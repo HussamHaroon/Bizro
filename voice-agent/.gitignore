@@ -1,0 +1,4 @@
+# probe artifacts: WAV audio + timestamped summaries are runtime output — never commit.
+# The committed demo_invoice*.png files are intentional QA/demo artifacts.
+probe_output/*.wav
+probe_output/urdu_speech_out_*.md
