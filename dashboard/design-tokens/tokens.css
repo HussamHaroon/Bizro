@@ -1,0 +1,57 @@
+/* Bizro "Khata Modern" design tokens — extracted from design.md §4.1–4.2.
+   SINGLE SOURCE OF TRUTH for colors, fonts, elevation, motion, touch targets.
+   Rule (AGENTS.md frontend-agent prompt): nothing enters the dashboard that isn't
+   defined here. Missing token → ask the Orchestrator, don't improvise. */
+
+:root {
+  /* ---- Color — design.md §4.1 ------------------------------------------- */
+  --bizro-ink-green:    #0B5D3B;   /* brand, primary actions, headers */
+  --bizro-paper-cream:  #F7F2E7;   /* app background — ledger paper, not clinical white */
+  --bizro-ledger-red:   #A6332B;   /* debit / udhar / expenses — real khata red ink */
+  --bizro-seal-gold:    #C98A2C;   /* AI-verified seal, credit-readiness highlights */
+  --bizro-settled-teal: #1F7A6C;   /* paid/settled — deliberately distinct from ink-green */
+  --bizro-ink-black:    #211E1A;   /* body text — warm black, never pure #000 */
+  --bizro-rule-line:    #DCD3BE;   /* ledger-rule dividers, card borders */
+
+  /* Derived same-family tints — ONLY for hover / pressed / disabled states */
+  --bizro-ink-green-hover:  #0E7A4C;
+  --bizro-ink-green-disabled: #7FA392;
+  --bizro-ledger-red-hover: #C04A41;
+  --bizro-paper-cream-raised: #FDFAF2; /* card surface on cream background */
+
+  /* WCAG AA-approved text/background pairs (design.md §4.1 — non-negotiable):
+     ink-black on paper-cream · ink-black on paper-cream-raised
+     ink-green on paper-cream (also on cream-raised)
+     ledger-red on paper-cream · settled-teal on paper-cream
+     paper-cream on ink-green (buttons/headers) · ink-black on seal-gold (stamp)
+     seal-gold is NOT AA as text on cream — use only for stamp/badge fills/borders. */
+
+  /* ---- Typography — design.md §4.2 --------------------------------------- */
+  --bizro-font-body:     "IBM Plex Sans", "Noto Sans Urdu", system-ui, sans-serif;
+  --bizro-font-numerals: "Zilla Slab", "IBM Plex Sans", serif;      /* amounts + section headers */
+  --bizro-font-display-ur: "Noto Nastaliq Urdu", serif;             /* display moments ONLY:
+                                                       app name, invoice greeting, WA template header.
+                                                       Too tall/slow for dense UI text. */
+
+  /* ---- Spacing & shape — ledger feels ruled and flat, not floating -------- */
+  --bizro-space-1: 4px;   --bizro-space-2: 8px;   --bizro-space-3: 12px;
+  --bizro-space-4: 16px;  --bizro-space-5: 24px;  --bizro-space-6: 32px;
+
+  --bizro-radius-card:   6px;   /* crisp, stamp-like — no pill shapes */
+  --bizro-radius-button: 6px;
+  --bizro-radius-seal:   50%;   /* circular trust-seal stamp only */
+
+  /* ---- Elevation — design.md §4.4: rule-lines read as "book", shadows as "app".
+     Cards get a 1px rule-line border and NO box-shadow. Ledger rows get
+     horizontal rules, never floating shadow cards. -------------------------------- */
+  --bizro-border-card: 1px solid var(--bizro-rule-line);
+  --bizro-rule-h:      1px solid var(--bizro-rule-line);
+  --bizro-shadow-none: none;
+
+  /* ---- Motion — design.md §4.6: minimal, purposeful, slow ----------------- */
+  --bizro-motion-fast:  200ms ease-out;
+  --bizro-motion-stamp: 300ms ease-out;   /* the one animation worth budget: seal "thud" */
+
+  /* ---- Touch — design.md §4.4 -------------------------------------------- */
+  --bizro-touch-min: 48px;   /* buttons and all interactive targets */
+}

@@ -1,0 +1,23 @@
+# secrets / local config
+.env
+.env.local
+
+# python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# node
+node_modules/
+dist/
+
+# local data & runtime artifacts
+*.db
+/media/
+.worktrees/
+
+# OS
+.DS_Store
+Thumbs.db
