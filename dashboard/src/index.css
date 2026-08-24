@@ -1,0 +1,150 @@
+/* Bizro dashboard — Khata Modern stylesheet.
+   TOKEN LAW (design-tokens/README.md): the ONLY allowed colors/fonts/spacing/motion are
+   defined in ../design-tokens/tokens.css (LOCKED, source of truth). The Tailwind v4
+   `@theme` block below mirrors tokens.css 1:1 (per bizro-frontend-agent SKILL.md).
+   If a value seems missing → request a token from the Orchestrator; never improvise. */
+
+@import "tailwindcss";
+@import "../design-tokens/tokens.css";
+
+@theme {
+  /* ---- Color (mirror of tokens.css — keep in sync or escalate) ------------ */
+  --color-ink-green: #0b5d3b;
+  --color-ink-green-hover: #0e7a4c;
+  --color-ink-green-disabled: #7fa392;
+  --color-ink-black: #211e1a;
+
+  --color-paper-cream: #f7f2e7;
+  --color-paper-raised: #fdfaf2;
+
+  --color-ledger-red: #a6332b;
+  --color-ledger-red-hover: #c04a41;
+
+  --color-seal-gold: #c98a2c;
+  --color-settled-teal: #1f7a6c;
+
+  --color-rule-line: #dcd3be;
+
+  /* ---- Typography ---------------------------------------------------------- */
+  --font-body: "IBM Plex Sans", "Noto Sans Urdu", system-ui, sans-serif;
+  --font-numerals: "Zilla Slab", "IBM Plex Sans", serif;
+  --font-display-ur: "Noto Nastaliq Urdu", serif; /* display moments ONLY (design.md §4.2) */
+
+  /* ---- Shape & spacing ----------------------------------------------------- */
+  --radius-card: 6px;
+  --radius-button: 6px;
+  --spacing-touch: 48px; /* --bizro-touch-min: buttons & interactive targets */
+}
+
+/* ---- Font packaging alias (flagged to Orchestrator in STATUS.agent.md) ------
+   tokens.css font-body names "Noto Sans Urdu", but no such npm/fontsource family
+   exists (only Nastaliq, the display face). The Urdu-script sans in the same Noto
+   superfamily ships as @fontsource/noto-sans-arabic, which covers Urdu glyphs
+   (U+0600–06FF incl. ٹ ڈ ڑ ژ ں ھ ے). These @font-face rules alias the shipped
+   files under the LOCKED token's family name so the token stack resolves
+   unchanged — a packaging fix, not a token change. Orchestrator may instead add
+   an explicit token; until then this is the only deviation, documented here. */
+@font-face {
+  font-family: "Noto Sans Urdu";
+  src: url("@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-400-normal.woff2")
+      format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Noto Sans Urdu";
+  src: url("@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-600-normal.woff2")
+      format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---- Base ----------------------------------------------------------------- */
+
+@layer base {
+  html {
+    background-color: var(--bizro-paper-cream);
+  }
+
+  body {
+    font-family: var(--bizro-font-body);
+    color: var(--bizro-ink-black);
+    background-color: var(--bizro-paper-cream);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* One consistent focus treatment: ink-green ring, AA against cream. */
+  :focus-visible {
+    outline: 2px solid var(--bizro-ink-green);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: var(--bizro-rule-line);
+  }
+}
+
+/* ---- Khata Modern component classes --------------------------------------- */
+
+@layer components {
+  /* Elevation rule (design.md §4.4): cards = cream surface + 1px rule-line border
+     + NO box-shadow. Shadows read as "app"; rule-lines read as "register". */
+  .bizro-card {
+    background-color: var(--bizro-paper-cream-raised);
+    border: var(--bizro-border-card);
+    border-radius: var(--bizro-radius-card);
+    box-shadow: var(--bizro-shadow-none);
+  }
+
+  /* Ledger rows sit on horizontal rules like a physical register (design.md §4.4). */
+  .bizro-rule-h {
+    border-bottom: var(--bizro-rule-h);
+  }
+
+  /* Urdu inline isolation: keeps RTL runs from disturbing surrounding Latin text. */
+  .bizro-urdu {
+    font-family: var(--bizro-font-body);
+    direction: rtl;
+    unicode-bidi: isolate;
+    line-height: 1.9; /* Urdu script needs taller leading than Latin */
+  }
+
+  /* Nastaliq is reserved for display moments only (app name, greetings). */
+  .bizro-display-ur {
+    font-family: var(--bizro-font-display-ur);
+    direction: rtl;
+    unicode-bidi: isolate;
+    line-height: 2.2;
+  }
+
+  /* The ONE animation worth budget (design.md §4.6): the seal "thud" when an
+     entry gets AI-verified — 300ms ease-out, reinforcing the stamp metaphor. */
+  .bizro-stamp-in {
+    animation: bizro-stamp-thud var(--bizro-motion-stamp);
+    transform-origin: center;
+  }
+
+  @keyframes bizro-stamp-thud {
+    0% {
+      transform: scale(1.5) rotate(-10deg);
+      opacity: 0;
+    }
+    55% {
+      transform: scale(0.94) rotate(2deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bizro-stamp-in {
+      animation: none;
+    }
+  }
+}
