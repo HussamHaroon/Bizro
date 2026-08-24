@@ -1,0 +1,9 @@
+# vision-agent runtime dependencies
+# (Orchestrator integration fix: requests was used but undeclared — caused
+# server_fallback_mock at smoke; see STATUS.md D0-11.)
+requests>=2.32
+pydantic>=2.13,<3
+httpx>=0.28            # used by tests / transport injection
+
+# Dev:
+pytest>=8
