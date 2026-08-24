@@ -10,6 +10,7 @@ Two validation layers:
 from __future__ import annotations
 
 import re
+from datetime import datetime as _dt
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
@@ -141,6 +142,15 @@ class TransactionResult(BaseModel):
     description: str = ""
     item_lines: list[dict[str, Any]] = Field(default_factory=list)
     occurred_at: str
+
+    @field_validator("occurred_at", mode="before")
+    @classmethod
+    def _coerce_datetime(cls, v: Any) -> Any:
+        # In-process callers (server dispatch) pass tz-aware datetimes; the
+        # canonical wire form is the ISO-8601 string (schema.md §1).
+        if isinstance(v, _dt):
+            return v.isoformat()
+        return v
     source: SourceInfo
     flag: str = "none"
     status: str = "pending"
