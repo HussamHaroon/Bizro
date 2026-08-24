@@ -1,0 +1,13 @@
+# voice-agent runtime dependencies — all verified to have Python 3.14 wheels
+# (voice-agent/notes.md §3).
+
+pydantic>=2.13,<3        # schema.md §1 contract validation + repair-retry
+httpx>=0.28              # thin DashScope client (SSE streaming, no SDK dependency)
+imageio-ffmpeg>=0.6      # bundled ffmpeg binary: ogg/opus → wav decode (default strategy)
+
+# Optional — each has a graceful fallback:
+#   av>=18                # AUDIO_DECODE=pyav alternative decode strategy
+#   playwright>=1.62      # invoice PNG via system Edge/Chromium; text receipt otherwise
+
+# Dev:
+pytest>=8
