@@ -1,0 +1,73 @@
+"""Bizro server — FastAPI app assembly.
+
+Run from the repo root (or anywhere — paths are anchored to the repo root):
+    python -m uvicorn server.app.main:app --reload --port 8000
+"""
+
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from . import dashscope_client, dispatch, whatsapp_client
+from .api import router as api_router
+from .config import ensure_repo_root_on_path, get_settings
+from .db import init_db
+from .webhook import router as webhook_router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("bizro.main")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ensure_repo_root_on_path()  # make voice_agent/vision_agent importable
+    init_db()
+    s = get_settings()
+    logger.info(
+        "Bizro server up. dashscope=%s whatsapp=%s signature_validation=%s mock_mode=%s db=%s",
+        "live" if dashscope_client.is_live() else "mock",
+        "live" if whatsapp_client.is_live() else "mock",
+        "enforced" if s.signature_enforced() else "disabled",
+        s.mock_mode,
+        s.database_url,
+    )
+    if not dashscope_client.is_live():
+        logger.warning(
+            "DashScope is in MOCK mode — all model output is clearly-labeled "
+            "synthetic. Set DASHSCOPE_API_KEY (HANDOFF.md ①) for live calls."
+        )
+    yield
+
+
+app = FastAPI(title="Bizro server", version="0.1.0", lifespan=lifespan)
+
+app.include_router(webhook_router)
+app.include_router(api_router)
+
+
+@app.get("/health")
+def health():
+    """Liveness + which integrations are live vs mock (schema.md §4)."""
+    s = get_settings()
+    return {
+        "status": "ok",
+        "mock_mode": s.mock_mode,
+        "integrations": {
+            "dashscope": {
+                "mode": "live" if dashscope_client.is_live() else "mock",
+                "base_url": s.dashscope_base_url,
+            },
+            "whatsapp": {
+                "mode": "live" if whatsapp_client.is_live() else "mock",
+                "signature_validation": "enforced" if s.signature_enforced() else "disabled",
+            },
+        },
+        "pipelines": dispatch.pipeline_status(),
+        "confidence_confirm_threshold": s.confidence_confirm_threshold,
+    }
