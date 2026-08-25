@@ -41,12 +41,14 @@
   --bizro-radius-button: 6px;
   --bizro-radius-seal:   50%;   /* circular trust-seal stamp only */
 
-  /* ---- Elevation — design.md §4.4: rule-lines read as "book", shadows as "app".
-     Cards get a 1px rule-line border and NO box-shadow. Ledger rows get
-     horizontal rules, never floating shadow cards. -------------------------------- */
+  /* ---- Elevation — design.md §4.4 + D1-1 addendum: cards may pair the rule-line
+     border with a soft shadow ("stamped paper on a desk"); ledger ROWS stay
+     pure rule-lines (shadows read "app", rules read "book"). ------------------- */
   --bizro-border-card: 1px solid var(--bizro-rule-line);
   --bizro-rule-h:      1px solid var(--bizro-rule-line);
   --bizro-shadow-none: none;
+  --bizro-shadow-card: 0 1px 2px rgba(33, 30, 26, 0.06), 0 4px 14px rgba(33, 30, 26, 0.07);
+  --bizro-shadow-raise: 0 2px 4px rgba(33, 30, 26, 0.08), 0 10px 28px rgba(33, 30, 26, 0.10);
 
   /* ---- Motion — design.md §4.6: minimal, purposeful, slow ----------------- */
   --bizro-motion-fast:  200ms ease-out;
