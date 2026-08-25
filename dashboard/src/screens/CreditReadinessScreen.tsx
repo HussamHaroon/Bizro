@@ -16,8 +16,10 @@ import type {
 } from '../types/schema';
 import { AmountText, toneForKind, type AmountTone } from '../components/AmountText';
 import { AuditTrail } from '../components/AuditTrail';
+import { CashflowChart } from '../components/CashflowChart';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { SealGauge } from '../components/SealGauge';
 import { SealMark } from '../components/TrustSealBadge';
 import {
   IconFlag,
@@ -26,7 +28,7 @@ import {
   IconReport,
   IconVoice,
 } from '../components/icons';
-import { formatConfidence, formatMonth, urduMonth } from '../lib/format';
+import { formatConfidence, formatMonth, formatPkr, urduMonth } from '../lib/format';
 import { T, useT } from '../i18n';
 
 const READINESS_WORDS: Record<ReadinessLevel, { en: string; ur: string }> = {
@@ -90,9 +92,9 @@ export function CreditReadinessScreen() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-6 sm:gap-8">
         <ScreenHeader
-          icon={<IconReport className="h-9 w-9 text-paper-cream" />}
+          icon={<IconReport className="h-9 w-9 text-ink-green" />}
           title="Credit Readiness"
           titleUr="کریڈٹ رپورٹ"
           purpose="Loan-ready proof"
@@ -107,9 +109,9 @@ export function CreditReadinessScreen() {
 
   if (!report || !readiness) {
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-6 sm:gap-8">
         <ScreenHeader
-          icon={<IconReport className="h-9 w-9 text-paper-cream" />}
+          icon={<IconReport className="h-9 w-9 text-ink-green" />}
           title="Credit Readiness"
           titleUr="کریڈٹ رپورٹ"
           purpose="Loan-ready proof"
@@ -125,9 +127,9 @@ export function CreditReadinessScreen() {
   const levelWord = READINESS_WORDS[readiness.level];
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6 sm:gap-8">
       <ScreenHeader
-        icon={<IconReport className="h-9 w-9 text-paper-cream" />}
+        icon={<IconReport className="h-9 w-9 text-ink-green" />}
         title="Credit Readiness"
         titleUr="کریڈٹ رپورٹ"
         purpose="Loan-ready proof"
@@ -144,53 +146,50 @@ export function CreditReadinessScreen() {
         }
       />
 
-      {/* Verdict — seal treatment; shape + word carry the level, not color alone. */}
-      <section className="bizro-card flex flex-wrap items-center gap-5 px-5 py-5" aria-label={pick('Readiness verdict', 'قرض کی تیاری')}>
-        <SealMark variant={readiness.level === 'ready' ? 'verified' : 'pending'} size="lg" />
-        <div className="min-w-56 flex-1">
-          <h2 className="flex flex-wrap items-baseline gap-x-3">
-            <T
-              en={levelWord.en}
-              ur={levelWord.ur}
-              className="font-numerals text-2xl font-semibold text-ink-black"
-              urClassName="text-xl font-semibold text-ink-black"
-            />
+      {/* Verdict (D1-1 §5) — the judge screenshot: 140px seal gauge, band word
+          large in Urdu AND English (always both on this artifact), summaries
+          per active language mode. Shape + word carry the level, not color. */}
+      <section
+        className="bizro-card bizro-card-hover flex flex-wrap items-center gap-x-8 gap-y-5 px-6 py-6"
+        aria-label={pick('Readiness verdict', 'قرض کی تیاری')}
+      >
+        <SealGauge
+          score={readiness.score_0_100}
+          label={pick(
+            `Readiness score ${readiness.score_0_100} of 100 — ${levelWord.en}`,
+            `تیاری کا اسکور ${readiness.score_0_100} از 100 — ${levelWord.ur}`,
+          )}
+        />
+        <div className="min-w-64 flex-1">
+          <h2 className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <span className="font-numerals text-3xl font-bold text-ink-green">{levelWord.en}</span>
+            <span className="bizro-urdu text-2xl font-semibold text-ink-green" lang="ur">
+              {levelWord.ur}
+            </span>
           </h2>
-          <p className="mt-1 text-sm text-ink-black"><T en={readiness.summary_en} ur={readiness.summary_ur} /></p>
-        </div>
-        <div className="min-w-48">
-          <p className="font-numerals text-4xl font-semibold text-ink-black">
-            {readiness.score_0_100}
-            <span className="text-xl opacity-70">/100</span>
+          <p className="mt-2 text-sm text-ink-black">
+            <T en={readiness.summary_en} ur={readiness.summary_ur} />
           </p>
-          <div
-            className="mt-2 h-2 w-full overflow-hidden rounded-card bg-paper-cream"
-            role="img"
-            aria-label={pick(
-              `Readiness score ${readiness.score_0_100} of 100`,
-              `تیاری کا اسکور ${readiness.score_0_100} از 100`,
-            )}
-          >
-            <div className="h-full rounded-card bg-seal-gold" style={{ width: `${readiness.score_0_100}%` }} />
-          </div>
-          <p className="mt-1 text-xs text-ink-black opacity-75">
-            <T en="Readiness score" ur="تیاری کا اسکور" />
+          <p className="mt-2 flex items-center gap-2 text-xs text-ink-black opacity-75">
+            <SealMark variant={readiness.level === 'ready' ? 'verified' : 'pending'} />
+            <T en="Readiness score · Alkhidmat Mawakhat review" ur="تیاری کا اسکور · الخدمت مواکات جائزہ" />
           </p>
         </div>
       </section>
 
       {/* Urdu narrative — dense text uses Noto Sans Urdu, NOT Nastaliq (design.md §4.2). */}
       {report.narrative_ur && (
-        <section className="bizro-card px-5 py-4" aria-label={pick('Report narrative', 'رپورٹ کا خلاصہ')}>
+        <section className="bizro-card px-5 py-5" aria-label={pick('Report narrative', 'رپورٹ کا خلاصہ')}>
           <p className="bizro-urdu text-base text-ink-black" lang="ur">
             {report.narrative_ur}
           </p>
         </section>
       )}
 
-      {/* Cash-flow stability over months — the first thing a Mawakhat officer reads. */}
-      <section className="bizro-card px-5 py-4" aria-labelledby="cashflow-title">
-        <h2 id="cashflow-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
+      {/* Cash-flow stability over months (D1-1 §3) — SVG grouped bars primary,
+          exact numbers preserved in the visually-hidden table for SR users. */}
+      <section className="bizro-card px-5 py-5" aria-labelledby="cashflow-title">
+        <h2 id="cashflow-title" className="mb-4 flex flex-wrap items-baseline gap-x-2">
           <T
             en="Cash-flow by month"
             ur="ماہانہ نقد رواں"
@@ -198,9 +197,13 @@ export function CreditReadinessScreen() {
             urClassName="text-base font-semibold text-ink-black"
           />
         </h2>
-        <table className="w-full border-collapse text-sm">
+        <CashflowChart months={report.monthly_cashflow} />
+        <table className="sr-only w-full border-collapse text-sm">
+          <caption className="text-left">
+            <T en="Monthly cash-flow, exact figures" ur="ماہانہ نقد رواں، درست اعداد" />
+          </caption>
           <thead>
-            <tr className="bizro-rule-h text-left text-xs uppercase tracking-wide text-ink-black opacity-70">
+            <tr className="text-left">
               <th className="py-2 pr-2 font-semibold"><T en="Month" ur="مہینہ" /></th>
               <th className="py-2 pr-2 text-right font-semibold"><T en="In" ur="آمدنی" /></th>
               <th className="py-2 pr-2 text-right font-semibold"><T en="Out" ur="خرچ" /></th>
@@ -210,17 +213,17 @@ export function CreditReadinessScreen() {
           </thead>
           <tbody>
             {report.monthly_cashflow.map((m) => (
-              <tr key={m.month} className="bizro-rule-h">
+              <tr key={m.month}>
                 <th scope="row" className="py-2.5 pr-2 text-left font-semibold text-ink-black">
-                  {formatMonth(m.month)}{' '}
-                  <span className="bizro-urdu text-sm font-normal" lang="ur">{urduMonth(m.month)}</span>
+                  {formatMonth(m.month)} · {urduMonth(m.month)}
                 </th>
-                <td className="py-2.5 pr-2 text-right"><AmountText value={m.inflow_pkd} tone="in" size="sm" /></td>
-                <td className="py-2.5 pr-2 text-right"><AmountText value={m.outflow_pkd} tone="out" size="sm" /></td>
+                <td className="py-2.5 pr-2 text-right">{formatPkr(m.inflow_pkd)}</td>
+                <td className="py-2.5 pr-2 text-right">{formatPkr(m.outflow_pkd)}</td>
                 <td className="py-2.5 pr-2 text-right">
-                  <AmountText value={Math.abs(m.net_pkd)} tone={m.net_pkd >= 0 ? 'in' : 'out'} size="sm" />
+                  {formatPkr(Math.abs(m.net_pkd))}
+                  {m.net_pkd < 0 ? ' −' : ''}
                 </td>
-                <td className="py-2.5 text-right font-numerals text-ink-black">{m.entries}</td>
+                <td className="py-2.5 text-right">{m.entries}</td>
               </tr>
             ))}
           </tbody>
@@ -229,7 +232,7 @@ export function CreditReadinessScreen() {
 
       {/* Consistency + AI sourcing — the seal earns its place here. */}
       <div className="grid gap-5 sm:grid-cols-2">
-        <section className="bizro-card px-5 py-4" aria-labelledby="consistency-title">
+        <section className="bizro-card px-5 py-5" aria-labelledby="consistency-title">
           <h2 id="consistency-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
             <T
               en="Record consistency"
@@ -256,7 +259,7 @@ export function CreditReadinessScreen() {
           </dl>
         </section>
 
-        <section className="bizro-card px-5 py-4" aria-labelledby="sourcing-title">
+        <section className="bizro-card px-5 py-5" aria-labelledby="sourcing-title">
           <h2 id="sourcing-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
             <T
               en="AI sourcing"
@@ -298,7 +301,7 @@ export function CreditReadinessScreen() {
       </div>
 
       {/* Red flags — honest about what an officer would probe. */}
-      <section className="bizro-card px-5 py-4" aria-labelledby="flags-title">
+      <section className="bizro-card px-5 py-5" aria-labelledby="flags-title">
         <h2 id="flags-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
           <T
             en="Flags to review"

@@ -8,15 +8,18 @@ import type { Transaction } from '../types/schema';
 import { AmountText } from '../components/AmountText';
 import { AuditTrail } from '../components/AuditTrail';
 import { Button } from '../components/Button';
+import { CashflowChart } from '../components/CashflowChart';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { EmptyState } from '../components/EmptyState';
+import { HeroStat } from '../components/HeroStat';
 import { LedgerRow } from '../components/LedgerRow';
 import { ReceiptCard } from '../components/ReceiptCard';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { SealGauge } from '../components/SealGauge';
 import { StatusPill } from '../components/StatusPill';
 import { TrustSealBadge, SealMark } from '../components/TrustSealBadge';
 import { UdharRadar } from '../components/UdharRadar';
-import { IconLedger, IconReport } from '../components/icons';
+import { IconExpense, IconLedger, IconReport, IconSale } from '../components/icons';
 import { MOCK_TRANSACTIONS, deriveUdhar } from '../api/mockData';
 
 const TOKENS: { name: string; hex: string; note: string }[] = [
@@ -68,7 +71,7 @@ export function ComponentsGallery() {
   return (
     <div className="flex flex-col gap-8">
       <ScreenHeader
-        icon={<IconReport className="h-9 w-9 text-paper-cream" />}
+        icon={<IconReport className="h-9 w-9 text-ink-green" />}
         title="Component Gallery"
         titleUr="اجزاء کی نمائش"
         purpose="Every part, every state"
@@ -254,11 +257,35 @@ export function ComponentsGallery() {
         />
       </Section>
 
-      <Section title="12 · Elevation rule" note="Everything above is 1px rule-line + no box-shadow — 'register', not 'app'.">
-        <p className="bizro-card px-4 py-3 text-sm text-ink-black">
-          Cards: cream-raised surface, border 1px rule-line, box-shadow none. Ledger rows: horizontal
-          rules only, never floating shadow cards.
+      <Section title="12 · Elevation (D1-1)" note="Cards pair the rule-line border with the shadow ramp ('stamped paper'); ledger rows stay pure rule-lines ('book').">
+        <p className="bizro-card px-5 py-4 text-sm text-ink-black">
+          Cards: cream-raised surface, 1px rule-line border, box-shadow shadow-card, hover lifts to
+          shadow-raise (200ms ease-out). Ledger rows: horizontal rules only, never floating shadow
+          cards.
         </p>
+      </Section>
+
+      <Section title="13 · D1-1 hero stat, seal gauge, cash-flow chart" note="Hero numbers count up (300ms, reduced-motion safe); the gauge is the credit verdict; bars show values on hover/focus.">
+        <div className="flex flex-col gap-5">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <HeroStat en="Money in" ur="آمدنی" value={45300} tone="in" icon={<IconSale className="h-6 w-6 text-settled-teal" />} />
+            <HeroStat en="Money out" ur="خرچ" value={28950} tone="out" icon={<IconExpense className="h-6 w-6 text-ledger-red" />} />
+            <HeroStat en="Net kept" ur="خالص بچت" value={16350} tone="in" icon={<IconLedger className="h-6 w-6 text-ink-green" />} />
+          </div>
+          <div className="bizro-card flex flex-wrap items-center gap-6 px-5 py-5">
+            <SealGauge score={78} label="Readiness score 78 of 100 — demo" />
+            <p className="text-sm text-ink-black">SealGauge — 140px gold ring, tick marks, Zilla Slab score.</p>
+          </div>
+          <div className="bizro-card px-5 py-5">
+            <CashflowChart
+              months={[
+                { month: '2026-06', inflow_pkd: 5730, outflow_pkd: 13300, net_pkd: -7570, entries: 8 },
+                { month: '2026-07', inflow_pkd: 5810, outflow_pkd: 17450, net_pkd: -11640, entries: 9 },
+                { month: '2026-08', inflow_pkd: 7820, outflow_pkd: 19770, net_pkd: -11950, entries: 14 },
+              ]}
+            />
+          </div>
+        </div>
       </Section>
     </div>
   );
