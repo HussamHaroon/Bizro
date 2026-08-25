@@ -27,6 +27,7 @@ import {
   IconVoice,
 } from '../components/icons';
 import { formatConfidence, formatMonth, urduMonth } from '../lib/format';
+import { T, useT } from '../i18n';
 
 const READINESS_WORDS: Record<ReadinessLevel, { en: string; ur: string }> = {
   ready: { en: 'Loan-ready', ur: 'قرض کے لیے تیار' },
@@ -48,6 +49,7 @@ const SOURCE_ROWS: { key: 'voice' | 'photo' | 'manual'; icon: typeof IconVoice; 
 ];
 
 export function CreditReadinessScreen() {
+  const { pick } = useT();
   const [report, setReport] = useState<CreditReportPreview | null>(null);
   const [byId, setById] = useState<Map<string, Transaction>>(new Map());
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +96,7 @@ export function CreditReadinessScreen() {
           title="Credit Readiness"
           titleUr="کریڈٹ رپورٹ"
           purpose="Loan-ready proof"
+          purposeUr="قرض کے لیے ثبوت"
         />
         <p role="alert" className="bizro-card px-4 py-3 text-sm font-semibold text-ledger-red">
           {error}
@@ -110,9 +113,10 @@ export function CreditReadinessScreen() {
           title="Credit Readiness"
           titleUr="کریڈٹ رپورٹ"
           purpose="Loan-ready proof"
+          purposeUr="قرض کے لیے ثبوت"
         />
         <p className="px-1 py-6 text-center text-sm text-ink-black opacity-75">
-          Preparing the report… <span className="bizro-urdu" lang="ur">رپورٹ بن رہی ہے</span>
+          <T en="Preparing the report…" ur="رپورٹ بن رہی ہے" />
         </p>
       </div>
     );
@@ -127,29 +131,32 @@ export function CreditReadinessScreen() {
         title="Credit Readiness"
         titleUr="کریڈٹ رپورٹ"
         purpose="Loan-ready proof"
+        purposeUr="قرض کے لیے ثبوت"
         actions={
           <p className="text-right text-sm text-paper-cream">
             {report.merchant.display_name}
             <br />
             <span className="opacity-85">
-              {report.period.start} → {report.period.end} · for Alkhidmat Mawakhat review
+              {report.period.start} → {report.period.end} ·{' '}
+              <T en="for Alkhidmat Mawakhat review" ur="الخدمت مواکات کے جائزے کے لیے" />
             </span>
           </p>
         }
       />
 
       {/* Verdict — seal treatment; shape + word carry the level, not color alone. */}
-      <section className="bizro-card flex flex-wrap items-center gap-5 px-5 py-5" aria-label="Readiness verdict">
+      <section className="bizro-card flex flex-wrap items-center gap-5 px-5 py-5" aria-label={pick('Readiness verdict', 'قرض کی تیاری')}>
         <SealMark variant={readiness.level === 'ready' ? 'verified' : 'pending'} size="lg" />
         <div className="min-w-56 flex-1">
           <h2 className="flex flex-wrap items-baseline gap-x-3">
-            <span className="font-numerals text-2xl font-semibold text-ink-black">{levelWord.en}</span>
-            <span className="bizro-urdu text-xl text-ink-black" lang="ur">{levelWord.ur}</span>
+            <T
+              en={levelWord.en}
+              ur={levelWord.ur}
+              className="font-numerals text-2xl font-semibold text-ink-black"
+              urClassName="text-xl font-semibold text-ink-black"
+            />
           </h2>
-          <p className="mt-1 text-sm text-ink-black">{readiness.summary_en}</p>
-          <p className="bizro-urdu mt-1 text-sm text-ink-black" lang="ur">
-            {readiness.summary_ur}
-          </p>
+          <p className="mt-1 text-sm text-ink-black"><T en={readiness.summary_en} ur={readiness.summary_ur} /></p>
         </div>
         <div className="min-w-48">
           <p className="font-numerals text-4xl font-semibold text-ink-black">
@@ -159,19 +166,22 @@ export function CreditReadinessScreen() {
           <div
             className="mt-2 h-2 w-full overflow-hidden rounded-card bg-paper-cream"
             role="img"
-            aria-label={`Readiness score ${readiness.score_0_100} of 100`}
+            aria-label={pick(
+              `Readiness score ${readiness.score_0_100} of 100`,
+              `تیاری کا اسکور ${readiness.score_0_100} از 100`,
+            )}
           >
             <div className="h-full rounded-card bg-seal-gold" style={{ width: `${readiness.score_0_100}%` }} />
           </div>
           <p className="mt-1 text-xs text-ink-black opacity-75">
-            Readiness score · <span className="bizro-urdu" lang="ur">تیاری کا اسکور</span>
+            <T en="Readiness score" ur="تیاری کا اسکور" />
           </p>
         </div>
       </section>
 
       {/* Urdu narrative — dense text uses Noto Sans Urdu, NOT Nastaliq (design.md §4.2). */}
       {report.narrative_ur && (
-        <section className="bizro-card px-5 py-4" aria-label="Report narrative · رپورٹ کا خلاصہ">
+        <section className="bizro-card px-5 py-4" aria-label={pick('Report narrative', 'رپورٹ کا خلاصہ')}>
           <p className="bizro-urdu text-base text-ink-black" lang="ur">
             {report.narrative_ur}
           </p>
@@ -181,17 +191,21 @@ export function CreditReadinessScreen() {
       {/* Cash-flow stability over months — the first thing a Mawakhat officer reads. */}
       <section className="bizro-card px-5 py-4" aria-labelledby="cashflow-title">
         <h2 id="cashflow-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
-          <span className="font-numerals text-lg font-semibold text-ink-black">Cash-flow by month</span>
-          <span className="bizro-urdu text-base text-ink-black" lang="ur">ماہانہ نقد رواں</span>
+          <T
+            en="Cash-flow by month"
+            ur="ماہانہ نقد رواں"
+            className="font-numerals text-lg font-semibold text-ink-black"
+            urClassName="text-base font-semibold text-ink-black"
+          />
         </h2>
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="bizro-rule-h text-left text-xs uppercase tracking-wide text-ink-black opacity-70">
-              <th className="py-2 pr-2 font-semibold">Month · مہینہ</th>
-              <th className="py-2 pr-2 text-right font-semibold">In · آمدنی</th>
-              <th className="py-2 pr-2 text-right font-semibold">Out · خرچ</th>
-              <th className="py-2 pr-2 text-right font-semibold">Net · باقی</th>
-              <th className="py-2 text-right font-semibold">Entries</th>
+              <th className="py-2 pr-2 font-semibold"><T en="Month" ur="مہینہ" /></th>
+              <th className="py-2 pr-2 text-right font-semibold"><T en="In" ur="آمدنی" /></th>
+              <th className="py-2 pr-2 text-right font-semibold"><T en="Out" ur="خرچ" /></th>
+              <th className="py-2 pr-2 text-right font-semibold"><T en="Net" ur="باقی" /></th>
+              <th className="py-2 text-right font-semibold"><T en="Entries" ur="انٹریاں" /></th>
             </tr>
           </thead>
           <tbody>
@@ -217,8 +231,12 @@ export function CreditReadinessScreen() {
       <div className="grid gap-5 sm:grid-cols-2">
         <section className="bizro-card px-5 py-4" aria-labelledby="consistency-title">
           <h2 id="consistency-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
-            <span className="font-numerals text-lg font-semibold text-ink-black">Record consistency</span>
-            <span className="bizro-urdu text-base text-ink-black" lang="ur">ریکارڈ کی تسلسل</span>
+            <T
+              en="Record consistency"
+              ur="ریکارڈ کی تسلسل"
+              className="font-numerals text-lg font-semibold text-ink-black"
+              urClassName="text-base font-semibold text-ink-black"
+            />
           </h2>
           <dl className="flex flex-col gap-2 text-sm text-ink-black">
             <StatRow en="Months of records" ur="مہینوں کا ریکارڈ" value={`${report.consistency.months_active}`} />
@@ -230,22 +248,28 @@ export function CreditReadinessScreen() {
             <StatRow
               en="Longest gap"
               ur="سب سے لمبا وقفہ"
-              value={`${report.consistency.longest_gap_days} ${report.consistency.longest_gap_days === 1 ? 'day' : 'days'}`}
+              value={`${report.consistency.longest_gap_days} ${pick(
+                report.consistency.longest_gap_days === 1 ? 'day' : 'days',
+                report.consistency.longest_gap_days === 1 ? 'دن' : 'دن',
+              )}`}
             />
           </dl>
         </section>
 
         <section className="bizro-card px-5 py-4" aria-labelledby="sourcing-title">
           <h2 id="sourcing-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
-            <span className="font-numerals text-lg font-semibold text-ink-black">AI sourcing</span>
-            <span className="bizro-urdu text-base text-ink-black" lang="ur">اے آئی ذرائع</span>
+            <T
+              en="AI sourcing"
+              ur="اے آئی ذرائع"
+              className="font-numerals text-lg font-semibold text-ink-black"
+              urClassName="text-base font-semibold text-ink-black"
+            />
           </h2>
           <div className="mb-3 flex items-center gap-3">
             <SealMark variant="verified" />
             <p className="text-sm text-ink-black">
-              <span className="font-numerals text-lg font-semibold">{aiSharePct}%</span> of entries
-              AI-verified ·{' '}
-              <span className="bizro-urdu" lang="ur">تصدیق شدہ</span>
+              <span className="font-numerals text-lg font-semibold">{aiSharePct}%</span>{' '}
+              <T en="of entries AI-verified" ur="انٹریاں تصدیق شدہ" />
               <br />
               <span className="text-xs opacity-75">
                 avg confidence {formatConfidence(report.sourcing.avg_confidence)} across{' '}
@@ -260,7 +284,7 @@ export function CreditReadinessScreen() {
                 <li key={key} className="flex items-center gap-2">
                   <Icon className="h-6 w-6 text-ink-green" />
                   <span className="flex-1">
-                    {en} <span className="bizro-urdu" lang="ur">{ur}</span>
+                    <T en={en} ur={ur} />
                   </span>
                   <span className="font-numerals font-semibold">{s?.entries ?? 0}</span>
                   <span className="w-20 text-right text-xs opacity-75">
@@ -276,12 +300,16 @@ export function CreditReadinessScreen() {
       {/* Red flags — honest about what an officer would probe. */}
       <section className="bizro-card px-5 py-4" aria-labelledby="flags-title">
         <h2 id="flags-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
-          <span className="font-numerals text-lg font-semibold text-ink-black">Flags to review</span>
-          <span className="bizro-urdu text-base text-ink-black" lang="ur">خطرے کے نشانات</span>
+          <T
+            en="Flags to review"
+            ur="خطرے کے نشانات"
+            className="font-numerals text-lg font-semibold text-ink-black"
+            urClassName="text-base font-semibold text-ink-black"
+          />
         </h2>
         {report.flags.length === 0 ? (
           <p className="text-sm text-ink-black">
-            No flags in this period. <span className="bizro-urdu" lang="ur">کوئی خطرہ نہیں</span>
+            <T en="No flags in this period." ur="کوئی خطرہ نہیں" />
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -309,10 +337,12 @@ export function CreditReadinessScreen() {
       {/* Sourced line items with the audit-trail drill-down (design.md §7.2). */}
       <section aria-labelledby="lineitems-title">
         <h2 id="lineitems-title" className="mb-2 flex flex-wrap items-baseline gap-x-2 px-1">
-          <span className="font-numerals text-lg font-semibold text-ink-black">
-            Sourced line items — tap for audit trail
-          </span>
-          <span className="bizro-urdu text-base text-ink-black" lang="ur">تفصیل دیکھنے کے لیے ٹیپ کریں</span>
+          <T
+            en="Sourced line items — tap for audit trail"
+            ur="تفصیل دیکھنے کے لیے ٹیپ کریں"
+            className="font-numerals text-lg font-semibold text-ink-black"
+            urClassName="text-base font-semibold text-ink-black"
+          />
         </h2>
         <ul className="border-t border-rule-line">
           {report.line_items.map((li) => {
@@ -332,14 +362,13 @@ export function CreditReadinessScreen() {
                 >
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="font-semibold text-ink-black">{li.label}</span>
-                      <span className="bizro-urdu text-sm font-normal text-ink-black" lang="ur">
-                        {li.label_ur}
+                      <span className="font-semibold text-ink-black">
+                        <T en={li.label} ur={li.label_ur} />
                       </span>
                       {ai && <SealMark variant={li.audit.status === 'pending' ? 'pending' : 'verified'} />}
                     </span>
                     <span className="text-xs text-ink-black opacity-75">
-                      {formatMonth(li.month)} · {ai ? `${li.audit.model} · conf ${formatConfidence(li.audit.confidence)}` : 'manual entry'}
+                      {formatMonth(li.month)} · {ai ? `${li.audit.model} · conf ${formatConfidence(li.audit.confidence)}` : pick('manual entry', 'دستی اندراج')}
                     </span>
                   </span>
                   <AmountText
@@ -374,13 +403,17 @@ export function CreditReadinessScreen() {
       <footer className="px-1 pb-2 text-xs text-ink-black opacity-75">
         {report.mock ? (
           <p>
-            <span className="font-semibold">Demo report</span> — deterministic fixture derived from demo
-            transactions; no model was run. Live mode shows the generating model here.
+            <span className="font-semibold"><T en="Demo report" ur="نمائشی رپورٹ" /></span>{' '}
+            <T
+              en="— deterministic fixture derived from demo transactions; no model was run. Live mode shows the generating model here."
+              ur="— ڈیمو لین دین سے بنائی گئی مستقل رپورٹ؛ کوئی ماڈل نہیں چلا۔ لائیو موڈ میں ماڈل کا نام یہاں نظر آئے گا۔"
+            />
           </p>
         ) : (
           <p>
-            Generated by <span className="font-semibold">{report.model ?? 'the reporting model'}</span> via
-            Alibaba Cloud Model Studio · {report.generated_at}
+            <T en="Generated by" ur="تیار کردہ" />{' '}
+            <span className="font-semibold">{report.model ?? 'the reporting model'}</span>{' '}
+            <T en="via Alibaba Cloud Model Studio" ur="علی بابا کلاؤڈ ماڈل اسٹوڈیو سے" /> · {report.generated_at}
           </p>
         )}
       </footer>
@@ -397,7 +430,7 @@ function StatRow({ en, ur, value }: { en: string; ur: string; value: string }) {
   return (
     <div className="bizro-rule-h flex items-baseline justify-between gap-3 pb-1.5 last:border-b-0">
       <dt>
-        {en} <span className="bizro-urdu text-sm" lang="ur">{ur}</span>
+        <T en={en} ur={ur} />
       </dt>
       <dd className="font-numerals text-base font-semibold">{value}</dd>
     </div>

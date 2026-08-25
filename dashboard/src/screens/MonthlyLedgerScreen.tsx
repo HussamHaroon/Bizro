@@ -26,6 +26,7 @@ import {
   IconUdharSettled,
 } from '../components/icons';
 import { formatDay, formatMonth, monthOf, shiftMonth, urduMonth } from '../lib/format';
+import { T, useT } from '../i18n';
 
 type Filter = 'all' | 'sale' | 'expense' | 'udhar';
 
@@ -49,6 +50,7 @@ function sumKind(items: Transaction[], kinds: TransactionKind[]): number {
 }
 
 export function MonthlyLedgerScreen() {
+  const { pick } = useT();
   const currentMonth = monthOf(new Date().toISOString());
   const [month, setMonth] = useState(currentMonth);
   const [filter, setFilter] = useState<Filter>('all');
@@ -155,13 +157,17 @@ export function MonthlyLedgerScreen() {
         title="Monthly Ledger"
         titleUr="ماہانہ کھاتہ"
         purpose="This month's money"
+        purposeUr="اس ماہ کا پیسہ"
         actions={
-          <div className="flex items-center gap-2" role="group" aria-label="Choose month · مہینہ چنیں">
+          <div className="flex items-center gap-2" role="group" aria-label={pick('Choose month', 'مہینہ چنیں')}>
             <button
               type="button"
               onClick={() => setMonth((m) => shiftMonth(m, -1))}
               className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-button border border-rule-line bg-paper-raised text-ink-black transition-colors duration-200 ease-out hover:bg-paper-cream"
-              aria-label={`Previous month (${formatMonth(shiftMonth(month, -1))})`}
+              aria-label={pick(
+                `Previous month (${formatMonth(shiftMonth(month, -1))})`,
+                `پچھلا مہینہ (${urduMonth(shiftMonth(month, -1))})`,
+              )}
             >
               <IconChevronLeft className="h-6 w-6" />
             </button>
@@ -178,7 +184,10 @@ export function MonthlyLedgerScreen() {
               onClick={() => setMonth((m) => shiftMonth(m, 1))}
               disabled={month >= currentMonth}
               className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-button border border-rule-line bg-paper-raised text-ink-black transition-colors duration-200 ease-out hover:bg-paper-cream disabled:cursor-not-allowed disabled:text-ink-green-disabled disabled:hover:bg-paper-raised"
-              aria-label={`Next month (${formatMonth(shiftMonth(month, 1))})`}
+              aria-label={pick(
+                `Next month (${formatMonth(shiftMonth(month, 1))})`,
+                `اگلا مہینہ (${urduMonth(shiftMonth(month, 1))})`,
+              )}
             >
               <IconChevronRight className="h-6 w-6" />
             </button>
@@ -195,7 +204,7 @@ export function MonthlyLedgerScreen() {
       {/* Settled / udhar split — four glanceable cells: icon + word + amount. */}
       {stats && (
         <section
-          aria-label="Month split · ماہ کا خلاصہ"
+          aria-label={pick('Month split', 'ماہ کا خلاصہ')}
           className="bizro-card grid grid-cols-2 sm:grid-cols-4 sm:divide-x sm:divide-rule-line [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(-n+2)]:border-rule-line [&>*:nth-child(odd)]:border-r [&>*:nth-child(odd)]:border-rule-line sm:[&>*:nth-child(-n+2)]:border-b-0 sm:[&>*:nth-child(odd)]:border-r-0"
         >
           <SplitCell icon={<IconSale className="h-7 w-7 text-settled-teal" />} en="Sales" ur="فروخت" amount={stats.sales} tone="in" />
@@ -217,7 +226,7 @@ export function MonthlyLedgerScreen() {
             <dl className="flex flex-col gap-1 text-sm text-ink-black">
               <div className="flex items-center gap-2">
                 <dt className="font-semibold">
-                  Money in · <span className="bizro-urdu" lang="ur">آمدنی</span>
+                  <T en="Money in" ur="آمدنی" />
                 </dt>
                 <dd>
                   <AmountText value={stats.sales + stats.collected} tone="in" />
@@ -225,7 +234,7 @@ export function MonthlyLedgerScreen() {
               </div>
               <div className="flex items-center gap-2">
                 <dt className="font-semibold">
-                  Money out · <span className="bizro-urdu" lang="ur">خرچ</span>
+                  <T en="Money out" ur="خرچ" />
                 </dt>
                 <dd>
                   <AmountText value={stats.expenses + stats.udharGiven} tone="out" />
@@ -233,7 +242,7 @@ export function MonthlyLedgerScreen() {
               </div>
               <div className="flex items-center gap-2">
                 <dt className="font-semibold">
-                  Net · <span className="bizro-urdu" lang="ur">باقی</span>
+                  <T en="Net" ur="باقی" />
                 </dt>
                 <dd>
                   <AmountText
@@ -245,14 +254,15 @@ export function MonthlyLedgerScreen() {
             </dl>
             <p className="flex items-center gap-2 text-sm text-ink-black">
               <SealMark variant="verified" />
-              {Math.round((stats.aiEntries / stats.entries) * 100)}% entries stamped from voice or photos
+              {Math.round((stats.aiEntries / stats.entries) * 100)}%{' '}
+              <T en="entries stamped from voice or photos" ur="انٹریاں آواز یا تصویر سے درج" />
             </p>
           </div>
         </ReceiptCard>
       )}
 
       {/* Kind filter — every chip is word-paired (EN + UR), never icon-only. */}
-      <div role="group" aria-label="Filter entries · انٹریاں چھانیں" className="flex flex-wrap gap-2">
+      <div role="group" aria-label={pick('Filter entries', 'انٹریاں چھانیں')} className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -265,17 +275,14 @@ export function MonthlyLedgerScreen() {
                 : 'border-rule-line bg-paper-raised text-ink-black hover:bg-paper-cream'
             }`}
           >
-            {f.en}
-            <span className="bizro-urdu font-normal" lang="ur">
-              {f.ur}
-            </span>
+            <T en={f.en} ur={f.ur} />
           </button>
         ))}
       </div>
 
       {filtered === null && !error && (
         <p className="px-1 py-6 text-center text-sm text-ink-black opacity-75">
-          Reading the khata… <span className="bizro-urdu" lang="ur">کھاتہ کھل رہا ہے</span>
+          <T en="Reading the khata…" ur="کھاتہ کھل رہا ہے" />
         </p>
       )}
 
@@ -285,6 +292,7 @@ export function MonthlyLedgerScreen() {
           title="No entries this month"
           titleUr="اس ماہ کوئی انٹری نہیں"
           hint="Voice notes and receipt photos will appear here as ledger rows."
+          hintUr="آواز اور رسید کی تصویریں یہاں کھاتہ کی صفوں میں نظر آئیں گی۔"
           actionLabel="Back to this month"
           actionLabelUr="اس ماہ پر جائیں"
           onAction={() => {
@@ -295,13 +303,17 @@ export function MonthlyLedgerScreen() {
       )}
 
       {groups.length > 0 && (
-        <section aria-label="Entries · انٹریاں" className="border-t border-rule-line">
+        <section aria-label={pick('Entries', 'انٹریاں')} className="border-t border-rule-line">
           {groups.map(([day, rows]) => (
             <ul key={day} aria-label={formatDay(day)}>
               <LedgerDayHeader>
                 {formatDay(day)}{' '}
                 <span className="font-normal text-ink-black opacity-70">
-                  · {rows.length} {rows.length === 1 ? 'entry' : 'entries'}
+                  · {rows.length}{' '}
+                  {pick(
+                    rows.length === 1 ? 'entry' : 'entries',
+                    rows.length === 1 ? 'انٹری' : 'انٹریاں',
+                  )}
                 </span>
               </LedgerDayHeader>
               {rows.map((t) => (
@@ -353,7 +365,7 @@ function SplitCell({
       {icon}
       <div className="flex min-w-0 flex-col">
         <span className="flex flex-wrap items-baseline gap-x-1.5 text-sm font-semibold text-ink-black">
-          {en} <span className="bizro-urdu font-normal" lang="ur">{ur}</span>
+          <T en={en} ur={ur} />
         </span>
         <AmountText value={amount} tone={tone} />
       </div>

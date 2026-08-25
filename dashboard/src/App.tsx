@@ -5,11 +5,14 @@
 import { BrowserRouter, Link, NavLink, Route, Routes, Navigate } from 'react-router-dom';
 import { MockBanner } from './components/MockBanner';
 import { IconLedger, IconReport } from './components/icons';
+import { LanguageControl } from './i18n/LanguageControl';
+import { T, useT } from './i18n';
 import { MonthlyLedgerScreen } from './screens/MonthlyLedgerScreen';
 import { CreditReadinessScreen } from './screens/CreditReadinessScreen';
 import { ComponentsGallery } from './dev/ComponentsGallery';
 
 function Nav() {
+  const { pick } = useT();
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `inline-flex min-h-touch items-center gap-2 rounded-button px-3 text-sm font-semibold transition-colors duration-200 ease-out ${
       isActive
@@ -18,14 +21,14 @@ function Nav() {
     }`;
   return (
     <nav
-      aria-label="Screens · اسکرین"
+      aria-label={pick('Screens', 'اسکرین')}
       className="border-b border-rule-line bg-paper-raised"
     >
       <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2">
         <Link
           to="/ledger"
           className="flex items-baseline gap-2 py-1"
-          aria-label="Bizro home — ledger"
+          aria-label={pick('Bizro home — ledger', 'بزرو — کھاتہ')}
         >
           <span className="font-numerals text-xl font-bold tracking-wide text-ink-green">Bizro</span>
           <span className="bizro-display-ur text-xl leading-none text-ink-green" lang="ur">
@@ -35,12 +38,14 @@ function Nav() {
         <div className="ml-auto flex flex-wrap items-center gap-1">
           <NavLink to="/ledger" className={linkClass}>
             <IconLedger className="h-6 w-6" />
-            Ledger <span className="bizro-urdu font-normal" lang="ur">کھاتہ</span>
+            <T en="Ledger" ur="کھاتہ" />
           </NavLink>
           <NavLink to="/credit" className={linkClass}>
             <IconReport className="h-6 w-6" />
-            Credit <span className="bizro-urdu font-normal" lang="ur">کریڈٹ</span>
+            <T en="Credit" ur="کریڈٹ" />
           </NavLink>
+          <span className="mx-1 hidden h-6 w-px bg-rule-line sm:block" aria-hidden="true" />
+          <LanguageControl />
         </div>
       </div>
     </nav>
@@ -63,9 +68,9 @@ export function App() {
         </main>
         <footer className="border-t border-rule-line px-4 py-3">
           <p className="mx-auto max-w-4xl text-xs text-ink-black opacity-70">
-            Bizro control room · Khata Modern ·{' '}
+            <T en="Bizro control room · Khata Modern" ur="بزرو کنٹرول روم" /> ·{' '}
             <Link to="/dev/components" className="font-semibold underline">
-              Component gallery
+              <T en="Component gallery" ur="اجزاء کی نمائش" />
             </Link>
           </p>
         </footer>

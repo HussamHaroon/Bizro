@@ -16,6 +16,7 @@
 import type { MouseEvent } from 'react';
 import { formatConfidence } from '../lib/format';
 import { IconEdit } from './icons';
+import { T, useT } from '../i18n';
 
 export type SealVariant = 'verified' | 'pending';
 
@@ -35,7 +36,6 @@ export interface TrustSealBadgeProps {
   editLabelUr?: string;
   className?: string;
 }
-
 const SEAL_PX: Record<NonNullable<TrustSealBadgeProps['size']>, number> = { sm: 28, md: 40, lg: 64 };
 const TEXT_CLASS: Record<NonNullable<TrustSealBadgeProps['size']>, string> = {
   sm: 'text-xs',
@@ -101,29 +101,26 @@ export function TrustSealBadge({
   confidence,
   stampIn = false,
   onEdit,
-  editLabel = 'Edit if wrong',
-  editLabelUr = 'غلط ہو تو بدلیں',
+  editLabel,
+  editLabelUr,
   className = '',
 }: TrustSealBadgeProps) {
+  const { pick } = useT();
   const px = SEAL_PX[size];
   return (
     <span className={`inline-flex flex-wrap items-center gap-x-2 gap-y-1 ${className}`}>
       <span
         className={stampIn ? 'bizro-stamp-in' : undefined}
-        title={variant === 'verified' ? 'AI-verified entry' : 'Waiting for confirmation'}
+        title={variant === 'verified' ? pick('AI-verified entry', 'تصدیق شدہ انٹری') : pick('Waiting for confirmation', 'تصدیق کا انتظار')}
       >
         <SealGlyph variant={variant} px={px} />
       </span>
       <span className={`flex flex-col ${TEXT_CLASS[size]} leading-tight`}>
         <span className="font-semibold text-ink-black">
           {variant === 'verified' ? (
-            <>
-              AI-verified <span className="bizro-urdu font-normal" lang="ur">تصدیق شدہ</span>
-            </>
+            <T en="AI-verified" ur="تصدیق شدہ" />
           ) : (
-            <>
-              Needs your check <span className="bizro-urdu font-normal" lang="ur">تصدیق باقی</span>
-            </>
+            <T en="Needs your check" ur="تصدیق باقی" />
           )}
         </span>
         <span className="text-ink-black opacity-75">
@@ -145,10 +142,7 @@ export function TrustSealBadge({
         className="inline-flex min-h-touch items-center gap-2 rounded-button border border-rule-line bg-paper-raised px-3 text-sm font-semibold text-ink-black transition-colors duration-200 ease-out hover:bg-paper-cream"
       >
         <IconEdit className="h-[18px] w-[18px] text-ink-green" />
-        <span>{editLabel}</span>
-        <span className="bizro-urdu font-normal" lang="ur">
-          {editLabelUr}
-        </span>
+        <T en={editLabel ?? 'Edit if wrong'} ur={editLabelUr ?? 'غلط ہو تو بدلیں'} />
       </button>
     </span>
   );

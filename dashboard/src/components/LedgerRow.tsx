@@ -21,6 +21,7 @@ import {
   IconVoice,
 } from './icons';
 import { formatDateTime } from '../lib/format';
+import { T } from '../i18n';
 
 export interface LedgerRowProps {
   transaction: Transaction;
@@ -61,9 +62,7 @@ function SourceChip({ type }: { type: SourceType }) {
   return (
     <span className="inline-flex items-center gap-1 text-ink-black">
       <Icon className="h-[16px] w-[16px] text-ink-green" />
-      <span>
-        {en} <span className="bizro-urdu" lang="ur">{ur}</span>
-      </span>
+      <T en={en} ur={ur} />
     </span>
   );
 }
@@ -73,9 +72,7 @@ function FlagChip({ flag }: { flag: Exclude<TransactionFlag, 'none'> }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-card border border-rule-line bg-paper-cream px-1.5 py-0.5 font-semibold text-ledger-red">
       <span aria-hidden="true">▲</span>
-      <span>
-        {en} <span className="bizro-urdu font-normal" lang="ur">{ur}</span>
-      </span>
+      <T en={en} ur={ur} />
     </span>
   );
 }
@@ -107,7 +104,7 @@ export function LedgerRow({
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-baseline gap-x-2">
               <span className="font-semibold text-ink-black">
-                {kind.en} <span className="bizro-urdu font-normal" lang="ur">{kind.ur}</span>
+                <T en={kind.en} ur={kind.ur} />
               </span>
               {t.counterparty && (
                 <span className="truncate text-sm text-ink-black opacity-80">· {t.counterparty.name}</span>
@@ -142,8 +139,7 @@ export function LedgerRow({
               className="inline-flex min-h-touch items-center gap-1.5 rounded-button border border-rule-line bg-paper-raised px-2.5 text-sm font-semibold text-ink-black transition-colors duration-200 ease-out hover:bg-paper-cream"
             >
               <IconEdit className="h-[18px] w-[18px] text-ink-green" />
-              Edit
-              <span className="bizro-urdu font-normal" lang="ur">بدلیں</span>
+              <T en="Edit" ur="بدلیں" />
             </button>
           )}
           {canConfirm && (
@@ -152,8 +148,7 @@ export function LedgerRow({
               onClick={() => onConfirm(t)}
               className="inline-flex min-h-touch items-center gap-1.5 rounded-button bg-ink-green px-3 text-sm font-semibold text-paper-cream transition-colors duration-200 ease-out hover:bg-ink-green-hover"
             >
-              Confirm
-              <span className="bizro-urdu font-normal" lang="ur">تصدیق</span>
+              <T en="Confirm" ur="تصدیق" />
             </button>
           )}
         </span>

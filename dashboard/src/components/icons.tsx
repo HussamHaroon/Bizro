@@ -240,3 +240,43 @@ export function IconChevronDown({ className, ...rest }: IconProps) {
     </Badge>
   );
 }
+
+/* ---- Language modes (D1-1a segmented control) ------------------------------ */
+/* Letter-glyph badges: the word on the segment carries the meaning; the icon
+   keeps the filled-badge weight consistent with the rest of the set. */
+
+/** Urdu mode. Pair with the word "اردو". */
+export function IconLangUr({ className, ...rest }: IconProps) {
+  return (
+    <Badge className={className} {...rest}>
+      <text x="12" y="16.5" textAnchor="middle" fontSize="13" fontWeight="700">
+        ا
+      </text>
+    </Badge>
+  );
+}
+
+/** English mode. Pair with the word "English". */
+export function IconLangEn({ className, ...rest }: IconProps) {
+  return (
+    <Badge className={className} {...rest}>
+      <text x="12" y="16.5" textAnchor="middle" fontSize="12" fontWeight="700">
+        A
+      </text>
+    </Badge>
+  );
+}
+
+/** Mixed mode — both scripts side by side. Pair with the word "Mixed". */
+export function IconLangMixed({ className, ...rest }: IconProps) {
+  return (
+    <Badge className={className} {...rest}>
+      <text x="7.6" y="16" textAnchor="middle" fontSize="10" fontWeight="700">
+        ا
+      </text>
+      <text x="15.6" y="16" textAnchor="middle" fontSize="10" fontWeight="700">
+        A
+      </text>
+    </Badge>
+  );
+}
