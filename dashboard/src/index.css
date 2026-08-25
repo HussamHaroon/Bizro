@@ -25,6 +25,12 @@
 
   --color-rule-line: #dcd3be;
 
+  /* ---- Elevation (D1-1): cards may pair the rule-line border with a soft
+     shadow ("stamped paper on a desk"); ledger ROWS stay pure rule-lines.
+     Mirrors --bizro-shadow-card / --bizro-shadow-raise in tokens.css. -------- */
+  --shadow-card: 0 1px 2px rgba(33, 30, 26, 0.06), 0 4px 14px rgba(33, 30, 26, 0.07);
+  --shadow-raise: 0 2px 4px rgba(33, 30, 26, 0.08), 0 10px 28px rgba(33, 30, 26, 0.10);
+
   /* ---- Typography ---------------------------------------------------------- */
   --font-body: "IBM Plex Sans", "Noto Sans Urdu", system-ui, sans-serif;
   --font-numerals: "Zilla Slab", "IBM Plex Sans", serif;
@@ -75,9 +81,11 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* One consistent focus treatment: ink-green ring, AA against cream. */
+  /* One consistent focus treatment (D1-1 art direction): a seal-gold stamp ring.
+     tokens.css sanctions seal-gold for stamp/badge fills AND borders — never
+     body-text color on cream. */
   :focus-visible {
-    outline: 2px solid var(--bizro-ink-green);
+    outline: 2px solid var(--bizro-seal-gold);
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -90,13 +98,34 @@
 /* ---- Khata Modern component classes --------------------------------------- */
 
 @layer components {
-  /* Elevation rule (design.md §4.4): cards = cream surface + 1px rule-line border
-     + NO box-shadow. Shadows read as "app"; rule-lines read as "register". */
+  /* Elevation (design.md §4.4 + D1-1): cards = cream surface + 1px rule-line
+     border, now PAIRED with the soft shadow ramp ("stamped paper on a desk").
+     Ledger ROWS stay pure rule-lines — shadows read as "app", rules as "book". */
   .bizro-card {
     background-color: var(--bizro-paper-cream-raised);
     border: var(--bizro-border-card);
     border-radius: var(--bizro-radius-card);
-    box-shadow: var(--bizro-shadow-none);
+    box-shadow: var(--bizro-shadow-card);
+  }
+
+  /* Micro-interaction (D1-1 art direction §7): 200ms ease-out hover; the card
+     lifts to the raise shadow. Disabled under prefers-reduced-motion. */
+  .bizro-card-hover {
+    transition:
+      box-shadow var(--bizro-motion-fast),
+      transform var(--bizro-motion-fast);
+  }
+  .bizro-card-hover:hover {
+    box-shadow: var(--bizro-shadow-raise);
+    transform: translateY(-2px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bizro-card-hover,
+    .bizro-card-hover:hover {
+      transition: none;
+      transform: none;
+    }
   }
 
   /* Ledger rows sit on horizontal rules like a physical register (design.md §4.4). */

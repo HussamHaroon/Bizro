@@ -1,6 +1,8 @@
 /* ScreenHeader — one per screen (design.md §4.7: purpose graspable in ≤5 words).
-   Ink-green band, paper-cream text (AA pair per tokens.css), slab-serif title
-   (tokens: section headers use Zilla Slab), Urdu label alongside English. */
+   D1-1 restyle: the sticky ink-green top bar now carries the brand band, so the
+   page header is a raised cream card ("stamped paper") with a seal-gold left
+   rule, ink-green slab title, Urdu pair alongside, purpose line, actions right.
+   Sits on the shadow-card token per the D1-1 elevation ruling. */
 
 import type { ReactNode } from 'react';
 import { T } from '../i18n';
@@ -19,9 +21,9 @@ export interface ScreenHeaderProps {
 
 export function ScreenHeader({ title, titleUr, purpose, purposeUr, icon, actions }: ScreenHeaderProps) {
   return (
-    <header className="bg-ink-green text-paper-cream">
-      <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-x-4 gap-y-3 px-4 py-5">
-        <div className="flex min-h-touch min-w-touch items-center justify-center">
+    <header className="bizro-card border-l-4 border-l-seal-gold">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4 sm:px-6">
+        <div className="flex min-h-touch min-w-touch items-center justify-center text-ink-green">
           {icon ?? null}
         </div>
         <div className="min-w-0 flex-1">
@@ -29,17 +31,13 @@ export function ScreenHeader({ title, titleUr, purpose, purposeUr, icon, actions
             <T
               en={title}
               ur={titleUr}
-              className="font-numerals text-2xl font-semibold tracking-wide"
-              urClassName="text-2xl font-semibold"
+              className="font-numerals text-2xl font-semibold tracking-wide text-ink-green"
+              urClassName="text-2xl font-semibold text-ink-green"
             />
           </h1>
-          {purposeUr ? (
-            <p className="mt-0.5 text-sm opacity-90">
-              <T en={purpose} ur={purposeUr} />
-            </p>
-          ) : (
-            <p className="mt-0.5 text-sm opacity-90">{purpose}</p>
-          )}
+          <p className="mt-0.5 text-sm text-ink-black opacity-80">
+            {purposeUr ? <T en={purpose} ur={purposeUr} /> : purpose}
+          </p>
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
