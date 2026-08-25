@@ -9,6 +9,7 @@ import type { Transaction, TransactionFlag, TransactionKind, SourceType } from '
 import { AmountText, toneForKind } from './AmountText';
 import { AuditTrail } from './AuditTrail';
 import { SealMark } from './TrustSealBadge';
+import { StatusPill } from './StatusPill';
 import {
   IconChevronDown,
   IconEdit,
@@ -60,8 +61,8 @@ const FLAG_SPEC: Record<Exclude<TransactionFlag, 'none'>, { en: string; ur: stri
 function SourceChip({ type }: { type: SourceType }) {
   const { icon: Icon, en, ur } = SOURCE_SPEC[type];
   return (
-    <span className="inline-flex items-center gap-1 text-ink-black">
-      <Icon className="h-[16px] w-[16px] text-ink-green" />
+    <span className="inline-flex items-center gap-1 rounded-card bg-paper-cream px-1.5 py-0.5 text-ink-black opacity-90">
+      <Icon className="h-[15px] w-[15px] text-ink-green" />
       <T en={en} ur={ur} />
     </span>
   );
@@ -121,6 +122,7 @@ export function LedgerRow({
               <span className="text-ink-black opacity-75">{formatDateTime(t.occurred_at)}</span>
               <SourceChip type={t.source.type} />
               {t.flag !== 'none' && <FlagChip flag={t.flag} />}
+              <StatusPill status={t.status} />
             </span>
           </span>
           <span className="ml-auto pr-1 text-right">

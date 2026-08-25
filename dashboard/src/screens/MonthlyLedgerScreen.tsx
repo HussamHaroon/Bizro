@@ -11,8 +11,8 @@ import type { Transaction, TransactionKind, UdharOutstanding } from '../types/sc
 import { AmountText } from '../components/AmountText';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { EmptyState } from '../components/EmptyState';
+import { HeroStat } from '../components/HeroStat';
 import { LedgerDayHeader, LedgerRow } from '../components/LedgerRow';
-import { ReceiptCard } from '../components/ReceiptCard';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SealMark } from '../components/TrustSealBadge';
 import { UdharRadar } from '../components/UdharRadar';
@@ -151,9 +151,9 @@ export function MonthlyLedgerScreen() {
   }, [txs]);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6 sm:gap-8">
       <ScreenHeader
-        icon={<IconLedger className="h-9 w-9 text-paper-cream" />}
+        icon={<IconLedger className="h-9 w-9 text-ink-green" />}
         title="Monthly Ledger"
         titleUr="ماہانہ کھاتہ"
         purpose="This month's money"
@@ -201,8 +201,40 @@ export function MonthlyLedgerScreen() {
         </p>
       )}
 
+      {/* Hero numbers (D1-1 §2) — the month summary as large-format stats on
+          raised cream cards; counts up on mount, remounts per month. */}
+      {stats && stats.entries > 0 && (
+        <section
+          key={month}
+          aria-label={pick('Month summary', 'ماہانہ خلاصہ')}
+          className="grid gap-4 sm:gap-5 md:grid-cols-3"
+        >
+          <HeroStat
+            en="Money in"
+            ur="آمدنی"
+            value={stats.sales + stats.collected}
+            tone="in"
+            icon={<IconSale className="h-6 w-6 text-settled-teal" />}
+          />
+          <HeroStat
+            en="Money out"
+            ur="خرچ"
+            value={stats.expenses + stats.udharGiven}
+            tone="out"
+            icon={<IconExpense className="h-6 w-6 text-ledger-red" />}
+          />
+          <HeroStat
+            en="Net kept"
+            ur="خالص بچت"
+            value={Math.abs(stats.sales + stats.collected - stats.expenses - stats.udharGiven)}
+            tone={stats.sales + stats.collected >= stats.expenses + stats.udharGiven ? 'in' : 'out'}
+            icon={<IconUdharSettled className="h-6 w-6 text-ink-green" />}
+          />
+        </section>
+      )}
+
       {/* Settled / udhar split — four glanceable cells: icon + word + amount. */}
-      {stats && (
+      {stats && stats.entries > 0 && (
         <section
           aria-label={pick('Month split', 'ماہ کا خلاصہ')}
           className="bizro-card grid grid-cols-2 sm:grid-cols-4 sm:divide-x sm:divide-rule-line [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(-n+2)]:border-rule-line [&>*:nth-child(odd)]:border-r [&>*:nth-child(odd)]:border-rule-line sm:[&>*:nth-child(-n+2)]:border-b-0 sm:[&>*:nth-child(odd)]:border-r-0"
@@ -211,55 +243,17 @@ export function MonthlyLedgerScreen() {
           <SplitCell icon={<IconExpense className="h-7 w-7 text-ledger-red" />} en="Expenses" ur="خرچ" amount={stats.expenses} tone="out" />
           <SplitCell icon={<IconUdharGiven className="h-7 w-7 text-ledger-red" />} en="Udhar given" ur="ادھار" amount={stats.udharGiven} tone="out" />
           <SplitCell icon={<IconUdharSettled className="h-7 w-7 text-settled-teal" />} en="Collected" ur="وصولی" amount={stats.collected} tone="in" />
+          <p className="col-span-2 flex flex-wrap items-center gap-2 border-t border-rule-line px-4 py-3 text-sm text-ink-black sm:col-span-4">
+            <SealMark variant="verified" />
+            <span className="font-numerals font-semibold">
+              {Math.round((stats.aiEntries / stats.entries) * 100)}%
+            </span>{' '}
+            <T en="of entries stamped from voice or photos" ur="انٹریاں آواز یا تصویر سے درج" />
+          </p>
         </section>
       )}
 
       {udhar && <UdharRadar items={udhar} />}
-
-      {stats && stats.entries > 0 && (
-        <ReceiptCard
-          title={`Month summary — ${formatMonth(month)}`}
-          titleUr="ماہانہ خلاصہ"
-          meta={`${stats.entries} entries · ${stats.aiEntries} AI-verified`}
-        >
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <dl className="flex flex-col gap-1 text-sm text-ink-black">
-              <div className="flex items-center gap-2">
-                <dt className="font-semibold">
-                  <T en="Money in" ur="آمدنی" />
-                </dt>
-                <dd>
-                  <AmountText value={stats.sales + stats.collected} tone="in" />
-                </dd>
-              </div>
-              <div className="flex items-center gap-2">
-                <dt className="font-semibold">
-                  <T en="Money out" ur="خرچ" />
-                </dt>
-                <dd>
-                  <AmountText value={stats.expenses + stats.udharGiven} tone="out" />
-                </dd>
-              </div>
-              <div className="flex items-center gap-2">
-                <dt className="font-semibold">
-                  <T en="Net" ur="باقی" />
-                </dt>
-                <dd>
-                  <AmountText
-                    value={Math.abs(stats.sales + stats.collected - stats.expenses - stats.udharGiven)}
-                    tone={stats.sales + stats.collected >= stats.expenses + stats.udharGiven ? 'in' : 'out'}
-                  />
-                </dd>
-              </div>
-            </dl>
-            <p className="flex items-center gap-2 text-sm text-ink-black">
-              <SealMark variant="verified" />
-              {Math.round((stats.aiEntries / stats.entries) * 100)}%{' '}
-              <T en="entries stamped from voice or photos" ur="انٹریاں آواز یا تصویر سے درج" />
-            </p>
-          </div>
-        </ReceiptCard>
-      )}
 
       {/* Kind filter — every chip is word-paired (EN + UR), never icon-only. */}
       <div role="group" aria-label={pick('Filter entries', 'انٹریاں چھانیں')} className="flex flex-wrap gap-2">
