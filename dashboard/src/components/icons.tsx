@@ -25,7 +25,13 @@ function Badge({ children, className = '', ...rest }: IconProps & { children: Re
       {...rest}
     >
       <circle cx="12" cy="12" r="11" fill="currentColor" />
-      <g fill="var(--bizro-paper-cream)">{children}</g>
+      {/* Glyph fill defaults to paper-cream (dark circle on light surface). On
+          surfaces where currentColor is LIGHT (cream tab on the ink-green top
+          bar), the cascade in index.css flips .bizro-badge-glyph to ink-green —
+          presentation attributes lose to CSS, so no per-call-site props. */}
+      <g fill="var(--bizro-paper-cream)" className="bizro-badge-glyph">
+        {children}
+      </g>
     </svg>
   );
 }
@@ -278,5 +284,27 @@ export function IconLangMixed({ className, ...rest }: IconProps) {
         A
       </text>
     </Badge>
+  );
+}
+
+/* ---- Non-badge glyphs (inline inside filled buttons, currentColor) ---------- */
+
+/** Print / PDF. Solid currentColor — sits inside the ink-green primary button
+    where the filled-badge treatment would vanish. Pair with a word. */
+export function IconPrint({ className, ...rest }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      role="img"
+      aria-hidden="true"
+      focusable="false"
+      className={`inline-block shrink-0 ${className}`}
+      {...rest}
+    >
+      <path
+        fillRule="evenodd"
+        d="M6.8 8.6V4.6h10.4v4h2a1.5 1.5 0 0 1 1.5 1.5v4.4a1.5 1.5 0 0 1-1.5 1.5h-2.3v3.4H7.1v-3.4H4.8a1.5 1.5 0 0 1-1.5-1.5v-4.4A1.5 1.5 0 0 1 4.8 8.6zm3.2 2a1 1 0 0 0-1 1v2.2h6V11.6a1 1 0 0 0-1-1z"
+      />
+    </svg>
   );
 }
