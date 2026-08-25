@@ -9,6 +9,7 @@ import { AmountText, toneForKind } from './AmountText';
 import { Button } from './Button';
 import { TrustSealBadge } from './TrustSealBadge';
 import { formatConfidence, formatDateTime, formatPkr } from '../lib/format';
+import { T } from '../i18n';
 
 export interface AuditTrailProps {
   transaction: Transaction;
@@ -41,21 +42,21 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
       )}
       {!ai && (
         <p className="flex flex-wrap items-baseline gap-x-2 font-semibold text-ink-black">
-          <span>
-            {src.en} <span className="bizro-urdu font-normal" lang="ur">{src.ur}</span>
-          </span>
-          <span className="text-ink-black opacity-70">— no AI involved in this entry</span>
+          <T en={src.en} ur={src.ur} />
+          <span className="text-ink-black opacity-70">— <T en="no AI involved in this entry" ur="اس انٹری میں کوئی اے آئی شامل نہیں" /></span>
         </p>
       )}
 
       <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
         <div className="flex flex-col gap-0.5">
-          <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">When · کب</dt>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
+            <T en="When" ur="کب" />
+          </dt>
           <dd className="text-ink-black">{formatDateTime(t.occurred_at)}</dd>
         </div>
         <div className="flex flex-col gap-0.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
-            Amount · رقم
+            <T en="Amount" ur="رقم" />
           </dt>
           <dd>
             <AmountText value={t.amount_pkd} tone={toneForKind(t.kind)} showWords />
@@ -63,11 +64,11 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
         </div>
         <div className="flex flex-col gap-0.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
-            Source · ماخذ
+            <T en="Source" ur="ماخذ" />
           </dt>
           <dd className="flex flex-col gap-0.5 text-ink-black">
             <span>
-              {src.en} <span className="bizro-urdu" lang="ur">{src.ur}</span>
+              <T en={src.en} ur={src.ur} />
             </span>
             <span className="font-mono text-xs opacity-80">
               {t.source.media_id ? `media ${t.source.media_id} · stored on server (never deleted)` : 'no media (manual entry)'}
@@ -76,7 +77,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
         </div>
         <div className="flex flex-col gap-0.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
-            Model · ماڈل
+            <T en="Model" ur="ماڈل" />
           </dt>
           <dd className="flex flex-col gap-1 text-ink-black">
             <span>{t.source.model ?? '— (manual entry)'}</span>
@@ -101,7 +102,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
       {(t.source.raw_output as { transcript?: string } | null | undefined)?.transcript && (
         <div className="flex flex-col gap-0.5">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-green">
-            What we heard · سنی گئی بات
+            <T en="What we heard" ur="سنی گئی بات" />
           </p>
           <p className="bizro-urdu rounded-card border border-rule-line bg-paper-cream px-3 py-2 text-ink-black" lang="ur">
             {(t.source.raw_output as { transcript?: string }).transcript}
@@ -112,15 +113,15 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
       {t.item_lines.length > 0 && (
         <div className="flex flex-col gap-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-green">
-            Items read from receipt · رسید کی اشیاء
+            <T en="Items read from receipt" ur="رسید کی اشیاء" />
           </p>
           <table className="w-full border-collapse text-ink-black">
             <thead>
               <tr className="bizro-rule-h text-left text-xs uppercase tracking-wide opacity-70">
-                <th className="py-1 pr-2 font-semibold">Item</th>
-                <th className="py-1 pr-2 font-semibold">Qty</th>
-                <th className="py-1 pr-2 font-semibold">Unit price</th>
-                <th className="py-1 text-right font-semibold">Line total</th>
+                <th className="py-1 pr-2 font-semibold"><T en="Item" ur="شے" /></th>
+                <th className="py-1 pr-2 font-semibold"><T en="Qty" ur="مقدار" /></th>
+                <th className="py-1 pr-2 font-semibold"><T en="Unit price" ur="فی قیمت" /></th>
+                <th className="py-1 text-right font-semibold"><T en="Line total" ur="کل" /></th>
               </tr>
             </thead>
             <tbody>
@@ -144,7 +145,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
       {t.confirmation_ur && (
         <div className="flex flex-col gap-0.5">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-green">
-            WhatsApp confirmation · تصدیقی پیغام
+            <T en="WhatsApp confirmation" ur="تصدیقی پیغام" />
           </p>
           <p className="bizro-urdu rounded-card border border-rule-line bg-paper-cream px-3 py-2 text-ink-black" lang="ur">
             {t.confirmation_ur}
@@ -155,11 +156,13 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
       {t.status === 'pending' && onConfirm && (
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={onConfirm}>
-            Confirm this entry
-            <span className="bizro-urdu font-normal" lang="ur">تصدیق کریں</span>
+            <T en="Confirm this entry" ur="تصدیق کریں" />
           </Button>
           <p className="text-xs text-ink-black opacity-75">
-            Low confidence entries stay pending until you confirm (schema.md §1).
+            <T
+              en="Low confidence entries stay pending until you confirm (schema.md §1)."
+              ur="کم اعتماد انٹریاں آپ کی تصدیق تک انتظار میں رہتی ہیں۔"
+            />
           </p>
         </div>
       )}

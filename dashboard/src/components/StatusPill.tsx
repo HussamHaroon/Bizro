@@ -4,6 +4,7 @@
 
 import type { TransactionStatus } from '../types/schema';
 import { IconCheck, IconEdited, IconPending, IconRejected } from './icons';
+import { T } from '../i18n';
 
 export interface StatusPillProps {
   status: TransactionStatus;
@@ -51,10 +52,7 @@ export function StatusPill({ status, className = '' }: StatusPillProps) {
       className={`inline-flex items-center gap-1.5 rounded-card border px-2 py-0.5 text-xs font-semibold ${classes} ${className}`}
     >
       <Icon className="h-[18px] w-[18px]" />
-      <span>{en}</span>
-      <span className="bizro-urdu font-normal" lang="ur">
-        {ur}
-      </span>
+      <T en={en} ur={ur} />
     </span>
   );
 }

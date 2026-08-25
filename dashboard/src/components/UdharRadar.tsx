@@ -7,6 +7,7 @@ import type { UdharOutstanding } from '../types/schema';
 import { AmountText } from './AmountText';
 import { IconCustomer, IconRadar } from './icons';
 import { formatPkr } from '../lib/format';
+import { T, useT } from '../i18n';
 
 export interface UdharRadarProps {
   items: UdharOutstanding[];
@@ -14,6 +15,7 @@ export interface UdharRadarProps {
 }
 
 export function UdharRadar({ items, className = '' }: UdharRadarProps) {
+  const { pick } = useT();
   const total = items.reduce((s, u) => s + u.outstanding_pkd, 0);
   const max = items.length ? items[0].outstanding_pkd : 0;
 
@@ -23,11 +25,15 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
         <IconRadar className="h-8 w-8 text-ledger-red" />
         <div>
           <h2 id="udhar-radar-title" className="flex flex-wrap items-baseline gap-x-2">
-            <span className="font-numerals text-lg font-semibold text-ink-black">Udhar Radar</span>
-            <span className="bizro-urdu text-base text-ink-black" lang="ur">ادھار راڈار</span>
+            <T
+              en="Udhar Radar"
+              ur="ادھار راڈار"
+              className="font-numerals text-lg font-semibold text-ink-black"
+              urClassName="text-base font-semibold text-ink-black"
+            />
           </h2>
           <p className="text-xs text-ink-black opacity-75">
-            Who owes you · کون مقروض ہے
+            <T en="Who owes you" ur="کون مقروض ہے" />
           </p>
         </div>
         {total > 0 && (
@@ -39,8 +45,7 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
 
       {items.length === 0 ? (
         <p className="px-1 py-3 text-sm text-ink-black">
-          No udhar outstanding — everyone has paid up.{' '}
-          <span className="bizro-urdu" lang="ur">کوئی ادھار باقی نہیں</span>
+          <T en="No udhar outstanding — everyone has paid up." ur="کوئی ادھار باقی نہیں" />
         </p>
       ) : (
         <ul>
@@ -59,7 +64,10 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                 <div
                   className="h-1.5 w-full overflow-hidden rounded-card bg-paper-cream"
                   role="img"
-                  aria-label={`${u.name}: ${formatPkr(u.outstanding_pkd)} of ${formatPkr(total)} outstanding`}
+                  aria-label={pick(
+                    `${u.name}: Rs ${u.outstanding_pkd.toLocaleString('en-PK')} outstanding`,
+                    `${u.name}: ادھار ${u.outstanding_pkd.toLocaleString('en-PK')} روپے`,
+                  )}
                 >
                   <div
                     className="h-full rounded-card bg-ledger-red"
