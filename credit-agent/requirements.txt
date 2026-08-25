@@ -1,0 +1,7 @@
+# credit-agent runtime dependencies (all present in the root .venv)
+sqlalchemy>=2.0
+pydantic>=2.13,<3
+httpx>=0.28
+
+# Dev:
+pytest>=8
