@@ -5,6 +5,7 @@
 - POST  /api/transactions/{id}/confirm
 - PATCH /api/transactions/{id}                        (audit-preserving correction)
 - GET   /api/merchants/{id}/report/preview
+- GET   /api/media/{id}                              (audit trail: original voice note / receipt photo)
 - GET   /health lives in main.py
 
 PATCH audit rule: the pre-edit snapshot of every editable field is stored in
@@ -20,13 +21,35 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 
 from . import dispatch
-from .db import CreditReport, Customer, Merchant, Transaction, db_session
+from .db import CreditReport, Customer, Merchant, MediaBlob, Transaction, db_session
 from .schemas import TransactionPatch, transaction_to_wire
 
 router = APIRouter(prefix="/api")
+
+
+@router.get("/media/{media_id}")
+def get_media(media_id: str):
+    """Serve the original voice note / receipt photo for the audit trail
+    (design.md §7.2). Path comes from our own UUID-named storage, never the client."""
+    try:
+        mid = uuid.UUID(media_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid media id")
+    with db_session() as session:
+        blob = session.get(MediaBlob, mid)
+        if blob is None:
+            raise HTTPException(status_code=404, detail="media not found")
+        path = blob.storage_path
+        mime = blob.mime_type
+    import os
+
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=410, detail="media file missing on disk")
+    return FileResponse(path, media_type=mime)
 
 _EDITABLE_FIELDS = ("kind", "amount_pkd", "currency", "description", "occurred_at", "item_lines", "flag")
 
