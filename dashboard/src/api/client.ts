@@ -16,6 +16,7 @@ import {
   deriveReportPreview,
   deriveUdhar,
 } from './mockData';
+import { adaptCanonicalReport, isCanonicalReport } from './reportAdapter';
 import type {
   CreditReportPreview,
   Transaction,
@@ -93,10 +94,21 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
         body: JSON.stringify(patch),
       }).then((data): Labeled<Transaction> => ({ mock: false, data }));
     },
-    reportPreview() {
-      return req<CreditReportPreview>(`/api/merchants/${merchantId}/report/preview`).then(
-        (data): Labeled<CreditReportPreview> => ({ mock: false, data: { ...data, mock: false } }),
-      );
+    async reportPreview() {
+      const payload = await req<unknown>(`/api/merchants/${merchantId}/report/preview`);
+      // Server wraps as {cached, report}; the report itself is canonical §6.5.
+      const canonical = (payload as { report?: unknown })?.report ?? payload;
+      if (isCanonicalReport(canonical)) {
+        const qs = '';
+        const rows = await req<Transaction[]>(
+          `/api/merchants/${merchantId}/transactions${qs}`,
+        );
+        return {
+          mock: false,
+          data: adaptCanonicalReport(canonical, rows),
+        } as Labeled<CreditReportPreview>;
+      }
+      return { mock: false, data: { ...(payload as CreditReportPreview), mock: false } };
     },
   };
 }
