@@ -7,6 +7,7 @@ import { useState } from 'react';
 import type { Transaction } from '../types/schema';
 import { api } from '../api/client';
 import { Button } from './Button';
+import { T, useT } from '../i18n';
 
 export interface EditTransactionFormProps {
   transaction: Transaction;
@@ -15,6 +16,7 @@ export interface EditTransactionFormProps {
 }
 
 export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditTransactionFormProps) {
+  const { pick } = useT();
   const [amount, setAmount] = useState(String(t.amount_pkd));
   const [description, setDescription] = useState(t.description ?? '');
   const [saving, setSaving] = useState(false);
@@ -23,7 +25,7 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
   async function save() {
     const parsed = Number(amount);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setError('Enter a positive amount · رقم درج کریں');
+      setError(pick('Enter a positive amount', 'رقم درج کریں'));
       return;
     }
     setSaving(true);
@@ -52,11 +54,11 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
       }}
     >
       <p className="text-sm font-semibold text-ink-black">
-        Correct this entry · <span className="bizro-urdu font-normal" lang="ur">اس انٹری میں ترمیم کریں</span>
+        <T en="Correct this entry" ur="اس انٹری میں ترمیم کریں" />
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm text-ink-black">
-          Amount (PKR) · <span className="bizro-urdu" lang="ur">رقم</span>
+          <T en="Amount (PKR)" ur="رقم" />
           <input
             type="number"
             inputMode="numeric"
@@ -68,7 +70,7 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
           />
         </label>
         <label className="flex flex-col gap-1 text-sm text-ink-black">
-          Note · <span className="bizro-urdu" lang="ur">تفصیل</span>
+          <T en="Note" ur="تفصیل" />
           <input
             type="text"
             value={description}
@@ -84,15 +86,17 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
       )}
       <div className="flex flex-wrap gap-3">
         <Button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : 'Save correction'}
-          <span className="bizro-urdu font-normal" lang="ur">محفوظ کریں</span>
+          <T en={saving ? 'Saving…' : 'Save correction'} ur={saving ? 'محفوظ ہو رہا ہے…' : 'محفوظ کریں'} />
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel <span className="bizro-urdu font-normal" lang="ur">محو کریں</span>
+          <T en="Cancel" ur="محو کریں" />
         </Button>
       </div>
       <p className="text-xs text-ink-black opacity-75">
-        The original values stay on record for the audit trail (schema.md §4 PATCH).
+        <T
+          en="The original values stay on record for the audit trail (schema.md §4 PATCH)."
+          ur="اصل قیمتیں ریکارڈ میں محفوظ رہتی ہیں۔"
+        />
       </p>
     </form>
   );

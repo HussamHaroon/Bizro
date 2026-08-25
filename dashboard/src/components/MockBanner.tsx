@@ -4,6 +4,7 @@
    tokens' approved stamp pair. */
 
 import { api } from '../api/client';
+import { T } from '../i18n';
 
 export function MockBanner() {
   if (!api.mock) return null;
@@ -12,10 +13,7 @@ export function MockBanner() {
       role="status"
       className="bg-seal-gold px-4 py-2 text-center text-sm font-semibold text-ink-black"
     >
-      Demo data (no live server) ·{' '}
-      <span className="bizro-urdu font-normal" lang="ur">
-        نمائشی ڈیٹا
-      </span>{' '}
+      <T en="Demo data (no live server)" ur="نمائشی ڈیٹا" />{' '}
       — set <code className="font-mono">VITE_API_BASE_URL</code> for live records
     </p>
   );
