@@ -17,14 +17,14 @@ import { ComponentsGallery } from './dev/ComponentsGallery';
 function TopBar() {
   const { pick } = useT();
   const tabClass = ({ isActive }: { isActive: boolean }) =>
-    `inline-flex min-h-touch items-center gap-2 rounded-button px-3 text-sm font-semibold transition-colors duration-200 ease-out ${
+    `bizro-topbar-tab inline-flex min-h-touch items-center gap-2 rounded-button px-3 text-sm font-semibold transition-colors duration-200 ease-out ${
       isActive
         ? 'bg-paper-cream text-ink-green'
         : 'text-paper-cream hover:bg-ink-green-hover'
     }`;
   return (
     <header
-      className="sticky top-0 z-40 border-b-2 border-seal-gold bg-ink-green text-paper-cream shadow-card"
+      className="bizro-no-print sticky top-0 z-40 border-b-2 border-seal-gold bg-ink-green text-paper-cream shadow-card"
     >
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
         <Link
@@ -50,7 +50,7 @@ function TopBar() {
           </NavLink>
         </nav>
         <div className="ml-auto">
-          <LanguageControl onDark />
+          <LanguageControl />
         </div>
       </div>
     </header>
@@ -71,7 +71,7 @@ export function App() {
             <Route path="/dev/components" element={<ComponentsGallery />} />
           </Routes>
         </main>
-        <footer className="border-t border-rule-line px-4 py-3">
+        <footer className="bizro-no-print border-t border-rule-line px-4 py-3">
           <p className="mx-auto max-w-6xl text-xs text-ink-black opacity-70">
             <T en="Bizro control room · Khata Modern" ur="بزرو کنٹرول روم" /> ·{' '}
             <Link to="/dev/components" className="font-semibold underline">
