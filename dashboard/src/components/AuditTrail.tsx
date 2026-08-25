@@ -7,6 +7,7 @@
 import type { Transaction } from '../types/schema';
 import { AmountText, toneForKind } from './AmountText';
 import { Button } from './Button';
+import { SourceMedia } from './SourceMedia';
 import { TrustSealBadge } from './TrustSealBadge';
 import { formatConfidence, formatDateTime, formatPkr } from '../lib/format';
 import { T } from '../i18n';
@@ -98,6 +99,10 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           </dd>
         </div>
       </dl>
+
+      {/* The original artifact — deepest drill-down level (design.md §4.5):
+           tap a line → source → original voice note / receipt photo. */}
+      <SourceMedia mediaId={t.source.media_id} sourceType={t.source.type} />
 
       {(t.source.raw_output as { transcript?: string } | null | undefined)?.transcript && (
         <div className="flex flex-col gap-0.5">

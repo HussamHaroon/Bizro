@@ -12,22 +12,15 @@ const OPTIONS: { mode: LangMode; label: string; urdu: boolean; icon: typeof Icon
   { mode: 'en', label: 'English', urdu: false, icon: IconLangEn },
 ];
 
-export function LanguageControl({ onDark = false }: { onDark?: boolean }) {
+export function LanguageControl() {
   const { mode, setMode } = useLang();
   const { pick } = useT();
-
-  const activeClass = onDark ? 'bg-paper-cream text-ink-green' : 'bg-ink-green text-paper-cream';
-  const idleClass = onDark
-    ? 'text-paper-cream hover:bg-ink-green-hover'
-    : 'text-ink-black hover:bg-paper-cream';
 
   return (
     <div
       role="group"
       aria-label={pick('Language', 'زبان')}
-      className={`flex items-center gap-0.5 rounded-button border p-0.5 ${
-        onDark ? 'border-paper-cream/40' : 'border-rule-line'
-      }`}
+      className="flex items-center gap-0.5 rounded-button border border-paper-cream/40 p-0.5"
     >
       {OPTIONS.map(({ mode: m, label, urdu, icon: Icon }) => {
         const active = mode === m;
@@ -37,8 +30,10 @@ export function LanguageControl({ onDark = false }: { onDark?: boolean }) {
             type="button"
             onClick={() => setMode(m)}
             aria-pressed={active}
-            className={`inline-flex min-h-touch items-center gap-1.5 rounded-button px-2.5 text-sm font-semibold transition-colors duration-200 ease-out ${
-              active ? activeClass : idleClass
+            className={`bizro-lang-segment inline-flex min-h-touch items-center gap-1.5 rounded-button px-2.5 text-sm font-semibold transition-colors duration-200 ease-out ${
+              active
+                ? 'bg-paper-cream text-ink-green'
+                : 'text-paper-cream hover:bg-ink-green-hover'
             }`}
           >
             <Icon className="h-6 w-6" />

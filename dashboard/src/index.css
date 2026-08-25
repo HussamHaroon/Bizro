@@ -133,6 +133,19 @@
     border-bottom: var(--bizro-rule-h);
   }
 
+  /* Badge-glyph knockout (icons.tsx): the filled badge circle uses currentColor
+     and the glyph defaults to paper-cream. Where currentColor is LIGHT (cream
+     inactive states on the ink-green top bar) the circle is light, so the glyph
+     flips to ink-green; active/dark states keep the cream knockout. */
+  .bizro-topbar-tab .bizro-badge-glyph,
+  .bizro-lang-segment .bizro-badge-glyph {
+    fill: var(--bizro-ink-green);
+  }
+  .bizro-topbar-tab[aria-current='page'] .bizro-badge-glyph,
+  .bizro-lang-segment[aria-pressed='true'] .bizro-badge-glyph {
+    fill: var(--bizro-paper-cream);
+  }
+
   /* Urdu inline isolation: keeps RTL runs from disturbing surrounding Latin text. */
   .bizro-urdu {
     font-family: var(--bizro-font-body);
@@ -175,5 +188,36 @@
     .bizro-stamp-in {
       animation: none;
     }
+  }
+}
+
+/* ---- Print — the credit report becomes the PDF artifact (design.md §6
+   screen 4): hide chrome (top bar, banner, footer, drill-down controls), keep
+   the token colors exact so the seal gauge prints branded, cards never split
+   across pages. ------------------------------------------------------------------ */
+@media print {
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .bizro-no-print {
+    display: none !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .bizro-card {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  .bizro-card-hover,
+  .bizro-card-hover:hover {
+    transition: none !important;
+    transform: none !important;
+  }
+  audio,
+  button.bizro-print-hide {
+    display: none !important;
   }
 }

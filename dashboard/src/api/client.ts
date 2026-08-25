@@ -4,11 +4,17 @@
      POST /api/transactions/{id}/confirm
      PATCH /api/transactions/{id}          (correction; server keeps original for audit)
      GET  /api/merchants/{id}/report/preview
-   Live mode: set VITE_API_BASE_URL (e.g. http://localhost:8000) — that single env
-   change swaps every screen from mock fixtures to the real server.
-   Mock mode (no VITE_API_BASE_URL): clearly-labeled fixtures (STATUS.md D0-3) shaped
-   exactly like schema.md §1; every result carries mock:true and screens surface a
-   "mock data" banner so nothing fabricated is ever presented as real. */
+     GET  /api/media/{id}                  (audit drill-down: original voice note / photo)
+
+   LIVE BY DEFAULT (D1-1 wiring): with VITE_API_BASE_URL unset the client targets
+   same-origin /api — the Vite dev proxy already forwards /api to :8000, and a
+   deployed build sits next to the server. The mock fixtures are used ONLY as a
+   fallback when a live call fails BEFORE any live call has ever succeeded (server
+   not running, wrong merchant id…); the fallback flips a subscribed, honestly
+   labeled banner (MockBanner). Once live has answered once, later failures are
+   real errors and surface as errors — never silently swapped data.
+
+   Set VITE_API_BASE_URL to target a server on another origin. */
 
 import {
   MOCK_MERCHANT,
@@ -52,6 +58,10 @@ export interface ApiClient {
 }
 
 const env = import.meta.env;
+
+/** '' = same-origin (dev proxy → :8000); or an explicit origin. */
+const BASE_URL = env.VITE_API_BASE_URL ? String(env.VITE_API_BASE_URL).replace(/\/$/, '') : '';
+const MERCHANT_ID = String(env.VITE_MERCHANT_ID ?? 'me');
 
 // -- live client ----------------------------------------------------------------
 
@@ -99,10 +109,7 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
       // Server wraps as {cached, report}; the report itself is canonical §6.5.
       const canonical = (payload as { report?: unknown })?.report ?? payload;
       if (isCanonicalReport(canonical)) {
-        const qs = '';
-        const rows = await req<Transaction[]>(
-          `/api/merchants/${merchantId}/transactions${qs}`,
-        );
+        const rows = await req<Transaction[]>(`/api/merchants/${merchantId}/transactions`);
         return {
           mock: false,
           data: adaptCanonicalReport(canonical, rows),
@@ -162,7 +169,74 @@ function mockClient(): ApiClient {
   };
 }
 
-/** App-wide client. Mock unless VITE_API_BASE_URL is set (see dashboard/.env.example). */
-export const api: ApiClient = env.VITE_API_BASE_URL
-  ? liveClient(String(env.VITE_API_BASE_URL), String(env.VITE_MERCHANT_ID ?? 'me'))
-  : mockClient();
+// -- fallback orchestration --------------------------------------------------------
+
+const live = liveClient(BASE_URL, MERCHANT_ID);
+let mockImpl: ApiClient | null = null;
+const getMock = (): ApiClient => (mockImpl ??= mockClient());
+
+/** Flips to true only when a live call fails BEFORE any live success — after
+    that, live is genuinely up and failures are surfaced as errors instead. */
+let fellBack = false;
+let liveEverSucceeded = false;
+let fallbackReason: string | null = null;
+
+const listeners = new Set<() => void>();
+/** Stable cached snapshot — useSyncExternalStore requires referential stability. */
+let snapshot = JSON.stringify({ mock: false, reason: null as string | null });
+
+function notify() {
+  snapshot = JSON.stringify({ mock: fellBack, reason: fallbackReason });
+  for (const l of listeners) l();
+}
+
+/** Subscribe to live/mock mode flips (MockBanner). Returns an unsubscribe fn. */
+export function subscribeClient(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+/** Cached {mock, reason} snapshot for useSyncExternalStore. */
+export function clientSnapshot(): string {
+  return snapshot;
+}
+
+async function attempt<T>(op: (c: ApiClient) => Promise<Labeled<T>>): Promise<Labeled<T>> {
+  if (!fellBack) {
+    try {
+      const res = await op(live);
+      liveEverSucceeded = true;
+      return res;
+    } catch (e) {
+      if (liveEverSucceeded) throw e; // live was working — a real error, show it
+      fellBack = true;
+      fallbackReason = e instanceof Error ? e.message : String(e);
+      notify();
+    }
+  }
+  return op(getMock());
+}
+
+/** App-wide client. Live-first (same-origin /api by default); honest mock
+    fallback on first failure — see the header comment and MockBanner. */
+export const api: ApiClient = {
+  get mock() {
+    return fellBack;
+  },
+  get merchantId() {
+    return fellBack ? getMock().merchantId : MERCHANT_ID;
+  },
+  listTransactions: (query) => attempt((c) => c.listTransactions(query)),
+  listUdhar: () => attempt((c) => c.listUdhar()),
+  confirmTransaction: (id) => attempt((c) => c.confirmTransaction(id)),
+  patchTransaction: (id, patch) => attempt((c) => c.patchTransaction(id, patch)),
+  reportPreview: () => attempt((c) => c.reportPreview()),
+};
+
+/** Absolute URL for GET /api/media/{id} (audit drill-down). Never called while
+    the client runs on mock fixtures — mock media ids cannot resolve. */
+export function mediaUrl(id: string): string {
+  return `${BASE_URL}/api/media/${encodeURIComponent(id)}`;
+}

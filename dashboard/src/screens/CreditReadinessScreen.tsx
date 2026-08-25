@@ -16,6 +16,7 @@ import type {
 } from '../types/schema';
 import { AmountText, toneForKind, type AmountTone } from '../components/AmountText';
 import { AuditTrail } from '../components/AuditTrail';
+import { Button } from '../components/Button';
 import { CashflowChart } from '../components/CashflowChart';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -25,6 +26,7 @@ import {
   IconFlag,
   IconManual,
   IconPhoto,
+  IconPrint,
   IconReport,
   IconVoice,
 } from '../components/icons';
@@ -135,14 +137,25 @@ export function CreditReadinessScreen() {
         purpose="Loan-ready proof"
         purposeUr="قرض کے لیے ثبوت"
         actions={
-          <p className="text-right text-sm text-paper-cream">
-            {report.merchant.display_name}
-            <br />
-            <span className="opacity-85">
-              {report.period.start} → {report.period.end} ·{' '}
-              <T en="for Alkhidmat Mawakhat review" ur="الخدمت مواکات کے جائزے کے لیے" />
-            </span>
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-right text-sm text-ink-black">
+              <span className="font-semibold">{report.merchant.display_name}</span>
+              <br />
+              <span className="opacity-75">
+                {report.period.start} → {report.period.end} ·{' '}
+                <T en="for Alkhidmat Mawakhat review" ur="الخدمت مواکات کے جائزے کے لیے" />
+              </span>
+            </p>
+            {/* ONE primary action per screen (§4.4): print the report as the
+                PDF artifact. Hidden in print itself. */}
+            <Button
+              className="bizro-no-print"
+              icon={<IconPrint className="h-5 w-5" />}
+              onClick={() => window.print()}
+            >
+              <T en="Print / PDF" ur="پرنٹ / پی ڈی ایف" />
+            </Button>
+          </div>
         }
       />
 
