@@ -1,0 +1,20 @@
+# Bizro — full-stack runtime requirements (union of server + pipelines).
+# One command installs everything: pip install -r requirements.txt
+# Per-package lists live in voice-agent/, vision-agent/, credit-agent/ requirements.txt.
+
+# server/
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+pydantic>=2.13,<3
+pydantic-settings>=2.4
+httpx>=0.28
+python-multipart>=0.0.9
+
+# pipelines
+requests>=2.32          # vision-agent OCR client
+pillow>=11.0            # receipt image handling + simulator synth media
+imageio-ffmpeg>=0.6     # bundled ffmpeg binary: WhatsApp ogg/opus decode (voice)
+
+# dev/test
+pytest>=8
