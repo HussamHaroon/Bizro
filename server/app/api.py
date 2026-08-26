@@ -54,7 +54,24 @@ def get_media(media_id: str):
 _EDITABLE_FIELDS = ("kind", "amount_pkd", "currency", "description", "occurred_at", "item_lines", "flag")
 
 
+@router.get("/merchants")
+def list_merchants():
+    """Merchant picker source (D1-2); also proves server liveness for the dashboard."""
+    with db_session() as session:
+        rows = session.scalars(select(Merchant).order_by(Merchant.created_at)).all()
+        return [{"id": str(m.id), "display_name": m.display_name, "wa_id": m.wa_id} for m in rows]
+
+
 def _get_merchant(session, merchant_id: str) -> Merchant:
+    # 'me' = first merchant (single-merchant demo mode, ruling D1-2) — lets the
+    # dashboard go live with zero VITE_MERCHANT_ID configuration.
+    if merchant_id == "me":
+        m = session.scalars(select(Merchant).order_by(Merchant.created_at)).first()
+        if m is None:
+            raise HTTPException(
+                status_code=404, detail="no merchants yet — seed data or send a webhook first"
+            )
+        return m
     try:
         mid = uuid.UUID(merchant_id)
     except ValueError:
@@ -84,11 +101,11 @@ def list_transactions(
     kind: str | None = None,
 ):
     with db_session() as session:
-        _get_merchant(session, merchant_id)
+        merchant = _get_merchant(session, merchant_id)
         q = (
             select(Transaction, Customer)
             .outerjoin(Customer, Transaction.customer_id == Customer.id)
-            .where(Transaction.merchant_id == uuid.UUID(merchant_id))
+            .where(Transaction.merchant_id == merchant.id)
             .order_by(Transaction.occurred_at.desc())
         )
         if _from is not None:
@@ -114,12 +131,12 @@ def udhar_outstanding(merchant_id: str):
     """Udhar Radar — derived view, no new tables (schema.md §3):
     outstanding = Σ(udhar_given) − Σ(udhar_settlement) over confirmed+pending."""
     with db_session() as session:
-        _get_merchant(session, merchant_id)
+        merchant = _get_merchant(session, merchant_id)
         rows = session.execute(
             select(Customer, Transaction)
             .join(Transaction, Transaction.customer_id == Customer.id)
             .where(
-                Transaction.merchant_id == uuid.UUID(merchant_id),
+                Transaction.merchant_id == merchant.id,
                 Transaction.kind.in_(["udhar_given", "udhar_settlement"]),
                 Transaction.status.in_(["confirmed", "pending", "edited"]),
             )
