@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 
 from . import dashscope_client, dispatch, whatsapp_client
 from .api import router as api_router
-from .config import ensure_repo_root_on_path, get_settings
+from .config import REPO_ROOT, ensure_repo_root_on_path, get_settings
 from .db import init_db
 from .webhook import router as webhook_router
 
@@ -49,6 +51,29 @@ app = FastAPI(title="Bizro server", version="0.1.0", lifespan=lifespan)
 
 app.include_router(webhook_router)
 app.include_router(api_router)
+
+# --- Single-service deploy: serve the built dashboard (dashboard/dist) -------
+# `npm run build` in dashboard/ produces a static SPA; mounting it here means ONE
+# process serves UI + API (works for the demo and for a single-container deploy).
+# The dev workflow (vite on :5173 proxying /api) is unaffected.
+
+_DIST = REPO_ROOT / "dashboard" / "dist"
+_INDEX = _DIST / "index.html"
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def spa(full_path: str):
+    """SPA fallback: real files from dist/, else index.html for client routes."""
+    if _INDEX.is_file():
+        candidate = (_DIST / full_path).resolve()
+        if full_path and str(candidate).startswith(str(_DIST.resolve())) and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_INDEX)
+    # No built dashboard (source checkout without a build) — say so instead of 500.
+    return {
+        "detail": "dashboard not built — run `npm install && npm run build` in dashboard/, "
+        "or use the dev server (cd dashboard && npm run dev)"
+    }
 
 
 @app.get("/health")
