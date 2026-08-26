@@ -180,7 +180,9 @@ _CLARIFY_NAME = "گاہک کا نام کیا ہے؟"
 
 
 def _build_clarification_ur(tx: Transaction, numeral_style: str) -> str:
-    unknown_amount = tx.amount_pkd <= 0
+    # §6.2/§6.9: unknown amount travels as None (never 0.0); <= 0 kept as a
+    # defensive legacy guard.
+    unknown_amount = tx.amount_pkd is None or tx.amount_pkd <= 0
     unknown_kind = tx.description.startswith(UNCLEAR_KIND_MARKER)
     known_name = (tx.counterparty.name or "").strip() if tx.counterparty else ""
 

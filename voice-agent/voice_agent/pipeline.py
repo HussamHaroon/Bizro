@@ -160,25 +160,28 @@ def _assemble(
         ), []
 
     # -- unclear extraction → flag, never guess ------------------------------
-    unknown_amount = ("amount" in unclear) or inner.get("amount_pkd") in (None, "", 0, 0.0)
+    amount = _safe_amount(inner.get("amount_pkd"))
+    unknown_amount = ("amount" in unclear) or amount is None
     if "kind" in unclear or unknown_amount:
         return _low_confidence_fallback(
             transcript=transcript, when=when, media_id=media_id, confidence=confidence,
             settings=settings, mock=mock, kind_hint=inner.get("kind"),
             counterparty_name=(inner.get("counterparty") or {}).get("name"),
             kind=None if "kind" in unclear else inner.get("kind"),
-            amount=0.0,
+            amount=None,
             mock_scenario=mock_scenario,
         ), []
 
     raw_out: dict = {"transcript": transcript}
+    if mock:
+        raw_out["mock"] = True  # §6.3/§6.11: stored-row mock marker
     if mock_scenario:
         raw_out["mock_scenario"] = mock_scenario
 
     try:
         tx = Transaction(
             kind=inner["kind"],
-            amount_pkd=float(inner["amount_pkd"]),
+            amount_pkd=amount,
             counterparty=(inner.get("counterparty") or {}),
             description=str(inner.get("description") or ""),
             item_lines=inner.get("item_lines") or [],
@@ -210,7 +213,7 @@ def _apply_derived_flags(tx: Transaction, settings: Settings) -> None:
     if tx.flag == "none":
         if tx.source.confidence < settings.confidence_confirm_threshold:
             tx.flag = "low_confidence"
-        elif tx.item_lines:
+        elif tx.item_lines and tx.amount_pkd is not None:
             total = sum(li.line_total for li in tx.item_lines)
             if abs(total - tx.amount_pkd) > 0.01:
                 tx.flag = "total_mismatch"
@@ -229,11 +232,11 @@ def _low_confidence_fallback(
     kind_hint: str | None = None,
     counterparty_name: str | None = None,
     kind: str | None = None,
-    amount: float = 0.0,
+    amount: float | None = None,
     mock_scenario: str | None = None,
 ) -> dict:
-    """Schema-conformant 'ask again' payload. amount 0.0 = unknown, never a guess
-    (notes.md §4: backend must not persist this row — send the question instead)."""
+    """Schema-conformant 'ask again' payload. amount None = unknown, never a guess
+    (§6.2/§6.9: the server must persist NOTHING and send the clarification instead)."""
     # kind is required by the contract enum; carry what was determinable, else mark
     # the description with UNCLEAR_KIND so the confirmation builder asks about kind.
     final_kind = kind if kind in ("sale", "expense", "udhar_given", "udhar_settlement") else "udhar_given"
@@ -243,6 +246,8 @@ def _low_confidence_fallback(
         description = f"{UNCLEAR_KIND_MARKER} — needs clarification{': ' + note if note else ''}"
 
     raw_out: dict = {"transcript": transcript}
+    if mock:
+        raw_out["mock"] = True  # §6.3/§6.11: stored-row mock marker
     if mock_scenario:
         raw_out["mock_scenario"] = mock_scenario
     elif mock:
@@ -311,6 +316,20 @@ def _safe_confidence(value: Any) -> float:
     except (TypeError, ValueError):
         return 0.0
     return min(max(c, 0.0), 1.0)
+
+
+def _safe_amount(value: Any) -> float | None:
+    """Real-model amount → float, or None when absent/blank/unparseable/≤0.
+    None = unknown → low-confidence clarification path (§6.9); the 10M upper
+    bound (§6.10) is enforced by the Transaction contract model, whose
+    ValidationError also routes to that path."""
+    if value is None or value == "":
+        return None
+    try:
+        amt = float(value)
+    except (TypeError, ValueError):
+        return None
+    return amt if amt > 0 else None
 
 
 def _repair_call(client: DashScopeClient, settings: Settings,
