@@ -75,6 +75,9 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
     if (!res.ok) throw new Error(`API ${res.status} ${res.statusText} — ${path}`);
     return (await res.json()) as T;
   }
+  // Server wraps transaction lists as {count, transactions}; accept both shapes.
+  const txList = (d: unknown): Transaction[] =>
+    Array.isArray(d) ? d : ((d as { transactions?: Transaction[] })?.transactions ?? []);
   return {
     mock: false,
     merchantId,
@@ -84,8 +87,8 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
       if (query.to) qs.set('to', query.to);
       if (query.kind) qs.set('kind', query.kind);
       const suffix = qs.size ? `?${qs}` : '';
-      return req<Transaction[]>(`/api/merchants/${merchantId}/transactions${suffix}`).then(
-        (data): Labeled<Transaction[]> => ({ mock: false, data }),
+      return req<unknown>(`/api/merchants/${merchantId}/transactions${suffix}`).then(
+        (data): Labeled<Transaction[]> => ({ mock: false, data: txList(data) }),
       );
     },
     listUdhar() {
@@ -109,10 +112,10 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
       // Server wraps as {cached, report}; the report itself is canonical §6.5.
       const canonical = (payload as { report?: unknown })?.report ?? payload;
       if (isCanonicalReport(canonical)) {
-        const rows = await req<Transaction[]>(`/api/merchants/${merchantId}/transactions`);
+        const rows = await req<unknown>(`/api/merchants/${merchantId}/transactions`);
         return {
           mock: false,
-          data: adaptCanonicalReport(canonical, rows),
+          data: adaptCanonicalReport(canonical, txList(rows)),
         } as Labeled<CreditReportPreview>;
       }
       return { mock: false, data: { ...(payload as CreditReportPreview), mock: false } };
