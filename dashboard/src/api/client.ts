@@ -92,8 +92,13 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
       );
     },
     listUdhar() {
-      return req<UdharOutstanding[]>(`/api/merchants/${merchantId}/udhar`).then(
-        (data): Labeled<UdharOutstanding[]> => ({ mock: false, data }),
+      return req<unknown>(`/api/merchants/${merchantId}/udhar`).then(
+        (data): Labeled<UdharOutstanding[]> => ({
+          mock: false,
+          data: Array.isArray(data)
+            ? data
+            : ((data as { customers?: UdharOutstanding[] })?.customers ?? []),
+        }),
       );
     },
     confirmTransaction(id) {
