@@ -180,6 +180,20 @@ class CreditReport(Base):
     )
 
 
+class ProcessedMessage(Base):
+    """Webhook idempotency table (schema.md §6.8, finding F-5): the webhook
+    inserts-or-ignores the wamid BEFORE dispatching; a Meta redelivery hits the
+    primary key and is acknowledged without re-processing, so one message can
+    never double-create a transaction. Additive — no consumer migration."""
+
+    __tablename__ = "processed_messages"
+
+    message_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+
 # --- engine / session -------------------------------------------------------
 
 

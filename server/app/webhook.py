@@ -18,17 +18,19 @@ path runs with zero Meta setup.
 from __future__ import annotations
 
 import base64
+import hmac
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Query, Request, Response
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from . import dispatch, whatsapp_client
 from .config import get_settings
-from .db import MediaBlob, Merchant, db_session
-from .media import store_blob
+from .db import MediaBlob, Merchant, ProcessedMessage, db_session
+from .media import MediaValidationError, store_blob, validate_media
 
 logger = logging.getLogger("bizro.webhook")
 
@@ -39,6 +41,10 @@ HELP_REPLY_UR = (
     "تصدیق کے لیے '1' اور رد کے لیے '0' لکھیں۔"
 )
 
+MEDIA_INVALID_REPLY_UR = (
+    "فائل موصول نہیں ہو سکی یا بہت بڑی ہے۔ براہِ کرم دوبارہ چھوٹی فائل بھیجیں۔"
+)
+
 
 @router.get("/webhook/whatsapp")
 def webhook_verify(
@@ -47,7 +53,12 @@ def webhook_verify(
     hub_challenge: str | None = Query(None, alias="hub.challenge"),
 ):
     s = get_settings()
-    if hub_mode == "subscribe" and hub_verify_token == s.whatsapp_verify_token:
+    # SEC: constant-time compare (bizro-security) — a plain == leaks token
+    # length/prefix information through timing.
+    token_ok = hmac.compare_digest(
+        str(hub_verify_token or ""), str(s.whatsapp_verify_token or "")
+    )
+    if hub_mode == "subscribe" and token_ok:
         return Response(content=hub_challenge or "", media_type="text/plain")
     return Response(content="verification failed", status_code=403)
 
@@ -79,14 +90,32 @@ async def webhook_ingest(request: Request):
                 continue
 
             for msg in messages:
+                # F-5 (§6.8): claim the wamid before any processing — a Meta
+                # redelivery is acknowledged as deduped and never re-processed.
+                wamid = msg.get("id")
+                if wamid and not _claim_message_id(str(wamid)):
+                    results.append({"message_id": wamid, "deduped": True})
+                    continue
                 try:
                     outcome = _handle_message(msg, contacts, sim_envelope)
                     results.append(outcome)
                 except Exception:  # never let one message kill the webhook
-                    logger.exception("Message handling failed (wamid=%s)", msg.get("id"))
-                    results.append({"message_id": msg.get("id"), "ok": False, "error": "internal"})
+                    logger.exception("Message handling failed (wamid=%s)", wamid)
+                    results.append({"message_id": wamid, "ok": False, "error": "internal"})
 
     return {"processed": len(results), "results": results}
+
+
+def _claim_message_id(message_id: str) -> bool:
+    """Insert-or-ignore into processed_messages; False when already seen."""
+    with db_session() as session:
+        try:
+            session.add(ProcessedMessage(message_id=message_id))
+            session.commit()
+            return True
+        except IntegrityError:
+            session.rollback()
+            return False
 
 
 def _handle_message(
@@ -159,6 +188,15 @@ def _ingest_media(
     mime_type: str = media_meta.get("mime_type") or sim_envelope.get("mime_type") or "application/octet-stream"
 
     data, source_note = _get_media_bytes(media_meta, sim_envelope, mime_type, kind)
+
+    # SEC: size caps + magic-byte sniff BEFORE anything touches disk.
+    try:
+        validate_media(data, kind)
+    except MediaValidationError as exc:
+        logger.warning("Rejected inbound %s media from %s: %s", kind, merchant.wa_id, exc)
+        sent = dispatch.send_reply(session, merchant, MEDIA_INVALID_REPLY_UR)
+        return _rejection_outcome(msg, MEDIA_INVALID_REPLY_UR, sent, reason=str(exc))
+
     path, digest = store_blob(data, mime_type, kind)
 
     blob = MediaBlob(
@@ -171,10 +209,41 @@ def _ingest_media(
     session.add(blob)
     session.flush()
 
-    if kind == "voice":
-        tx_data = dispatch.process_voice_note(str(path), merchant, occurred_at, digest)
-    else:
-        tx_data = dispatch.process_receipt_image(str(path), merchant, occurred_at, digest)
+    media_block = {
+        "id": str(blob.id),
+        "sha256": digest,
+        "bytes": len(data),
+        "storage_path": str(path),
+        "source": source_note,
+    }
+
+    # F-4: prior expense rows feed the vision pipeline's price-sanity flags.
+    history = dispatch.price_history(session, merchant.id) if kind == "image" else None
+
+    rejection_reply: str | None = None
+    try:
+        if kind == "voice":
+            tx_data = dispatch.process_voice_note(str(path), merchant, occurred_at, digest)
+        else:
+            tx_data = dispatch.process_receipt_image(
+                str(path), merchant, occurred_at, digest, history=history
+            )
+    except Exception as exc:
+        # §6.4/F-6: ReceiptRejected carries a polite Urdu reply — send it,
+        # persist nothing, and report the message handled. Anything else
+        # propagates to the webhook's per-message error handler.
+        rejection_reply = dispatch.rejection_reply_from_exception(exc)
+        if rejection_reply is None:
+            raise
+        tx_data = None
+
+    # §6.9/F-1: ambiguous/no-amount result → clarification, never persistence.
+    if rejection_reply is None:
+        rejection_reply = dispatch.pipeline_rejection(tx_data)
+
+    if rejection_reply is not None:
+        sent = dispatch.send_reply(session, merchant, rejection_reply)
+        return _rejection_outcome(msg, rejection_reply, sent, media=media_block)
 
     # Link the pipeline output to the stored blob before validation/persist.
     src = tx_data.get("source") or {}
@@ -188,18 +257,36 @@ def _ingest_media(
         "message_id": msg.get("id"),
         "ok": True,
         "type": msg["type"],
-        "media": {
-            "id": str(blob.id),
-            "sha256": digest,
-            "bytes": len(data),
-            "storage_path": str(path),
-            "source": source_note,
-        },
+        "media": media_block,
         "transaction_id": str(tx.id),
         "status": tx.status,
         "confirmation_ur": confirmation,
         "sent": sent,
     }
+
+
+def _rejection_outcome(
+    msg: dict[str, Any],
+    reply_ur: str,
+    sent: dict | None,
+    media: dict | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """§6.9 outcome: the message was handled OK (reply sent, nothing persisted)."""
+    out: dict[str, Any] = {
+        "message_id": msg.get("id"),
+        "ok": True,
+        "type": msg.get("type"),
+        "rejected": True,
+        "persisted": False,
+        "reply_ur": reply_ur,
+        "sent": sent,
+    }
+    if media is not None:
+        out["media"] = media
+    if reason:
+        out["reason"] = reason
+    return out
 
 
 def _get_media_bytes(

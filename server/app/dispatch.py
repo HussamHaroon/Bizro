@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -28,7 +28,7 @@ from . import whatsapp_client
 from .config import ensure_repo_root_on_path, get_settings
 from .db import Customer, Merchant, OutboundMessage, Transaction
 from .media import sha256_bytes
-from .schemas import TransactionIn
+from .schemas import TransactionIn, transaction_to_wire
 
 logger = logging.getLogger("bizro.dispatch")
 
@@ -92,7 +92,11 @@ def process_voice_note(
 
 
 def process_receipt_image(
-    image_path: str, merchant: Merchant, occurred_at: datetime, media_sha256: str
+    image_path: str,
+    merchant: Merchant,
+    occurred_at: datetime,
+    media_sha256: str,
+    history: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     fn = _load_pipeline_fn("vision-agent", "vision_agent.pipeline", "process_receipt_image")
     merchant_ctx = {
@@ -101,8 +105,92 @@ def process_receipt_image(
         "display_name": merchant.display_name,
     }
     if fn is not None:
-        return _call_with_occurred_at(fn, image_path, merchant_ctx, occurred_at)
+        return _call_vision(fn, image_path, merchant_ctx, occurred_at, history)
     return _fallback_vision(image_path, merchant, occurred_at, media_sha256)
+
+
+def _call_vision(
+    fn: PipelineFn,
+    path: str,
+    merchant_ctx: dict,
+    occurred_at: datetime,
+    history: list[dict[str, Any]] | None,
+) -> dict:
+    """Call the vision pipeline with prior transactions for the price-sanity
+    flags (schema.md §1: price_anomaly / duplicate_suspect need history).
+    A TypeError raised AT THE CALL (signature mismatch — pipeline predates the
+    history argument) retries without it; a TypeError raised INSIDE the
+    pipeline body is a real bug and propagates."""
+    if history:
+        try:
+            return fn(path, merchant_ctx, occurred_at, history=history)
+        except TypeError as exc:
+            if exc.__traceback__ is None or exc.__traceback__.tb_next is not None:
+                raise  # raised inside the pipeline, not at the call boundary
+        try:
+            return fn(path, merchant_ctx, occurred_at.isoformat(), history=history)
+        except TypeError as exc:
+            if exc.__traceback__ is None or exc.__traceback__.tb_next is not None:
+                raise
+    return _call_with_occurred_at(fn, path, merchant_ctx, occurred_at)
+
+
+def _aware_iso(value: Any) -> str:
+    """Normalize an occurred_at to a tz-aware ISO string. SQLite drops tzinfo
+    on DateTime round-trips (finding F-8); stored times are UTC, so a naive
+    value gets +00:00 back. Vision's duplicate_suspect subtracts datetimes —
+    mixing aware and naive raises TypeError (finding F-4 follow-up)."""
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return str(value)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.isoformat()
+
+
+def price_history(
+    session: Session,
+    merchant_id: uuid.UUID,
+    limit: int = 20,
+    days: int = 60,
+) -> list[dict[str, Any]]:
+    """Prior expense transactions (schema.md §1 wire dicts, newest-first) for
+    the vision pipeline's price-sanity flags (F-4).
+
+    Windowed by `created_at` (when the ledger recorded it), not `occurred_at`:
+    WhatsApp message timestamps can be arbitrarily old (clock skew, backdated
+    forwards), and the sanity checks apply their own windows to occurred_at.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    rows = (
+        session.execute(
+            select(Transaction, Customer)
+            .outerjoin(Customer, Transaction.customer_id == Customer.id)
+            .where(
+                Transaction.merchant_id == merchant_id,
+                Transaction.kind == "expense",
+                Transaction.created_at >= cutoff,
+            )
+            .order_by(Transaction.occurred_at.desc())
+            .limit(limit * 5)
+        )
+        .all()
+    )
+    history: list[dict[str, Any]] = []
+    for tx, customer in rows:
+        if not (tx.item_lines or []):
+            continue  # price flags key off item_lines — skip line-less expenses
+        wire = transaction_to_wire(
+            tx,
+            customer.name if customer else None,
+            customer.phone if customer else None,
+        )
+        wire["occurred_at"] = _aware_iso(wire["occurred_at"])
+        history.append(wire)
+        if len(history) >= limit:
+            break
+    return history
 
 
 # --- server fallback pipelines (clearly-labeled synthetic output) -----------
@@ -218,7 +306,12 @@ def persist_transaction(
 
     customer = None
     name = (parsed.counterparty.name if parsed.counterparty else None) or ""
-    if parsed.kind in ("sale", "udhar_given", "udhar_settlement") and name.strip():
+    # Counterparty customers are linked for every kind when the pipeline named
+    # one — including expense suppliers (§1: counterparty "optionally for
+    # expense"). This keeps the wire row's counterparty complete and lets the
+    # vision price-history duplicate_suspect check match by supplier name.
+    # Udhar Radar / credit metrics stay unaffected (both filter by tx kind).
+    if name.strip():
         customer = session.scalar(
             select(Customer).where(
                 Customer.merchant_id == merchant.id,
@@ -283,6 +376,78 @@ def send_confirmation(merchant: Merchant, tx: Transaction, confirmation_ur: str)
     """Send (or mock-log) the WhatsApp confirmation text. The outbound row is
     persisted by persist_transaction; this only does delivery."""
     return whatsapp_client.send_text(merchant.wa_id, confirmation_ur)
+
+
+# --- clarification / rejection path (schema.md §6.2 + §6.4 + §6.9) ------------
+
+DEFAULT_CLARIFICATION_UR = (
+    "معاف کیجیے، رقم واضح نہیں ہو سکی۔ براہِ کرم رقم لکھ کر بھیجیں یا دوبارہ بولیں۔"
+)
+
+
+def pipeline_rejection(tx_data: Any) -> str | None:
+    """Classify a pipeline result per §6.9: either an explicit rejection
+    (`rejected: true` + `reply_ur`, §6.4) or a no-amount result
+    (`amount_pkd` null/0/negative — §6.2 says null, legacy pipelines emit 0.0).
+    Returns the Urdu reply to send, or None when the result is a normal
+    persistable transaction."""
+    if not isinstance(tx_data, dict):
+        return None
+    if tx_data.get("rejected") is True:
+        return _reply_or_default(tx_data.get("reply_ur"), tx_data.get("confirmation_ur"))
+    amount = tx_data.get("amount_pkd")
+    if amount is None or (isinstance(amount, (int, float)) and amount <= 0):
+        return _reply_or_default(tx_data.get("confirmation_ur"), tx_data.get("reply_ur"))
+    return None
+
+
+def _reply_or_default(*candidates: Any) -> str:
+    for candidate in candidates:
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return DEFAULT_CLARIFICATION_UR
+
+
+_receipt_rejected_cache: dict[str, Any] = {}
+
+
+def _receipt_rejected_cls():
+    """Lazy, defensive import of vision_agent's ReceiptRejected (§6.4 blessed
+    rejection exception) — same tolerance as _load_pipeline_fn."""
+    if "cls" in _receipt_rejected_cache:
+        return _receipt_rejected_cache["cls"]
+    ensure_repo_root_on_path()
+    cls = None
+    try:
+        mod = importlib.import_module("vision_agent.pipeline")
+        cls = getattr(mod, "ReceiptRejected", None)
+    except ImportError as exc:
+        logger.info("vision_agent.pipeline not importable (%s) — rejection check disabled", exc)
+    _receipt_rejected_cache["cls"] = cls
+    return cls
+
+
+def rejection_reply_from_exception(exc: Exception) -> str | None:
+    """The reply_ur when `exc` is a pipeline rejection (ReceiptRejected-style),
+    else None (caller re-raises)."""
+    cls = _receipt_rejected_cls()
+    if cls is not None and isinstance(exc, cls):
+        return _reply_or_default(getattr(exc, "reply_ur", None))
+    return None
+
+
+def send_reply(
+    session: Session, merchant: Merchant, body: str, kind: str = "clarification"
+) -> dict[str, Any]:
+    """§6.9 clarification/rejection delivery: send via WhatsApp (or mock-log)
+    AND persist the outbound_messages row. No transaction is persisted — the
+    caller never has one for this path."""
+    sent = whatsapp_client.send_text(merchant.wa_id, body)
+    session.add(
+        OutboundMessage(merchant_id=merchant.id, transaction_id=None, kind=kind, body=body)
+    )
+    session.commit()
+    return sent
 
 
 # --- text replies (merchant confirms/rejects by WhatsApp text) ---------------

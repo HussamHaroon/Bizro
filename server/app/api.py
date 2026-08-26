@@ -22,10 +22,10 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from . import dispatch
-from .db import CreditReport, Customer, Merchant, MediaBlob, Transaction, db_session
+from .db import CreditReport, Customer, Merchant, MediaBlob, OutboundMessage, Transaction, db_session
 from .schemas import TransactionPatch, transaction_to_wire
 
 router = APIRouter(prefix="/api")
@@ -93,6 +93,47 @@ def _get_transaction(session, transaction_id: str) -> Transaction:
     return tx
 
 
+def _confirmation_ur(session, transaction_id: uuid.UUID) -> str | None:
+    """W-1: the WhatsApp confirmation we sent for this transaction (earliest
+    outbound row), so wire rows carry confirmation_ur."""
+    row = session.scalar(
+        select(OutboundMessage)
+        .where(
+            OutboundMessage.transaction_id == transaction_id,
+            OutboundMessage.kind == "confirmation_text",
+        )
+        .order_by(OutboundMessage.created_at)
+        .limit(1)
+    )
+    return row.body if row else None
+
+
+def _confirmation_map(session, tx_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """Batch form of _confirmation_ur for list endpoints."""
+    if not tx_ids:
+        return {}
+    rows = session.scalars(
+        select(OutboundMessage).where(
+            OutboundMessage.transaction_id.in_(tx_ids),
+            OutboundMessage.kind == "confirmation_text",
+        )
+    ).all()
+    out: dict[uuid.UUID, str] = {}
+    for row in sorted(rows, key=lambda r: r.created_at):
+        if row.transaction_id not in out:
+            out[row.transaction_id] = row.body or ""
+    return out
+
+
+def _tx_to_wire(session, tx: Transaction, customer: Customer | None) -> dict:
+    return transaction_to_wire(
+        tx,
+        customer.name if customer else None,
+        customer.phone if customer else None,
+        confirmation_ur=_confirmation_ur(session, tx.id),
+    )
+
+
 @router.get("/merchants/{merchant_id}/transactions")
 def list_transactions(
     merchant_id: str,
@@ -117,10 +158,16 @@ def list_transactions(
             q = q.where(Transaction.kind == kind)
 
         rows = session.execute(q).all()
+        confirmations = _confirmation_map(session, [tx.id for tx, _ in rows])
         return {
             "count": len(rows),
             "transactions": [
-                transaction_to_wire(tx, customer.name if customer else None, customer.phone if customer else None)
+                transaction_to_wire(
+                    tx,
+                    customer.name if customer else None,
+                    customer.phone if customer else None,
+                    confirmation_ur=confirmations.get(tx.id),
+                )
                 for tx, customer in rows
             ],
         }
@@ -180,7 +227,9 @@ def confirm_transaction(transaction_id: str):
         session.add(tx)
         session.commit()
         session.refresh(tx)
-        return {"ok": True, "transaction_id": transaction_id, "status": tx.status}
+        # §6.7 (C-1): mutation responses carry the wire row top-level — the
+        # dashboard consumes the body directly as the Transaction.
+        return _tx_to_wire(session, tx, session.get(Customer, tx.customer_id) if tx.customer_id else None)
 
 
 @router.patch("/transactions/{transaction_id}")
@@ -237,12 +286,10 @@ def patch_transaction(transaction_id: str, patch: TransactionPatch):
         session.refresh(tx)
 
         customer = session.get(Customer, tx.customer_id) if tx.customer_id else None
-        return {
-            "ok": True,
-            "transaction": transaction_to_wire(
-                tx, customer.name if customer else None, customer.phone if customer else None
-            ),
-        }
+        # §6.7 (C-2): the wire transaction at TOP level (original_values rides
+        # along inside the row per transaction_to_wire) — no {ok, transaction}
+        # wrapper; the dashboard maps rows by body.id.
+        return _tx_to_wire(session, tx, customer)
 
 
 @router.get("/merchants/{merchant_id}/report/preview")
@@ -260,16 +307,48 @@ def report_preview(merchant_id: str, refresh: bool = False):
             )
             if latest is not None:
                 return {"cached": True, "report": latest.report_json, "created_at": latest.created_at.isoformat()}
+        return _refresh_report(session, mid)
 
-        report = dispatch.generate_report_preview(session, mid)
+
+def _refresh_report(session, mid: uuid.UUID) -> dict:
+    """R-1: one refresh writes exactly ONE credit_reports row.
+
+    credit_agent.generate_report persists its own row (report.py does the
+    commit itself, with the §6.3 `mock` key stripped); the API used to add a
+    SECOND row on top. Instead: detect a row created during the generate call
+    and adopt it — restoring the full returned report_json (mock key kept,
+    mirroring what generate_report returns) and the real generator id — or, on
+    the server-fallback path (no credit_agent), insert the single row here.
+    """
+    before_ids = set(
+        session.scalars(select(CreditReport.id).where(CreditReport.merchant_id == mid))
+    )
+    report = dispatch.generate_report_preview(session, mid)
+
+    model = None
+    if isinstance(report, dict):
+        model = report.get("model") or report.get("generator")
+
+    rows_after = session.scalars(
+        select(CreditReport)
+        .where(CreditReport.merchant_id == mid)
+        .order_by(CreditReport.created_at.desc())
+    ).all()
+    adopted = next((r for r in rows_after if r.id not in before_ids), None)
+
+    if adopted is not None:
+        adopted.report_json = report  # keep mock/generator keys (§6.3)
+        adopted.model = model or adopted.model
+        row = adopted
+    else:
         today = date.today()
         row = CreditReport(
             merchant_id=mid,
             period_start=today - timedelta(days=30),
             period_end=today,
-            model=report.get("generator") if isinstance(report, dict) else None,
+            model=model,
             report_json=report,
         )
         session.add(row)
-        session.commit()
-        return {"cached": False, "report": report, "created_at": row.created_at.isoformat()}
+    session.commit()
+    return {"cached": False, "report": report, "created_at": row.created_at.isoformat()}

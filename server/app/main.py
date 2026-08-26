@@ -61,24 +61,14 @@ _DIST = REPO_ROOT / "dashboard" / "dist"
 _INDEX = _DIST / "index.html"
 
 
-@app.get("/{full_path:path}", include_in_schema=False)
-def spa(full_path: str):
-    """SPA fallback: real files from dist/, else index.html for client routes."""
-    if _INDEX.is_file():
-        candidate = (_DIST / full_path).resolve()
-        if full_path and str(candidate).startswith(str(_DIST.resolve())) and candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(_INDEX)
-    # No built dashboard (source checkout without a build) — say so instead of 500.
-    return {
-        "detail": "dashboard not built — run `npm install && npm run build` in dashboard/, "
-        "or use the dev server (cd dashboard && npm run dev)"
-    }
-
-
 @app.get("/health")
 def health():
-    """Liveness + which integrations are live vs mock (schema.md §4)."""
+    """Liveness + which integrations are live vs mock (schema.md §4).
+
+    H-1: this route MUST stay registered BEFORE the SPA catch-all below —
+    Starlette matches routes in registration order, so a catch-all defined
+    earlier would shadow /health with index.html.
+    """
     s = get_settings()
     return {
         "status": "ok",
@@ -95,4 +85,19 @@ def health():
         },
         "pipelines": dispatch.pipeline_status(),
         "confidence_confirm_threshold": s.confidence_confirm_threshold,
+    }
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def spa(full_path: str):
+    """SPA fallback: real files from dist/, else index.html for client routes."""
+    if _INDEX.is_file():
+        candidate = (_DIST / full_path).resolve()
+        if full_path and str(candidate).startswith(str(_DIST.resolve())) and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_INDEX)
+    # No built dashboard (source checkout without a build) — say so instead of 500.
+    return {
+        "detail": "dashboard not built — run `npm install && npm run build` in dashboard/, "
+        "or use the dev server (cd dashboard && npm run dev)"
     }
