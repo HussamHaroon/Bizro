@@ -20,6 +20,11 @@ Flag = Literal[
 ]
 Status = Literal["pending", "confirmed", "edited", "rejected"]
 
+# E-1 (ruling §6.10): amount enters the system as 0 < amount ≤ 10,000,000 PKR
+# (1 crore, ~4× Mawakhat's max loan). Hallucinated billion-rupee entries must
+# never reach the ledger/udhar/credit report.
+AMOUNT_MAX_PKD = 10_000_000
+
 
 class Counterparty(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -61,7 +66,7 @@ class TransactionIn(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     kind: Kind
-    amount_pkd: float = Field(gt=0)
+    amount_pkd: float = Field(gt=0, le=AMOUNT_MAX_PKD)
     currency: str = "PKR"
     counterparty: Counterparty | None = None
     description: str | None = None
@@ -77,7 +82,7 @@ class TransactionPatch(BaseModel):
     """PATCH /api/transactions/{id} body — any subset of editable fields."""
 
     kind: Kind | None = None
-    amount_pkd: float | None = Field(default=None, gt=0)
+    amount_pkd: float | None = Field(default=None, gt=0, le=AMOUNT_MAX_PKD)
     currency: str | None = None
     description: str | None = None
     counterparty: Counterparty | None = None
@@ -88,9 +93,17 @@ class TransactionPatch(BaseModel):
 
 
 def transaction_to_wire(
-    tx, customer_name: str | None = None, customer_phone: str | None = None
+    tx,
+    customer_name: str | None = None,
+    customer_phone: str | None = None,
+    confirmation_ur: str | None = None,
 ) -> dict[str, Any]:
-    """Map a persisted Transaction row back to the schema.md §1 wire shape."""
+    """Map a persisted Transaction row back to the schema.md §1 wire shape.
+
+    W-1: `confirmation_ur` is always present on the wire (null when the stored
+    outbound confirmation can't be found) — the dashboard type declares it and
+    AuditTrail renders it.
+    """
     counterparty = None
     if customer_name or customer_phone:
         counterparty = {"name": customer_name, "phone": customer_phone}
@@ -117,6 +130,7 @@ def transaction_to_wire(
         "source": source,
         "flag": tx.flag,
         "status": tx.status,
+        "confirmation_ur": confirmation_ur,
         "created_at": tx.created_at.isoformat(),
         "updated_at": tx.updated_at.isoformat(),
     }
