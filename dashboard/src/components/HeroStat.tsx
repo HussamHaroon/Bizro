@@ -55,15 +55,18 @@ const TONE_CLASS: Record<HeroTone, string> = {
 export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
   const shown = useCountUp(value);
   return (
-    <div className="bizro-card bizro-card-hover flex flex-col gap-2 px-5 py-5">
+    <div className="bizro-card bizro-card-hover flex flex-col gap-2 px-4 py-4 sm:px-5 sm:py-5">
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.08em] text-ink-black opacity-80">
         <span className="inline-flex">{icon}</span>
         <T en={en} ur={ur} />
       </p>
+      {/* Mobile-first numerals (D3): clamp() scales 390px→~35px / desktop→60px,
+          never below the 32px legibility floor. The amount line wraps (prefix
+          drops a line) rather than truncating — amounts are never cut. */}
       <p
-        className={`font-numerals text-5xl font-bold leading-none tabular-nums sm:text-6xl ${TONE_CLASS[tone]}`}
+        className={`flex flex-wrap items-baseline gap-x-1 font-numerals font-bold leading-none tabular-nums text-[clamp(2rem,8.9vw,3.75rem)] ${TONE_CLASS[tone]}`}
       >
-        <span className="mr-1 align-middle text-2xl font-semibold opacity-60">Rs</span>
+        <span className="text-[0.5em] font-semibold opacity-60">Rs</span>
         <bdi>{shown.toLocaleString('en-PK')}</bdi>
       </p>
     </div>

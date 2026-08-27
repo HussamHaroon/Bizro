@@ -6,8 +6,8 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { api } from '../api/client';
-import type { Transaction, TransactionKind, UdharOutstanding } from '../types/schema';
+import { api, fetchStreak } from '../api/client';
+import type { SavingsStreak, Transaction, TransactionKind, UdharOutstanding } from '../types/schema';
 import { AmountText } from '../components/AmountText';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { EmptyState } from '../components/EmptyState';
@@ -15,6 +15,7 @@ import { HeroStat } from '../components/HeroStat';
 import { LedgerDayHeader, LedgerRow } from '../components/LedgerRow';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SealMark } from '../components/TrustSealBadge';
+import { StreakChip } from '../components/StreakChip';
 import { UdharRadar } from '../components/UdharRadar';
 import {
   IconChevronLeft,
@@ -27,6 +28,7 @@ import {
 } from '../components/icons';
 import { formatDay, formatMonth, monthOf, shiftMonth, urduMonth } from '../lib/format';
 import { T, useT } from '../i18n';
+import { useMerchant } from '../merchant';
 
 type Filter = 'all' | 'sale' | 'expense' | 'udhar';
 
@@ -51,11 +53,14 @@ function sumKind(items: Transaction[], kinds: TransactionKind[]): number {
 
 export function MonthlyLedgerScreen() {
   const { pick } = useT();
+  const { merchantId } = useMerchant(); // re-key all data on merchant switch (D3-2)
   const currentMonth = monthOf(new Date().toISOString());
   const [month, setMonth] = useState(currentMonth);
   const [filter, setFilter] = useState<Filter>('all');
   const [txs, setTxs] = useState<Transaction[] | null>(null);
   const [udhar, setUdhar] = useState<UdharOutstanding[] | null>(null);
+  /** Savings streak (D3-3, schema.md §7.3). Optional endpoint: null = no chip. */
+  const [streak, setStreak] = useState<SavingsStreak | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -76,10 +81,15 @@ export function MonthlyLedgerScreen() {
       .catch((e: unknown) => {
         if (alive) setError(e instanceof Error ? e.message : 'Could not load the ledger');
       });
+    // Streak is fetched apart from the month data: it is week-scoped, and a
+    // missing endpoint must hide the chip, never break the ledger.
+    fetchStreak().then((s) => {
+      if (alive) setStreak(s);
+    });
     return () => {
       alive = false;
     };
-  }, [month]);
+  }, [month, merchantId]);
 
   const flashStamp = useCallback((id: string) => {
     setJustConfirmedId(id);
@@ -207,8 +217,15 @@ export function MonthlyLedgerScreen() {
         <section
           key={month}
           aria-label={pick('Month summary', 'ماہانہ خلاصہ')}
-          className="grid gap-4 sm:gap-5 md:grid-cols-3"
+          className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 md:gap-5"
         >
+          {/* Savings streak chip (D3-3) — lives in the hero, spans the grid;
+              renders nothing until the streak endpoint reports ≥1 week. */}
+          {streak && streak.streak_weeks >= 1 && (
+            <div className="col-span-2 flex md:col-span-3">
+              <StreakChip streak={streak} />
+            </div>
+          )}
           <HeroStat
             en="Money in"
             ur="آمدنی"

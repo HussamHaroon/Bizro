@@ -154,6 +154,12 @@
     line-height: 1.9; /* Urdu script needs taller leading than Latin */
   }
 
+  /* Mobile-first pass (D3): notch-safe bottom padding for the fixed bottom tab
+     bar. Harmless where inset is 0. Paired with viewport-fit=cover. */
+  .bizro-safe-b {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   /* Nastaliq is reserved for display moments only (app name, greetings). */
   .bizro-display-ur {
     font-family: var(--bizro-font-display-ur);

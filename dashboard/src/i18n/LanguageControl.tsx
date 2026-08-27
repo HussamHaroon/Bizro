@@ -30,7 +30,7 @@ export function LanguageControl() {
             type="button"
             onClick={() => setMode(m)}
             aria-pressed={active}
-            className={`bizro-lang-segment inline-flex min-h-touch items-center gap-1.5 rounded-button px-2.5 text-sm font-semibold transition-colors duration-200 ease-out ${
+                className={`bizro-lang-segment inline-flex min-h-touch items-center gap-1.5 rounded-button px-1.5 text-sm font-semibold transition-colors duration-200 ease-out sm:px-2.5 ${
               active
                 ? 'bg-paper-cream text-ink-green'
                 : 'text-paper-cream hover:bg-ink-green-hover'

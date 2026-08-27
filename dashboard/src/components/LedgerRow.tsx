@@ -93,7 +93,9 @@ export function LedgerRow({
 
   return (
     <li className="bizro-rule-h">
-      <div className="flex flex-wrap items-center gap-y-1 py-1.5">
+      {/* min-h-14 (56px): touch-friendly row height on phones/tablets (D3
+          mobile-first pass); row buttons keep their own 48px targets. */}
+      <div className="flex min-h-14 flex-wrap items-center gap-y-1 py-1.5">
         {/* Main target: row details / audit drill-down. */}
         <button
           type="button"
@@ -170,11 +172,11 @@ export function LedgerRow({
   );
 }
 
-/** Day-group heading between ledger rule runs. */
+/** Day-group heading between ledger rule runs — generous spacing on touch (D3). */
 export function LedgerDayHeader({ children }: { children: ReactNode }) {
   return (
     <li className="bizro-rule-h bg-paper-cream/60">
-      <p className="px-1 py-1.5 font-numerals text-sm font-semibold tracking-wide text-ink-green">
+      <p className="px-1 py-2 font-numerals text-sm font-semibold tracking-wide text-ink-green sm:py-1.5">
         {children}
       </p>
     </li>

@@ -69,6 +69,37 @@ export interface UdharOutstanding {
   outstanding_pkd: number;
 }
 
+/* ---- v0.3 addendum (schema.md §7 / D1-2) --------------------------------------
+   GET /api/merchants — loan-officer merchant picker. The special id 'me' resolves
+   server-side to the first merchant (single-merchant demo default). */
+
+export interface MerchantSummary {
+  id: string;
+  display_name: string;
+  wa_id: string;
+}
+
+/* ---- v0.3 addendum (schema.md §7.2–7.3, ruling D3-1) ---------------------------
+   GET /api/merchants/{id}/report/history → {"history": [{generated_at, score,
+   band}, …]} oldest→newest from credit_reports (dashboard: trend sparkline).
+   GET /api/merchants/{id}/streak → {streak_weeks, best_streak_weeks,
+   current_week_positive} — consecutive Mon–Sun PKT weeks with net cash-flow > 0;
+   zero-entry weeks break the streak (dashboard: ledger hero chip).
+   Both are OPTIONAL endpoints: the client returns null on any absence and the
+   UI degrades to nothing — a missing feature, never an error. */
+
+export interface ReadinessHistoryPoint {
+  generated_at: string; // ISO 8601
+  score: number; // 0–100
+  band: string; // readiness level, e.g. ready | almost | not_yet
+}
+
+export interface SavingsStreak {
+  streak_weeks: number;
+  best_streak_weeks: number;
+  current_week_positive: boolean;
+}
+
 /* ---- Credit Readiness report preview ----------------------------------------
    GET /api/merchants/{id}/report/preview (schema.md §4). schema.md fixes the storage
    row (credit_reports: report_json JSONB + narrative_ur) but not the JSON's internal
