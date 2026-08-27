@@ -34,6 +34,17 @@ class Customer(Base):
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class MediaBlob(Base):
+    __tablename__ = "media_blobs"
+    id: Mapped[str] = mapped_column(Uuid, primary_key=True)
+    merchant_id: Mapped[str | None] = mapped_column(Uuid, ForeignKey("merchants.id"))
+    kind: Mapped[str] = mapped_column(String)              # 'voice' | 'image'
+    mime_type: Mapped[str] = mapped_column(String)
+    storage_path: Mapped[str] = mapped_column(String)
+    sha256: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Transaction(Base):
     __tablename__ = "transactions"
     id: Mapped[str] = mapped_column(Uuid, primary_key=True)
@@ -49,6 +60,7 @@ class Transaction(Base):
     source_media_id: Mapped[str | None] = mapped_column(Uuid)
     source_model: Mapped[str | None] = mapped_column(String)
     confidence: Mapped[float | None] = mapped_column(Numeric(4, 3))
+    raw_model_output: Mapped[dict | None] = mapped_column(__import__("sqlalchemy").JSON)
     flag: Mapped[str] = mapped_column(String, default="none")
     status: Mapped[str] = mapped_column(String, default="pending")
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

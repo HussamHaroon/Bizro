@@ -8,11 +8,12 @@ dashboard/report demo.
 
 from __future__ import annotations
 
+import pathlib
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from .db_view import Base, Customer, Merchant, Transaction, get_sessionmaker
+from .db_view import Base, Customer, MediaBlob, Merchant, Transaction, get_sessionmaker
 
 RNG_SEED = 20260821
 CUSTOMERS = ["Ahmad", "Bilal", "Kamran", "Nasir", "Sana"]
@@ -23,6 +24,44 @@ ITEMS = [
     ("cooking oil", 720, "litre"),
     ("atta", 190, "bag"),
 ]
+
+
+def _demo_voice_bytes(seconds: float = 0.3) -> bytes:
+    """Tiny valid WAV of silence — real file, clearly synthetic (audit drill-down fix)."""
+    import io
+    import struct
+    import wave
+
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(8000)
+        w.writeframes(struct.pack("<h", 0) * int(8000 * seconds))
+    return buf.getvalue()
+
+
+def _demo_receipt_png() -> bytes:
+    """64×64 cream PNG with 'MOCK' — real image file, unmistakably demo data."""
+    import io
+
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGB", (64, 64), (247, 242, 231))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, 63, 63], outline=(166, 51, 43))
+    d.text((10, 26), "MOCK", fill=(166, 51, 43))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _media_root_for(db_url: str) -> pathlib.Path:
+    """SQLite → media/ next to the DB file (tests self-clean); other URLs → repo media/."""
+    if db_url.startswith("sqlite:///") and db_url != "sqlite:///:memory:":
+        db_file = pathlib.Path(db_url[len("sqlite:///"):]).parent
+        return db_file / "media"
+    return pathlib.Path("media").resolve()
 
 
 def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
@@ -41,6 +80,26 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
     now = datetime.now(timezone.utc)
 
     with Session() as s:
+        import hashlib
+
+        media_root = _media_root_for(db_url)
+
+        def _blob(kind: str, data: bytes, when: datetime) -> uuid.UUID:
+            """Real file on disk + media_blobs row → audit drill-down resolves (§6.3 mock-marked)."""
+            mid_ = uuid.uuid4()
+            sub = media_root / f"{when.year:04d}" / f"{when.month:02d}"
+            sub.mkdir(parents=True, exist_ok=True)
+            ext = "wav" if kind == "voice" else "png"
+            path = sub / f"{mid_}.{ext}"
+            path.write_bytes(data)
+            s.add(MediaBlob(
+                id=mid_, merchant_id=m.id, kind=kind,
+                mime_type="audio/wav" if kind == "voice" else "image/png",
+                storage_path=str(path.resolve()),
+                sha256=hashlib.sha256(data).hexdigest(), created_at=when,
+            ))
+            return mid_
+
         m = Merchant(id=uuid.uuid4(), wa_id="923009999888", display_name=merchant_name,
                      created_at=now)
         s.add(m)
@@ -53,15 +112,22 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
         def add_tx(day_offset, kind, amount, source, conf, flag="none", status="confirmed",
                    desc="", customer=None):
             when = now - timedelta(days=day_offset, hours=rng.randint(0, 12))
+            media_id = None
+            raw_out = None
+            if source != "manual":
+                data = _demo_voice_bytes() if source == "voice" else _demo_receipt_png()
+                media_id = _blob("voice" if source == "voice" else "image", data, when)
+                raw_out = {"mock": True, "note": "seeded demo history (schema.md §6.3)"}
             s.add(Transaction(
                 id=uuid.uuid4(), merchant_id=m.id,
                 customer_id=cust_ids.get(customer),
                 kind=kind, amount_pkd=round(amount, 2), description=desc,
                 occurred_at=when,
                 source_type=source,
-                source_media_id=uuid.uuid4() if source != "manual" else None,
+                source_media_id=media_id,
                 source_model={"voice": "qwen3.5-omni-plus", "photo": "qwen-vl-ocr"}.get(source),
                 confidence=conf if source != "manual" else None,
+                raw_model_output=raw_out,
                 flag=flag, status=status,
                 created_at=when, updated_at=when,
             ))
