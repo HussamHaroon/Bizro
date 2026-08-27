@@ -216,32 +216,20 @@ def test_duplicate_webhook_delivery_is_idempotent(client):
 
 
 def test_unknown_amount_persists_nothing(client, monkeypatch):
+    """§6.9 (D2-1 ruling): ambiguous amount → clarification sent, nothing persisted,
+    message handled OK. The old ok:false/internal silence is abolished."""
     monkeypatch.setenv("MOCK_SCENARIO", "ambiguous_amount")
     wa = "923005555555"
     r = client.post("/webhook/whatsapp", json=_audio_payload(wa_id=wa))
-    out = r.json()["results"][0]
-    # Correct half of §6.2: nothing persisted, no guessed amount.
-    assert _tx_count_for_wa(wa) == 0
-    # The violation (silence) is asserted in the xfail twin below.
-    assert out["ok"] is False and out["error"] == "internal"
-
-
-@pytest.mark.xfail(
-    reason="F-1 [P1]: voice unknown-amount payload (amount 0.0) fails server "
-    "TransactionIn(gt=0); the §6.2-mandated clarification question is never "
-    "sent — the merchant hears silence after an ambiguous note.",
-    strict=False,
-)
-def test_unknown_amount_sends_clarification_per_6_2(client, monkeypatch):
-    monkeypatch.setenv("MOCK_SCENARIO", "ambiguous_amount")
-    wa = "923005555556"
-    r = client.post("/webhook/whatsapp", json=_audio_payload(wa_id=wa))
     assert r.status_code == 200
-    assert _tx_count_for_wa(wa) == 0
+    out = r.json()["results"][0]
+    assert _tx_count_for_wa(wa) == 0, "no guessed amount may be persisted"
+    assert out["ok"] is True and out.get("persisted") is False
     assert any("رقم" in b for b in _outbound_bodies_for_wa(wa))
 
 
 def test_non_receipt_image_persists_nothing(client, monkeypatch):
+    """§6.4+§6.9: non-receipt photo → polite Urdu reply, nothing persisted, OK."""
     from vision_agent.adapters import MockOcrAdapter
     import vision_agent.pipeline as vpipe
 
@@ -250,28 +238,10 @@ def test_non_receipt_image_persists_nothing(client, monkeypatch):
     )
     wa = "923006666666"
     r = client.post("/webhook/whatsapp", json=_image_payload(wa_id=wa))
-    out = r.json()["results"][0]
-    assert _tx_count_for_wa(wa) == 0  # nothing persisted: correct
-    assert out["ok"] is False and out["error"] == "internal"  # reply lost: F-6
-
-
-@pytest.mark.xfail(
-    reason="F-6 [P1]: ReceiptRejected (schema.md §6.4 blessed rejection path) "
-    "is not caught by the webhook — the polite Urdu reply_ur never reaches the "
-    "merchant; they get silence for a non-receipt photo.",
-    strict=False,
-)
-def test_non_receipt_image_gets_polite_urdu_reply_per_6_4(client, monkeypatch):
-    from vision_agent.adapters import MockOcrAdapter
-    import vision_agent.pipeline as vpipe
-
-    monkeypatch.setattr(
-        vpipe, "get_adapter", lambda s: MockOcrAdapter(s, scenario="not_receipt")
-    )
-    wa = "923006666667"
-    r = client.post("/webhook/whatsapp", json=_image_payload(wa_id=wa))
     assert r.status_code == 200
+    out = r.json()["results"][0]
     assert _tx_count_for_wa(wa) == 0
+    assert out["ok"] is True and out.get("persisted") is False
     assert any(b.strip() for b in _outbound_bodies_for_wa(wa))
 
 
@@ -362,7 +332,7 @@ def test_patch_with_counterparty_correction(client):
         f"/api/transactions/{tx_id}", json={"counterparty": {"name": "Ahmad Raza"}}
     )
     assert resp.status_code == 200, resp.text
-    assert resp.json()["transaction"]["status"] == "edited"
+    assert resp.json()["status"] == "edited"  # §6.7: wire row top-level
 
 
 def test_patch_keeps_original_values_audit_snapshot(client):
@@ -370,7 +340,7 @@ def test_patch_keeps_original_values_audit_snapshot(client):
     tx_id = r.json()["results"][0]["transaction_id"]
     resp = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 6000})
     assert resp.status_code == 200
-    body = resp.json()["transaction"]
+    body = resp.json()  # §6.7: wire row top-level, original_values inside
     assert body["original_values"]["amount_pkd"] == 5000  # first-edit snapshot
     assert body["amount_pkd"] == 6000
     assert body["status"] == "edited"
