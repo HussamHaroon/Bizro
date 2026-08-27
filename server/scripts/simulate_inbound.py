@@ -80,12 +80,18 @@ def synth_receipt_png() -> bytes:
     return buf.getvalue()
 
 
-def build_payload(wa_id: str, name: str, media_b64: str | None, mime: str | None, text: str | None) -> dict:
+def build_payload(wa_id: str, name: str, media_b64: str | None, mime: str | None, text: str | None,
+                  button: str | None = None) -> dict:
     msg: dict = {"from": wa_id, "id": f"wamid.SIM{uuid.uuid4().hex[:12]}", "timestamp": str(int(time.time()))}
     if media_b64 is not None:
         media_kind = "audio" if mime == "audio/ogg; codecs=opus" else "image"
         msg["type"] = media_kind
         msg[media_kind] = {"id": f"SIM_MEDIA_{uuid.uuid4().hex[:10]}", "mime_type": mime}
+    elif button is not None:
+        # one-tap reply to our interactive confirm/correct buttons (§7.1)
+        title = "درست ہے" if button == "confirm" else "بدلیں"
+        msg["type"] = "button"
+        msg["button"] = {"payload": button, "text": title}
     else:
         msg["type"] = "text"
         msg["text"] = {"body": text or ""}
@@ -147,12 +153,14 @@ def main() -> None:
     parser.add_argument("--voice", action="store_true", help="simulate an Urdu voice note")
     parser.add_argument("--image", action="store_true", help="simulate a receipt photo")
     parser.add_argument("--text", default=None, help="simulate a plain text reply (e.g. '1' to confirm)")
+    parser.add_argument("--button", default=None, choices=["confirm", "correct"],
+                        help="simulate a one-tap button reply to the latest confirmation (§7.1)")
     parser.add_argument("--voice-file", default=None, help="use a real audio file's bytes instead of synthetic")
     parser.add_argument("--image-file", default=None, help="use a real image file's bytes instead of synthetic")
     args = parser.parse_args()
 
-    if not (args.voice or args.image or args.text is not None):
-        parser.error("nothing to do: pass --voice, --image and/or --text")
+    if not (args.voice or args.image or args.text is not None or args.button is not None):
+        parser.error("nothing to do: pass --voice, --image, --text and/or --button")
 
     # 0) health + webhook GET handshake
     status, health = _request(f"{args.url}/health")
@@ -194,6 +202,14 @@ def main() -> None:
         body = post_flow(args.url, f"TEXT REPLY {args.text!r}", build_payload(args.wa_id, args.name, None, None, args.text))
         merchant_id = body["results"][0].get("merchant_id") or merchant_id
 
+    if args.button is not None:
+        body = post_flow(
+            args.url,
+            f"ONE-TAP BUTTON {args.button!r}",
+            build_payload(args.wa_id, args.name, None, None, None, button=args.button),
+        )
+        merchant_id = body["results"][0].get("merchant_id") or merchant_id
+
     if merchant_id:
         read_back(args.url, merchant_id)
         status, udhar = _request(f"{args.url}/api/merchants/{merchant_id}/udhar")
@@ -201,6 +217,9 @@ def main() -> None:
             print(f"\n--- GET /api/merchants/{merchant_id}/udhar -> total PKR {udhar['total_outstanding_pkd']}")
             for c in udhar["customers"]:
                 print(f"  {c['name']}: PKR {c['outstanding_pkd']}")
+        status, streak = _request(f"{args.url}/api/merchants/{merchant_id}/streak")
+        if status == 200:
+            print(f"--- GET /api/merchants/{merchant_id}/streak -> {json.dumps(streak)}")
 
     print("\nSIMULATION OK")
 
