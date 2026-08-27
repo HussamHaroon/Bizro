@@ -47,33 +47,73 @@ def _require_live() -> None:
             )
 
 
-def send_text(to_wa_id: str, body: str, timeout: float = 30.0) -> dict[str, Any]:
-    """Send a WhatsApp text message. Mock mode: log loudly, return mock marker."""
+def send_text(
+    to_wa_id: str,
+    body: str,
+    buttons: list[dict[str, Any]] | None = None,
+    timeout: float = 30.0,
+) -> dict[str, Any]:
+    """Send a WhatsApp text message. Mock mode: log loudly, return mock marker.
+
+    `buttons` (schema.md §7.1): Graph API interactive reply buttons in their
+    wire shape ([{"type": "reply", "reply": {"id": ..., "title": ...}}, ...]).
+    When WHATSAPP_TOKEN is live the message goes out as
+    `interactive.type=button`; in mock mode nothing is delivered but the button
+    labels are logged (and returned) so the flow stays observable offline.
+    """
     _require_live()
     s = get_settings()
     if not s.whatsapp_is_live():
-        logger.warning(
-            "MOCK OUTBOUND (not sent — no WhatsApp credentials): to=%s body=%r",
-            to_wa_id,
-            body,
-        )
-        return {
+        if buttons:
+            logger.warning(
+                "MOCK OUTBOUND BUTTONS (not sent): to=%s body=%r buttons=%s",
+                to_wa_id,
+                body,
+                [b.get("reply", {}).get("title") for b in buttons],
+            )
+        else:
+            logger.warning(
+                "MOCK OUTBOUND (not sent — no WhatsApp credentials): to=%s body=%r",
+                to_wa_id,
+                body,
+            )
+        result: dict[str, Any] = {
             "mock": True,
             "note": "MOCK send — message logged, not delivered. Configure WHATSAPP_TOKEN (HANDOFF.md ②).",
             "to": to_wa_id,
             "body": body,
         }
+        if buttons:
+            result["buttons"] = buttons
+        return result
 
-    resp = httpx.post(
-        f"{GRAPH_BASE}/{s.whatsapp_phone_number_id}/messages",
-        headers={"Authorization": f"Bearer {s.whatsapp_token}"},
-        json={
+    if buttons:
+        # §7.1: one-tap confirm/correct — interactive button message instead of
+        # plain text (buttons only attach on the live Graph API path).
+        message = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to_wa_id,
+            "type": "interactive",
+            "interactive": {
+                "type": "button",
+                "body": {"text": body},
+                "action": {"buttons": buttons},
+            },
+        }
+    else:
+        message = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to_wa_id,
             "type": "text",
             "text": {"preview_url": False, "body": body},
-        },
+        }
+
+    resp = httpx.post(
+        f"{GRAPH_BASE}/{s.whatsapp_phone_number_id}/messages",
+        headers={"Authorization": f"Bearer {s.whatsapp_token}"},
+        json=message,
         timeout=timeout,
     )
     if resp.status_code not in (200, 201):

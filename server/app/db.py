@@ -160,6 +160,11 @@ class OutboundMessage(Base):
     kind: Mapped[str] = mapped_column(Text, nullable=False)
     body: Mapped[str | None] = mapped_column(Text)
     media_path: Mapped[str | None] = mapped_column(Text)
+    # §7.1 (additive, flagged to the Orchestrator): structured extras for the
+    # send — button messages store {"buttons": [...]} (Graph API reply-button
+    # wire shape) so the one-tap flow is auditable. kind stays
+    # 'confirmation_text'; null on every pre-§7.1 row. No consumer migration.
+    payload: Mapped[dict | None] = mapped_column(JSONVariant)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
@@ -228,6 +233,23 @@ def init_db() -> None:
     """Create tables if missing and ensure the media dir exists."""
     get_settings().media_dir.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    _ensure_additive_columns()
+
+
+def _ensure_additive_columns() -> None:
+    """create_all() never ALTERs an existing table, so additive columns added
+    after a DB was first created must be back-filled here (SQLite dev DBs;
+    Postgres deployments run a real migration). Currently: §7.1's
+    outbound_messages.payload."""
+    from sqlalchemy import inspect, text as sa_text
+
+    inspector = inspect(engine)
+    if not inspector.has_table("outbound_messages"):
+        return
+    columns = {c["name"] for c in inspector.get_columns("outbound_messages")}
+    with engine.begin() as conn:
+        if "payload" not in columns:
+            conn.execute(sa_text("ALTER TABLE outbound_messages ADD COLUMN payload JSON"))
 
 
 def db_session() -> Session:

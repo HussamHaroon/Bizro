@@ -366,6 +366,10 @@ def persist_transaction(
                 transaction_id=tx.id,
                 kind="confirmation_text",
                 body=parsed.confirmation_ur,
+                # §7.1: pending confirmations carry the one-tap buttons — the
+                # outbound log records them in both modes (mock mode can't send
+                # interactive messages, only log the labels).
+                payload={"buttons": CONFIRM_BUTTONS} if status == "pending" else None,
             )
         )
     session.commit()
@@ -374,8 +378,11 @@ def persist_transaction(
 
 def send_confirmation(merchant: Merchant, tx: Transaction, confirmation_ur: str) -> dict[str, Any]:
     """Send (or mock-log) the WhatsApp confirmation text. The outbound row is
-    persisted by persist_transaction; this only does delivery."""
-    return whatsapp_client.send_text(merchant.wa_id, confirmation_ur)
+    persisted by persist_transaction; this only does delivery. §7.1: when the
+    transaction is pending, the confirmation goes out with the one-tap
+    confirm/correct reply buttons (interactive message when live)."""
+    buttons = CONFIRM_BUTTONS if tx.status == "pending" else None
+    return whatsapp_client.send_text(merchant.wa_id, confirmation_ur, buttons=buttons)
 
 
 # --- clarification / rejection path (schema.md §6.2 + §6.4 + §6.9) ------------
@@ -450,6 +457,108 @@ def send_reply(
     return sent
 
 
+# --- one-tap confirm/correct buttons (schema.md §7.1) -------------------------
+
+BUTTON_CONFIRM_PAYLOAD = "confirm"
+BUTTON_CORRECT_PAYLOAD = "correct"
+BUTTON_CONFIRM_TITLE_UR = "درست ہے"
+BUTTON_CORRECT_TITLE_UR = "بدلیں"
+
+# Graph API interactive reply buttons, wire shape (§7.1): attach to every
+# outbound confirmation for a pending transaction. Live mode sends them as
+# interactive.type=button (whatsapp_client); mock mode logs the labels.
+CONFIRM_BUTTONS = [
+    {"type": "reply", "reply": {"id": BUTTON_CONFIRM_PAYLOAD, "title": BUTTON_CONFIRM_TITLE_UR}},
+    {"type": "reply", "reply": {"id": BUTTON_CORRECT_PAYLOAD, "title": BUTTON_CORRECT_TITLE_UR}},
+]
+
+BUTTON_CONFIRM_REPLY_UR = "شکریہ! اندراج درست کر دیا گیا۔"
+BUTTON_CORRECT_REPLY_UR = (
+    "ٹھیک ہے — اندراج محفوظ ہے لیکن ابھی زیرِ التوا ہے۔ "
+    "براہِ کرم درست رقم بتا کر دوبارہ آواز بھیجیں۔"
+)
+NO_PENDING_REPLY_UR = "کوئی زیرِ التوا اندراج نہیں ملا۔"
+
+
+def handle_button_reply(
+    session: Session, merchant: Merchant, payload: str | None, text: str | None = None
+) -> dict[str, Any]:
+    """Inbound one-tap button press (§7.1) → act on the merchant's most recent
+    pending transaction.
+
+    - payload `confirm` (or button text `درست ہے`): status=confirmed — exactly
+      the POST /api/transactions/{id}/confirm semantics, with the wire row
+      returned for response logging like the REST endpoint.
+    - payload `correct` (or `بدلیں`): status stays pending; the merchant gets
+      an Urdu reply asking for the corrected voice note.
+    Returns {"action": confirm|correct|unknown, "reply": str|None,
+             "transaction": wire row | None}.
+    """
+    normalized_payload = (payload or "").strip().lower()
+    normalized_text = (text or "").strip()
+
+    if normalized_payload == BUTTON_CONFIRM_PAYLOAD:
+        intent = "confirm"
+    elif normalized_payload == BUTTON_CORRECT_PAYLOAD:
+        intent = "correct"
+    elif normalized_text == BUTTON_CONFIRM_TITLE_UR:
+        intent = "confirm"  # older Graph API versions only carry button.text
+    elif normalized_text == BUTTON_CORRECT_TITLE_UR:
+        intent = "correct"
+    else:
+        return {"action": "unknown", "reply": None, "transaction": None}
+
+    tx = _latest_pending_tx(session, merchant)
+    if tx is None:
+        return {"action": intent, "reply": NO_PENDING_REPLY_UR, "transaction": None}
+
+    if intent == "confirm":
+        tx.status = "confirmed"  # same transition + guards as the REST confirm
+        reply = BUTTON_CONFIRM_REPLY_UR
+    else:
+        reply = BUTTON_CORRECT_REPLY_UR  # stays pending
+
+    customer = session.get(Customer, tx.customer_id) if tx.customer_id else None
+    wire = transaction_to_wire(
+        tx,
+        customer.name if customer else None,
+        customer.phone if customer else None,
+        confirmation_ur=_confirmation_ur_for_tx(session, tx.id),
+    )
+    session.add(tx)
+    session.add(
+        OutboundMessage(
+            merchant_id=merchant.id, transaction_id=tx.id, kind="confirmation_text", body=reply
+        )
+    )
+    session.commit()
+    return {"action": intent, "reply": reply, "transaction": wire}
+
+
+def _latest_pending_tx(session: Session, merchant: Merchant) -> Transaction | None:
+    return session.scalar(
+        select(Transaction)
+        .where(Transaction.merchant_id == merchant.id, Transaction.status == "pending")
+        .order_by(Transaction.created_at.desc())
+        .limit(1)
+    )
+
+
+def _confirmation_ur_for_tx(session: Session, transaction_id: uuid.UUID) -> str | None:
+    """Earliest stored outbound confirmation for a tx (same lookup the REST
+    confirm endpoint uses for its wire row)."""
+    row = session.scalar(
+        select(OutboundMessage)
+        .where(
+            OutboundMessage.transaction_id == transaction_id,
+            OutboundMessage.kind == "confirmation_text",
+        )
+        .order_by(OutboundMessage.created_at)
+        .limit(1)
+    )
+    return row.body if row else None
+
+
 # --- text replies (merchant confirms/rejects by WhatsApp text) ---------------
 
 _CONFIRM_WORDS = {"1", "haan", "han", "ji", "yes", "y", "درست", "ہاں", "جی ہاں", "ٹھیک"}
@@ -519,13 +628,23 @@ def _normalize_report_result(result: Any) -> dict[str, Any]:
 def generate_report_preview(session: Session, merchant_id: uuid.UUID) -> dict[str, Any]:
     """GET /api/merchants/{id}/report/preview — try credit_agent.generate_report;
     fall back to a deterministic, clearly-labeled aggregate (never a fake LLM
-    narrative)."""
+    narrative).
+
+    db_url: the app engine's URL is passed explicitly so credit_agent reads the
+    SAME database the API just queried — credit_agent.db_view otherwise reads
+    DATABASE_URL at call time, which can drift from the import-time-bound
+    engine (observed in the full-repo test run; see STATUS.agent.md D3)."""
     fn = _load_pipeline_fn("credit-agent", "credit_agent.report", "generate_report")
     if fn is not None:
+        db_url = str(session.get_bind().url)
         try:
-            result = fn(merchant_id, period="last_30_days")
+            result = fn(merchant_id, period="last_30_days", db_url=db_url)
         except TypeError:
-            result = fn(merchant_id=merchant_id, period="last_30_days")
+            try:
+                result = fn(merchant_id=merchant_id, period="last_30_days", db_url=db_url)
+            except TypeError:
+                # pre-db_url credit_agent signature — env DATABASE_URL fallback
+                result = fn(merchant_id, period="last_30_days")
         return _normalize_report_result(result)
 
     from .db import CreditReport, Transaction as Tx

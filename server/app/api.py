@@ -26,6 +26,7 @@ from sqlalchemy import func, select
 
 from . import dispatch
 from .db import CreditReport, Customer, Merchant, MediaBlob, OutboundMessage, Transaction, db_session
+from .nudges import compute_streak
 from .schemas import TransactionPatch, transaction_to_wire
 
 router = APIRouter(prefix="/api")
@@ -308,6 +309,48 @@ def report_preview(merchant_id: str, refresh: bool = False):
             if latest is not None:
                 return {"cached": True, "report": latest.report_json, "created_at": latest.created_at.isoformat()}
         return _refresh_report(session, mid)
+
+
+def _report_history_entry(row: CreditReport) -> dict[str, Any]:
+    """§7.2 history item: {"generated_at", "score", "band"} — score/band come
+    from report_json.readiness (§6.5 skeleton). Tolerates the server-fallback
+    shape where readiness is a bare band string, and missing keys."""
+    report = row.report_json if isinstance(row.report_json, dict) else {}
+    readiness = report.get("readiness")
+    if isinstance(readiness, dict):
+        band = readiness.get("band")
+        score = readiness.get("score")
+    else:  # fallback reports store a bare band string
+        band = readiness
+        score = None
+    return {
+        "generated_at": row.created_at.isoformat(),
+        "score": int(score) if score is not None else 0,
+        "band": str(band or ""),
+    }
+
+
+@router.get("/merchants/{merchant_id}/report/history")
+def report_history(merchant_id: str):
+    """Readiness history (schema.md §7.2): every credit_reports row for the
+    merchant, oldest→newest — the dashboard renders a trend sparkline."""
+    with db_session() as session:
+        merchant = _get_merchant(session, merchant_id)
+        rows = session.scalars(
+            select(CreditReport)
+            .where(CreditReport.merchant_id == merchant.id)
+            .order_by(CreditReport.created_at.asc())
+        ).all()
+        return {"history": [_report_history_entry(row) for row in rows]}
+
+
+@router.get("/merchants/{merchant_id}/streak")
+def merchant_streak(merchant_id: str):
+    """Savings streak (schema.md §7.3): consecutive Mon–Sun (PKT) weeks with
+    net cash-flow > 0; zero-entry weeks break the streak."""
+    with db_session() as session:
+        merchant = _get_merchant(session, merchant_id)
+        return compute_streak(session, merchant.id)
 
 
 def _refresh_report(session, mid: uuid.UUID) -> dict:
