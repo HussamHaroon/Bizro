@@ -158,6 +158,29 @@ def _handle_message(
                 "reply": reply,
                 "sent": send_result,
             }
+        if msg_type == "button":
+            # §7.1: one-tap reply to our interactive confirm/correct buttons.
+            # Graph API carries button.payload; older versions only button.text.
+            button = msg.get("button") or {}
+            outcome = dispatch.handle_button_reply(
+                session, merchant, button.get("payload"), button.get("text")
+            )
+            reply = outcome["reply"]
+            if reply is None:
+                reply = HELP_REPLY_UR  # unknown press — help, never silence
+            send_result = whatsapp_client.send_text(merchant.wa_id, reply)
+            return {
+                "message_id": msg.get("id"),
+                "ok": True,
+                "type": "button",
+                "merchant_id": str(merchant.id),
+                "action": outcome["action"],
+                # wire row of the acted-on transaction (same row the REST
+                # confirm returns), or null when nothing was pending
+                "transaction": outcome["transaction"],
+                "reply": reply,
+                "sent": send_result,
+            }
 
         logger.info("Unsupported message type %r ignored (wamid=%s)", msg_type, msg.get("id"))
         return {"message_id": msg.get("id"), "ok": True, "type": msg_type, "ignored": True}
