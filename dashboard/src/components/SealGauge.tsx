@@ -12,6 +12,9 @@ export interface SealGaugeProps {
   score: number;
   /** Accessible description, built by the caller per active language mode. */
   label: string;
+  /** Responsive sizing (D3 mobile-first): the viewBox stays 140 — pass e.g.
+   *  "h-[104px] w-[104px] md:h-[140px] md:w-[140px]" to scale the whole gauge. */
+  className?: string;
 }
 
 const SIZE = 140;
@@ -19,7 +22,7 @@ const R_ARC = 54;
 const R_TICKS = 66;
 const CIRC = 2 * Math.PI * R_ARC;
 
-export function SealGauge({ score, label }: SealGaugeProps) {
+export function SealGauge({ score, label, className = '' }: SealGaugeProps) {
   const shown = useCountUp(score);
   const clamped = Math.max(0, Math.min(100, score));
   const ticks = Array.from({ length: 48 }, (_, i) => {
@@ -40,7 +43,7 @@ export function SealGauge({ score, label }: SealGaugeProps) {
       role="img"
       aria-label={label}
       focusable="false"
-      className="shrink-0 print-color-exact"
+      className={`shrink-0 print-color-exact ${className}`.trim()}
       style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
     >
       {/* stamp tick marks — notary edge, quarter ticks longer */}

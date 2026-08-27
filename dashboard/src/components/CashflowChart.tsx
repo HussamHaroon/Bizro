@@ -66,12 +66,24 @@ export function CashflowChart({ months }: CashflowChartProps) {
         </span>
       </p>
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full"
-        role="group"
-        aria-label={pick('Monthly cash-flow bars', 'ماہانہ نقد رواں')}
-      >
+      {/* Mobile-first (D3): below sm the chart keeps its full-width geometry
+          (bars + value labels stay readable — amounts are never truncated) and
+          scrolls horizontally inside a labeled, keyboard-focusable region with
+          a right-edge fade + swipe hint as the scroll affordance. sm+ fits
+          whole. Printing flattens the scroll (print:min-w-0 / overflow). */}
+      <div className="relative sm:static">
+        <div
+          className="overflow-x-auto rounded-button print:overflow-visible"
+          role="region"
+          tabIndex={0}
+          aria-label={pick('Monthly cash-flow bars — scrollable', 'ماہانہ نقد رواں — پھیرا جا سکتا ہے')}
+        >
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className="h-auto w-full min-w-[560px] print:min-w-0"
+            role="group"
+            aria-label={pick('Monthly cash-flow bars', 'ماہانہ نقد رواں')}
+          >
         {/* rule-line gridlines at quarters */}
         {[0, 0.25, 0.5, 0.75, 1].map((p) => (
           <line
@@ -146,7 +158,19 @@ export function CashflowChart({ months }: CashflowChartProps) {
             </g>
           );
         })}
-      </svg>
+          </svg>
+        </div>
+        {/* Scroll affordance (phones only): right-edge fade over the scroll
+            region — the token's raised-paper color to transparent. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-[linear-gradient(to_left,var(--bizro-paper-cream-raised),transparent)] sm:hidden"
+        />
+      </div>
+      <p className="flex items-center gap-1 text-xs text-ink-black opacity-70 sm:hidden">
+        <T en="Swipe for more months" ur="مزید مہینوں کے لیے پھیریں" />
+        <span aria-hidden="true" className="font-numerals font-semibold">→</span>
+      </p>
     </div>
   );
 }

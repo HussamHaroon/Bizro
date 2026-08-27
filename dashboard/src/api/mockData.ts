@@ -11,7 +11,9 @@
 
 import type {
   CreditReportPreview,
+  MerchantSummary,
   ReadinessLevel,
+  SavingsStreak,
   Transaction,
   TransactionKind,
   TransactionSource,
@@ -97,7 +99,11 @@ const YUSUF = { name: 'Chacha Yusuf', phone: '+92 333 5550123' };
 const HINA = { name: 'Hina Bibi', phone: null };
 const ALMADINA = { name: 'Al-Madina Distributors', phone: null };
 
-export const MOCK_MERCHANT = { id: 'mock-merchant-1', display_name: 'Bismillah Karyana Store' };
+export const MOCK_MERCHANT: MerchantSummary = {
+  id: 'mock-merchant-1',
+  display_name: 'Bismillah Karyana Store',
+  wa_id: '923001234567',
+};
 
 export const MOCK_TRANSACTIONS: Transaction[] = [
   // ---- June 2026 (history for the credit report) ------------------------------
@@ -235,6 +241,59 @@ export function deriveUdhar(items: Transaction[]): UdharOutstanding[] {
   return [...byCust.values()]
     .filter((u) => u.outstanding_pkd > 0)
     .sort((a, b) => b.outstanding_pkd - a.outstanding_pkd);
+}
+
+/** schema.md §7.3 — savings streak, mirrored 1:1 for the mock path: consecutive
+    Mon–Sun PKT weeks with net cash-flow > 0, counted backwards from the current
+    week; zero-entry weeks break the streak. Derived from the SAME fixtures the
+    ledger renders (an honest computation, not a fabricated number) — with the
+    demo scenario's current week net-negative, this yields 0 and the chip simply
+    doesn't render. */
+export function deriveStreak(items: Transaction[]): SavingsStreak {
+  const PKT_OFFSET_MS = 5 * 3_600_000; // PKT = UTC+5
+  const WEEK_MS = 7 * 86_400_000;
+  /** Monday 00:00 UTC of the week an ISO instant falls in (PKT calendar). */
+  const weekKey = (iso: string): number => {
+    const pkt = new Date(new Date(iso).getTime() + PKT_OFFSET_MS);
+    const day = pkt.getUTCDay(); // 0 = Sunday
+    const monday = Date.UTC(pkt.getUTCFullYear(), pkt.getUTCMonth(), pkt.getUTCDate() - ((day + 6) % 7));
+    return monday;
+  };
+  const weeks = new Map<number, { net: number; entries: number }>();
+  for (const t of items) {
+    if (t.status === 'rejected') continue;
+    const k = weekKey(t.occurred_at);
+    const w = weeks.get(k) ?? { net: 0, entries: 0 };
+    w.net += (t.kind === 'sale' || t.kind === 'udhar_settlement' ? 1 : -1) * t.amount_pkd;
+    w.entries += 1;
+    weeks.set(k, w);
+  }
+  const thisWeek = weekKey(new Date().toISOString());
+  const current = weeks.get(thisWeek);
+  let streak = 0;
+  for (let k = thisWeek; ; k -= WEEK_MS) {
+    const w = weeks.get(k);
+    if (!w || w.entries === 0 || w.net <= 0) break;
+    streak += 1;
+  }
+  const keys = [...weeks.keys()].sort((a, b) => a - b);
+  let best = 0;
+  let run = 0;
+  for (let i = 0; i < keys.length; i++) {
+    const w = weeks.get(keys[i])!;
+    const positive = w.entries > 0 && w.net > 0;
+    if (!positive) {
+      run = 0;
+      continue;
+    }
+    run = i > 0 && keys[i] - keys[i - 1] === WEEK_MS ? run + 1 : 1;
+    best = Math.max(best, run);
+  }
+  return {
+    streak_weeks: streak,
+    best_streak_weeks: best,
+    current_week_positive: (current?.net ?? 0) > 0,
+  };
 }
 
 /* ---- Credit Readiness preview (DRAFT shape — see types/schema.ts header) -----

@@ -7,9 +7,10 @@
    as model output (STATUS.md D0-3; qa-agent enforces). */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { api } from '../api/client';
+import { api, fetchReportHistory } from '../api/client';
 import type {
   CreditReportPreview,
+  ReadinessHistoryPoint,
   ReadinessLevel,
   Transaction,
   TransactionFlag,
@@ -22,6 +23,7 @@ import { EditTransactionForm } from '../components/EditTransactionForm';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SealGauge } from '../components/SealGauge';
 import { SealMark } from '../components/TrustSealBadge';
+import { TrendSparkline } from '../components/TrendSparkline';
 import {
   IconFlag,
   IconManual,
@@ -32,6 +34,7 @@ import {
 } from '../components/icons';
 import { formatConfidence, formatMonth, formatPkr, urduMonth } from '../lib/format';
 import { T, useT } from '../i18n';
+import { useMerchant } from '../merchant';
 
 const READINESS_WORDS: Record<ReadinessLevel, { en: string; ur: string }> = {
   ready: { en: 'Loan-ready', ur: 'قرض کے لیے تیار' },
@@ -54,14 +57,22 @@ const SOURCE_ROWS: { key: 'voice' | 'photo' | 'manual'; icon: typeof IconVoice; 
 
 export function CreditReadinessScreen() {
   const { pick } = useT();
+  const { merchants, merchantId } = useMerchant(); // re-key all data on switch (D3-2)
   const [report, setReport] = useState<CreditReportPreview | null>(null);
   const [byId, setById] = useState<Map<string, Transaction>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  /** Readiness trend (D3-3, schema.md §7.2). Optional endpoint: null = no
+      sparkline — fetched separately so a 404 can never break the report. */
+  const [history, setHistory] = useState<ReadinessHistoryPoint[] | null>(null);
 
   useEffect(() => {
     let alive = true;
+    setReport(null); // merchant switch → fresh report, never a stale one
+    setById(new Map());
+    setError(null);
+    setHistory(null);
     Promise.all([api.reportPreview(), api.listTransactions()])
       .then(([rep, txs]) => {
         if (!alive) return;
@@ -71,10 +82,13 @@ export function CreditReadinessScreen() {
       .catch((e: unknown) => {
         if (alive) setError(e instanceof Error ? e.message : 'Could not load the report');
       });
+    fetchReportHistory().then((h) => {
+      if (alive) setHistory(h);
+    });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [merchantId]);
 
   const handleSaved = useCallback((t: Transaction) => {
     setById((cur) => {
@@ -147,34 +161,44 @@ export function CreditReadinessScreen() {
               </span>
             </p>
             {/* ONE primary action per screen (§4.4): print the report as the
-                PDF artifact. Hidden in print itself. */}
-            <Button
-              className="bizro-no-print"
-              icon={<IconPrint className="h-5 w-5" />}
-              onClick={() => window.print()}
-            >
-              <T en="Print / PDF" ur="پرنٹ / پی ڈی ایف" />
-            </Button>
+                PDF artifact. Hidden in print itself; on phones the sticky
+                print bar below the verdict takes over (D3). */}
+            <span className="bizro-no-print hidden md:block">
+              <Button
+                icon={<IconPrint className="h-5 w-5" />}
+                onClick={() => window.print()}
+              >
+                <T en="Print / PDF" ur="پرنٹ / پی ڈی ایف" />
+              </Button>
+            </span>
           </div>
         }
       />
 
-      {/* Verdict (D1-1 §5) — the judge screenshot: 140px seal gauge, band word
-          large in Urdu AND English (always both on this artifact), summaries
-          per active language mode. Shape + word carry the level, not color. */}
+      {/* Verdict (D1-1 §5) — the judge screenshot. D3 mobile-first: on phones the
+          verdict text wraps ABOVE the (104px) gauge, text centered; ≥md it is the
+          desktop 140px gauge left of the words. Shape + word carry the level, not
+          color. */}
       <section
-        className="bizro-card bizro-card-hover flex flex-wrap items-center gap-x-8 gap-y-5 px-6 py-6"
+        className="bizro-card bizro-card-hover flex flex-col-reverse items-center gap-x-8 gap-y-5 px-5 py-6 text-center md:flex-row md:px-6 md:text-left"
         aria-label={pick('Readiness verdict', 'قرض کی تیاری')}
       >
-        <SealGauge
-          score={readiness.score_0_100}
-          label={pick(
-            `Readiness score ${readiness.score_0_100} of 100 — ${levelWord.en}`,
-            `تیاری کا اسکور ${readiness.score_0_100} از 100 — ${levelWord.ur}`,
-          )}
-        />
-        <div className="min-w-64 flex-1">
-          <h2 className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        {/* Gauge + trend group (D3-3): the sparkline sits beside the seal gauge
+            at every width; on phones the whole group lands below the verdict
+            words via the section's col-reverse. */}
+        <div className="flex shrink-0 items-center gap-4">
+          <SealGauge
+            score={readiness.score_0_100}
+            label={pick(
+              `Readiness score ${readiness.score_0_100} of 100 — ${levelWord.en}`,
+              `تیاری کا اسکور ${readiness.score_0_100} از 100 — ${levelWord.ur}`,
+            )}
+            className="h-[104px] w-[104px] md:h-[140px] md:w-[140px]"
+          />
+          {history && <TrendSparkline points={history} />}
+        </div>
+        <div className="min-w-0 flex-1 md:min-w-64">
+          <h2 className="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1 md:justify-start">
             <span className="font-numerals text-3xl font-bold text-ink-green">{levelWord.en}</span>
             <span className="bizro-urdu text-2xl font-semibold text-ink-green" lang="ur">
               {levelWord.ur}
@@ -183,12 +207,32 @@ export function CreditReadinessScreen() {
           <p className="mt-2 text-sm text-ink-black">
             <T en={readiness.summary_en} ur={readiness.summary_ur} />
           </p>
-          <p className="mt-2 flex items-center gap-2 text-xs text-ink-black opacity-75">
+          <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-ink-black opacity-75 md:justify-start">
             <SealMark variant={readiness.level === 'ready' ? 'verified' : 'pending'} />
             <T en="Readiness score · Alkhidmat Mawakhat review" ur="تیاری کا اسکور · الخدمت مواکات جائزہ" />
           </p>
         </div>
       </section>
+
+      {/* Mobile-only sticky print (D3): the ONE primary action stays reachable
+          while scrolling on phones — it floats just above the bottom tab bar
+          (and its merchant-picker row on multi-merchant servers). Desktop uses
+          the header button; both hide themselves in print. */}
+      <div
+        className={`bizro-no-print sticky z-30 md:hidden ${
+          merchants.length > 1
+            ? 'bottom-[calc(140px+env(safe-area-inset-bottom))]'
+            : 'bottom-[calc(76px+env(safe-area-inset-bottom))]'
+        }`}
+      >
+        <Button
+          className="w-full shadow-raise"
+          icon={<IconPrint className="h-5 w-5" />}
+          onClick={() => window.print()}
+        >
+          <T en="Print / PDF" ur="پرنٹ / پی ڈی ایف" />
+        </Button>
+      </div>
 
       {/* Urdu narrative — dense text uses Noto Sans Urdu, NOT Nastaliq (design.md §4.2). */}
       {report.narrative_ur && (
@@ -374,7 +418,7 @@ export function CreditReadinessScreen() {
                     setEditingId(null);
                   }}
                   aria-expanded={expanded}
-                  className="flex min-h-touch w-full flex-wrap items-center gap-x-3 gap-y-1 px-1 py-1.5 text-left transition-colors duration-200 ease-out hover:bg-paper-cream"
+                  className="flex min-h-14 w-full flex-wrap items-center gap-x-3 gap-y-1 px-1 py-1.5 text-left transition-colors duration-200 ease-out hover:bg-paper-cream"
                 >
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="flex flex-wrap items-baseline gap-x-2">
