@@ -20,11 +20,15 @@ import {
   MOCK_MERCHANT,
   MOCK_TRANSACTIONS,
   deriveReportPreview,
+  deriveStreak,
   deriveUdhar,
 } from './mockData';
 import { adaptCanonicalReport, isCanonicalReport } from './reportAdapter';
 import type {
   CreditReportPreview,
+  MerchantSummary,
+  ReadinessHistoryPoint,
+  SavingsStreak,
   Transaction,
   TransactionKind,
   UdharOutstanding,
@@ -179,9 +183,102 @@ function mockClient(): ApiClient {
 
 // -- fallback orchestration --------------------------------------------------------
 
-const live = liveClient(BASE_URL, MERCHANT_ID);
+/** Active merchant for every live call (D3-2 merchant picker). The client is a
+    module singleton; setActiveMerchant swaps its live instance — surgical, no
+    context-ification of every call site. 'me' = server-side first merchant. */
+let liveMerchantId = MERCHANT_ID;
+let live = liveClient(BASE_URL, MERCHANT_ID);
+
+/** Re-key all live calls to a merchant (loan-officer picker, D1-2/D3-2). */
+export function setActiveMerchant(merchantId: string): void {
+  if (merchantId === liveMerchantId) return;
+  liveMerchantId = merchantId;
+  live = liveClient(BASE_URL, merchantId);
+}
+
+/** The id every live call currently keys on (mock fixtures are single-merchant). */
+export function currentMerchantId(): string {
+  return fellBack ? getMock().merchantId : liveMerchantId;
+}
+
+/** GET /api/merchants — picker source (schema.md §4, D1-2). Deliberately OUTSIDE
+    the attempt() machinery: an older server without the route (or a down server)
+    must not flip the whole app to mock fixtures — the picker just stays hidden.
+    Mock mode lists the single fixture merchant (also hidden: ≤1 merchant). */
+export async function listMerchants(): Promise<MerchantSummary[]> {
+  if (fellBack) return [MOCK_MERCHANT];
+  try {
+    const res = await fetch(`${BASE_URL}/api/merchants`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) return [];
+    const data: unknown = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.filter(
+      (m): m is MerchantSummary =>
+        !!m && typeof (m as MerchantSummary).id === 'string' && typeof (m as MerchantSummary).display_name === 'string',
+    );
+  } catch {
+    return []; // server down / route missing → single-merchant demo stays clean
+  }
+}
+
 let mockImpl: ApiClient | null = null;
 const getMock = (): ApiClient => (mockImpl ??= mockClient());
+
+/** GET /api/merchants/{id}/report/history (schema.md §7.2) — trend sparkline
+    source. OPTIONAL endpoint (backend lands in parallel): any absence (404,
+    older server, network) → null and the sparkline simply doesn't render —
+    never an error, never a fabricated trend. Mock fixtures carry no report
+    history (only a single preview) → null there too. */
+export async function fetchReportHistory(): Promise<ReadinessHistoryPoint[] | null> {
+  if (fellBack) return null;
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/merchants/${encodeURIComponent(currentMerchantId())}/report/history`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const payload: unknown = await res.json();
+    const history = (payload as { history?: unknown })?.history;
+    if (!Array.isArray(history)) return null;
+    const points = history.filter(
+      (p): p is ReadinessHistoryPoint =>
+        !!p &&
+        typeof (p as ReadinessHistoryPoint).generated_at === 'string' &&
+        typeof (p as ReadinessHistoryPoint).score === 'number' &&
+        Number.isFinite((p as ReadinessHistoryPoint).score),
+    );
+    return points.length >= 2 ? points : null; // a trend needs ≥2 points
+  } catch {
+    return null;
+  }
+}
+
+/** GET /api/merchants/{id}/streak (schema.md §7.3) — ledger hero chip source.
+    OPTIONAL endpoint: any absence → null, chip hidden. In mock mode the streak
+    is DERIVED from the fixture transactions (deriveStreak — an honest
+    computation over the same data the ledger shows, never a made-up number). */
+export async function fetchStreak(): Promise<SavingsStreak | null> {
+  if (fellBack) return deriveStreak(MOCK_TRANSACTIONS);
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/merchants/${encodeURIComponent(currentMerchantId())}/streak`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const d: unknown = await res.json();
+    if (!d || typeof (d as SavingsStreak).streak_weeks !== 'number') return null;
+    const s = d as SavingsStreak;
+    return {
+      streak_weeks: s.streak_weeks,
+      best_streak_weeks: typeof s.best_streak_weeks === 'number' ? s.best_streak_weeks : s.streak_weeks,
+      current_week_positive: Boolean(s.current_week_positive),
+    };
+  } catch {
+    return null;
+  }
+}
 
 /** Flips to true only when a live call fails BEFORE any live success — after
     that, live is genuinely up and failures are surfaced as errors instead. */
@@ -234,7 +331,7 @@ export const api: ApiClient = {
     return fellBack;
   },
   get merchantId() {
-    return fellBack ? getMock().merchantId : MERCHANT_ID;
+    return currentMerchantId();
   },
   listTransactions: (query) => attempt((c) => c.listTransactions(query)),
   listUdhar: () => attempt((c) => c.listUdhar()),

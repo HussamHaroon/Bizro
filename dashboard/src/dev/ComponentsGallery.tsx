@@ -17,6 +17,8 @@ import { ReceiptCard } from '../components/ReceiptCard';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SealGauge } from '../components/SealGauge';
 import { StatusPill } from '../components/StatusPill';
+import { StreakChip } from '../components/StreakChip';
+import { TrendSparkline } from '../components/TrendSparkline';
 import { TrustSealBadge, SealMark } from '../components/TrustSealBadge';
 import { UdharRadar } from '../components/UdharRadar';
 import { IconExpense, IconLedger, IconReport, IconSale } from '../components/icons';
@@ -285,6 +287,26 @@ export function ComponentsGallery() {
               ]}
             />
           </div>
+        </div>
+      </Section>
+
+      <Section
+        title="14 · D3 trend sparkline + streak chip"
+        note="Readiness-over-time (GET /report/history, schema.md §7.2) and savings streak (GET /streak, §7.3). Both render nothing when the endpoint/data is absent."
+      >
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="bizro-card flex flex-wrap items-center gap-5 px-5 py-5">
+            <SealGauge score={78} label="Readiness score 78 of 100 — demo" className="h-[104px] w-[104px] md:h-[140px] md:w-[140px]" />
+            <TrendSparkline
+              points={[
+                { generated_at: '2026-07-01T21:00:00+05:00', score: 52, band: 'not_yet' },
+                { generated_at: '2026-07-15T21:00:00+05:00', score: 61, band: 'almost' },
+                { generated_at: '2026-08-01T21:00:00+05:00', score: 70, band: 'almost' },
+                { generated_at: '2026-08-21T21:00:00+05:00', score: 78, band: 'almost' },
+              ]}
+            />
+          </div>
+          <StreakChip streak={{ streak_weeks: 3, best_streak_weeks: 5, current_week_positive: true }} />
         </div>
       </Section>
     </div>

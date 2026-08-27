@@ -175,6 +175,18 @@ export function IconRadar({ className, ...rest }: IconProps) {
   );
 }
 
+/** Savings streak flame (D3-3). Pair with the week-streak words, e.g.
+    "3 week streak · ہفتوں کا سلسلہ". */
+export function IconStreak({ className, ...rest }: IconProps) {
+  return (
+    <Badge className={className} {...rest}>
+      {/* flame teardrop, hollowed like the camera-lens cut in IconPhoto */}
+      <path d="M12 4.8c3 3.1 4.5 5.6 4.5 8.3a4.5 4.5 0 0 1-9 0C7.5 10.4 9 7.9 12 4.8z" />
+      <circle cx="12" cy="14.4" r="2.1" fill="currentColor" />
+    </Badge>
+  );
+}
+
 /** Credit report document. Pair with "Report · رپورٹ". */
 export function IconReport({ className, ...rest }: IconProps) {
   return (
