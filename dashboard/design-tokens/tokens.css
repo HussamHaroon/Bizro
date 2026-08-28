@@ -17,12 +17,50 @@
   --bizro-ink-green-hover:  #0E7A4C;
   --bizro-ink-green-disabled: #7FA392;
   --bizro-ledger-red-hover: #C04A41;
-  --bizro-paper-cream-raised: #FDFAF2; /* card surface on cream background */
+  --bizro-paper-cream-raised: #FDFAF2; /* raised surface ON cream cards (inputs, inactive chips) */
+
+  /* ---- D3-4 substrate extension (Orchestrator ruling 2026-08-23) ------------
+     Canvas + depth: the page becomes a cool near-white CANVAS; the khata cream
+     warmth now lives in CARDS against it. ink-deep is the gradient end for the
+     header band. gold/teal bright+deep ends exist only inside gradient tokens
+     below (viz fills, seal ring). teal-ink is the AA text pair for text on
+     teal tints (settled-teal itself is 4.35:1 on its 10% tint — one notch short
+     of AA, so chips darken text one step). */
+  --bizro-canvas:        #FAFAF8;  /* page canvas — cool near-white */
+  --bizro-ink-deep:      #073D27;  /* gradient end: ink-green → ink-deep header */
+  --bizro-gold-bright:   #E3AC55;  /* seal-ring gradient light end */
+  --bizro-gold-deep:     #A8731F;  /* seal-ring gradient dark end */
+  --bizro-teal-bright:   #2F9C8A;  /* viz bar gradient light end (in) */
+  --bizro-teal-ink:      #176156;  /* AA text on teal tint surfaces (6.1:1) */
+
+  /* Gradient + glow tokens (D3-4). Stops reference the color tokens above so
+     the color set stays the single source of truth. */
+  --bizro-gradient-header: linear-gradient(135deg, var(--bizro-ink-green) 0%, var(--bizro-ink-deep) 100%);
+  --bizro-gradient-card:   linear-gradient(180deg, var(--bizro-paper-cream-raised) 0%, var(--bizro-paper-cream) 100%);
+  --bizro-gradient-bar-in:  linear-gradient(180deg, var(--bizro-teal-bright) 0%, var(--bizro-settled-teal) 100%);
+  --bizro-gradient-bar-out: linear-gradient(180deg, var(--bizro-ledger-red-hover) 0%, var(--bizro-ledger-red) 100%);
+  --bizro-gradient-ring:  linear-gradient(270deg, var(--bizro-gold-bright) 0%, var(--bizro-seal-gold) 55%, var(--bizro-gold-deep) 100%);
+  --bizro-gradient-udhar-h: linear-gradient(90deg, var(--bizro-ink-green-hover) 0%, var(--bizro-ink-deep) 100%);
+  --bizro-glow-seal: drop-shadow(0 2px 12px rgba(201, 138, 44, 0.28)); /* soft outer glow for the seal gauge (alpha kept in the 20–30% taste band) */
+
+  /* Soft tint surfaces (D3-4 chips) — 10–12% alpha of their token colors,
+     rgba values resolved from the tokens above (recompute if a color token
+     changes). `-line` variants are the matching hairline borders at ~30%. */
+  --bizro-tint-teal:       rgba(31, 122, 108, 0.10);
+  --bizro-tint-teal-line:  rgba(31, 122, 108, 0.30);
+  --bizro-tint-red:        rgba(166, 51, 43, 0.10);
+  --bizro-tint-red-line:   rgba(166, 51, 43, 0.30);
+  --bizro-tint-gold:       rgba(201, 138, 44, 0.12);
+  --bizro-tint-gold-line:  rgba(201, 138, 44, 0.32);
+  --bizro-tint-neutral:      rgba(33, 30, 26, 0.07);
+  --bizro-tint-neutral-line: rgba(33, 30, 26, 0.16);
 
   /* WCAG AA-approved text/background pairs (design.md §4.1 — non-negotiable):
-     ink-black on paper-cream · ink-black on paper-cream-raised
-     ink-green on paper-cream (also on cream-raised)
-     ledger-red on paper-cream · settled-teal on paper-cream
+     ink-black on canvas · ink-black on paper-cream · ink-black on paper-cream-raised
+     ink-green on canvas · ink-green on paper-cream (also on cream-raised)
+     ledger-red on canvas · ledger-red on paper-cream · settled-teal on canvas
+     settled-teal-ink on tint-teal (D3-4 chips) · paper-cream on ink-green and
+     on the gradient-header (ink-deep end is darker → higher contrast)
      paper-cream on ink-green (buttons/headers) · ink-black on seal-gold (stamp)
      seal-gold is NOT AA as text on cream — use only for stamp/badge fills/borders. */
 

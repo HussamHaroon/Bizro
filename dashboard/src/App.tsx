@@ -39,9 +39,9 @@ function TopBar() {
     }`;
   return (
     <header
-      className="bizro-no-print sticky top-0 z-40 border-b-2 border-seal-gold bg-ink-green text-paper-cream shadow-card"
+      className="bizro-no-print bizro-gradient-header sticky top-0 z-40 border-b-2 border-seal-gold text-paper-cream shadow-card"
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6 sm:py-3">
         <Link
           to="/ledger"
           className="flex items-center gap-2.5 py-1"
@@ -50,7 +50,7 @@ function TopBar() {
           <span className="bizro-display-ur text-2xl leading-none text-paper-cream" lang="ur">
             بزرو
           </span>
-          <span className="font-numerals text-xl font-bold tracking-wide text-paper-cream">
+          <span className="font-numerals text-2xl font-bold tracking-wide text-paper-cream">
             Bizro
           </span>
         </Link>
@@ -122,7 +122,7 @@ export function App() {
     <BrowserRouter>
       {/* pb reserves the fixed bottom tab bar's height + notch inset on <md so
           the footer/ledger tail is never covered. */}
-      <div className={`flex min-h-dvh flex-col bg-paper-cream ${reserveClass}`}>
+      <div className={`flex min-h-dvh flex-col bg-canvas ${reserveClass}`}>
         <MockBanner />
         <TopBar />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">

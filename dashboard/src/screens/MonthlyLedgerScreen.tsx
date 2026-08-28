@@ -182,10 +182,10 @@ export function MonthlyLedgerScreen() {
               <IconChevronLeft className="h-6 w-6" />
             </button>
             <p className="min-w-28 text-center">
-              <span className="block font-numerals text-lg font-semibold text-paper-cream">
+              <span className="block font-numerals text-lg font-semibold text-ink-green">
                 {formatMonth(month)}
               </span>
-              <span className="bizro-urdu block text-sm text-paper-cream" lang="ur">
+              <span className="bizro-urdu block text-sm font-semibold text-ink-black" lang="ur">
                 {urduMonth(month)} {month.slice(0, 4)}
               </span>
             </p>

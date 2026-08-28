@@ -11,16 +11,30 @@ module.exports = {
           green: '#0B5D3B',
           greenHover: '#0E7A4C',
           greenDisabled: '#7FA392',
+          deep: '#073D27',
           black: '#211E1A',
         },
         paper: {
           cream: '#F7F2E7',
           raised: '#FDFAF2',
         },
+        canvas: '#FAFAF8',
         ledger: { red: '#A6332B', redHover: '#C04A41' },
-        seal: { gold: '#C98A2C' },
-        settled: { teal: '#1F7A6C' },
+        seal: { gold: '#C98A2C', goldBright: '#E3AC55', goldDeep: '#A8731F' },
+        settled: { teal: '#1F7A6C', tealBright: '#2F9C8A', tealInk: '#176156' },
         rule: { line: '#DCD3BE' },
+      },
+      backgroundImage: {
+        'bizro-header':
+          'linear-gradient(135deg, #0B5D3B 0%, #073D27 100%)',
+        'bizro-card':
+          'linear-gradient(180deg, #FDFAF2 0%, #F7F2E7 100%)',
+        'bizro-bar-in':
+          'linear-gradient(180deg, #2F9C8A 0%, #1F7A6C 100%)',
+        'bizro-bar-out':
+          'linear-gradient(180deg, #C04A41 0%, #A6332B 100%)',
+        'bizro-udhar-h':
+          'linear-gradient(90deg, #0E7A4C 0%, #073D27 100%)',
       },
       fontFamily: {
         body: ['"IBM Plex Sans"', '"Noto Sans Urdu"', 'system-ui', 'sans-serif'],

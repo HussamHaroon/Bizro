@@ -23,7 +23,7 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
   const max = top3.length ? top3[0].outstanding_pkd : 0;
 
   return (
-    <section className={`bizro-card bizro-card-hover px-5 py-5 ${className}`} aria-labelledby="udhar-radar-title">
+    <section className={`bizro-card bizro-card-hero bizro-card-hover px-5 py-5 ${className}`} aria-labelledby="udhar-radar-title">
       <header className="mb-4 flex flex-wrap items-center gap-3">
         <IconRadar className="h-9 w-9 text-ledger-red" />
         <div className="min-w-0">

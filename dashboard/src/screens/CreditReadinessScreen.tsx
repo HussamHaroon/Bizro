@@ -180,7 +180,7 @@ export function CreditReadinessScreen() {
           desktop 140px gauge left of the words. Shape + word carry the level, not
           color. */}
       <section
-        className="bizro-card bizro-card-hover flex flex-col-reverse items-center gap-x-8 gap-y-5 px-5 py-6 text-center md:flex-row md:px-6 md:text-left"
+        className="bizro-card bizro-card-hero bizro-card-hover flex flex-col-reverse items-center gap-x-8 gap-y-5 px-5 py-6 text-center md:flex-row md:px-6 md:text-left"
         aria-label={pick('Readiness verdict', 'قرض کی تیاری')}
       >
         {/* Gauge + trend group (D3-3): the sparkline sits beside the seal gauge
