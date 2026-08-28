@@ -157,7 +157,7 @@ export function CreditReadinessScreen() {
               <br />
               <span className="opacity-75">
                 {report.period.start} → {report.period.end} ·{' '}
-                <T en="for Alkhidmat Mawakhat review" ur="الخدمت مواکات کے جائزے کے لیے" />
+                <T en="Mawakhat-style review · criteria pending" ur="مواکات اندازِ جائزہ · معیارات متوقع" />
               </span>
             </p>
             {/* ONE primary action per screen (§4.4): print the report as the
@@ -209,7 +209,7 @@ export function CreditReadinessScreen() {
           </p>
           <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-ink-black opacity-75 md:justify-start">
             <SealMark variant={readiness.level === 'ready' ? 'verified' : 'pending'} />
-            <T en="Readiness score · Alkhidmat Mawakhat review" ur="تیاری کا اسکور · الخدمت مواکات جائزہ" />
+            <T en="Readiness score · Mawakhat-style review" ur="تیاری کا اسکور · مواکات اندازِ جائزہ" />
           </p>
         </div>
       </section>
@@ -329,7 +329,7 @@ export function CreditReadinessScreen() {
             <SealMark variant="verified" />
             <p className="text-sm text-ink-black">
               <span className="font-numerals text-lg font-semibold">{aiSharePct}%</span>{' '}
-              <T en="of entries AI-verified" ur="انٹریاں تصدیق شدہ" />
+              <T en="of entries AI-parsed & confirmed" ur="انٹریاں اے آئی سے درج و تصدیق شدہ" />
               <br />
               <span className="text-xs opacity-75">
                 avg confidence {formatConfidence(report.sourcing.avg_confidence)} across{' '}
