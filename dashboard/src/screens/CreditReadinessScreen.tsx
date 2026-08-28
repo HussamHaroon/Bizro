@@ -199,7 +199,9 @@ export function CreditReadinessScreen() {
         </div>
         <div className="min-w-0 flex-1 md:min-w-64">
           <h2 className="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1 md:justify-start">
-            <span className="font-numerals text-3xl font-bold text-ink-green">{levelWord.en}</span>
+            <span className="font-numerals text-[2rem] font-bold leading-tight text-ink-green md:text-4xl">
+              {levelWord.en}
+            </span>
             <span className="bizro-urdu text-2xl font-semibold text-ink-green" lang="ur">
               {levelWord.ur}
             </span>
@@ -294,8 +296,8 @@ export function CreditReadinessScreen() {
             <T
               en="Record consistency"
               ur="ریکارڈ کی تسلسل"
-              className="font-numerals text-lg font-semibold text-ink-black"
-              urClassName="text-base font-semibold text-ink-black"
+              className="font-numerals text-xl font-semibold text-ink-black"
+              urClassName="text-lg font-semibold text-ink-black"
             />
           </h2>
           <dl className="flex flex-col gap-2 text-sm text-ink-black">
@@ -321,14 +323,14 @@ export function CreditReadinessScreen() {
             <T
               en="AI sourcing"
               ur="اے آئی ذرائع"
-              className="font-numerals text-lg font-semibold text-ink-black"
-              urClassName="text-base font-semibold text-ink-black"
+              className="font-numerals text-xl font-semibold text-ink-black"
+              urClassName="text-lg font-semibold text-ink-black"
             />
           </h2>
           <div className="mb-3 flex items-center gap-3">
             <SealMark variant="verified" />
             <p className="text-sm text-ink-black">
-              <span className="font-numerals text-lg font-semibold">{aiSharePct}%</span>{' '}
+              <span className="font-numerals text-2xl font-semibold">{aiSharePct}%</span>{' '}
               <T en="of entries AI-parsed & confirmed" ur="انٹریاں اے آئی سے درج و تصدیق شدہ" />
               <br />
               <span className="text-xs opacity-75">
