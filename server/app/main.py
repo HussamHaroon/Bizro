@@ -52,13 +52,23 @@ app = FastAPI(title="Bizro server", version="0.1.0", lifespan=lifespan)
 app.include_router(webhook_router)
 app.include_router(api_router)
 
-# --- Single-service deploy: serve the built dashboard (dashboard/dist) -------
-# `npm run build` in dashboard/ produces a static SPA; mounting it here means ONE
-# process serves UI + API (works for the demo and for a single-container deploy).
-# The dev workflow (vite on :5173 proxying /api) is unaffected.
+# --- Static surfaces -----------------------------------------------------------
+# site/dist (marketing homepage, when built) owns "/"; dashboard/dist (the SPA)
+# owns /ledger, /credit and every other non-API path via fallback. Both live in
+# their own hashed assets/ dirs, checked in order.
 
+_SITE = REPO_ROOT / "site" / "dist"
 _DIST = REPO_ROOT / "dashboard" / "dist"
 _INDEX = _DIST / "index.html"
+
+
+def _file_in(root: Path, rel: str) -> Path | None:
+    if not rel or not root.is_dir():
+        return None
+    candidate = (root / rel).resolve()
+    if str(candidate).startswith(str(root.resolve())) and candidate.is_file():
+        return candidate
+    return None
 
 
 @app.get("/health")
@@ -90,11 +100,14 @@ def health():
 
 @app.get("/{full_path:path}", include_in_schema=False)
 def spa(full_path: str):
-    """SPA fallback: real files from dist/, else index.html for client routes."""
+    """Static router: site assets → site index at / → dashboard assets → SPA fallback."""
+    if (asset := _file_in(_SITE, full_path)) is not None:
+        return FileResponse(asset)
+    if full_path in ("", "/") and (_SITE / "index.html").is_file():
+        return FileResponse(_SITE / "index.html")
+    if (asset := _file_in(_DIST, full_path)) is not None:
+        return FileResponse(asset)
     if _INDEX.is_file():
-        candidate = (_DIST / full_path).resolve()
-        if full_path and str(candidate).startswith(str(_DIST.resolve())) and candidate.is_file():
-            return FileResponse(candidate)
         return FileResponse(_INDEX)
     # No built dashboard (source checkout without a build) — say so instead of 500.
     return {
