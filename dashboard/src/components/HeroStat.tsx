@@ -6,7 +6,8 @@
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { T } from '../i18n';
+import { T, useT } from '../i18n';
+import { urduAmountWords } from '../lib/format';
 
 /** 0 → target over `duration` ms, ease-out quad. Reduced motion = instant. */
 export function useCountUp(target: number, duration = 300): number {
@@ -54,6 +55,7 @@ const TONE_CLASS: Record<HeroTone, string> = {
 
 export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
   const shown = useCountUp(value);
+  const { mode } = useT();
   return (
     <div className="bizro-card bizro-card-hover flex flex-col gap-2 px-4 py-4 sm:px-5 sm:py-5">
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.08em] text-ink-black opacity-80">
@@ -69,6 +71,13 @@ export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
         <span className="text-[0.5em] font-semibold opacity-60">Rs</span>
         <bdi>{shown.toLocaleString('en-PK')}</bdi>
       </p>
+      {/* §4.7: headline amounts appear in digits AND Urdu word form (mixed/ur
+          modes; digits-only in en per the numeral ruling). */}
+      {mode !== 'en' && (
+        <p className="bizro-urdu text-xs leading-relaxed text-ink-black opacity-70" lang="ur">
+          {urduAmountWords(value)} روپے
+        </p>
+      )}
     </div>
   );
 }
