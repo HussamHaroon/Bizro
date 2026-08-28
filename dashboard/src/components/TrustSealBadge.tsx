@@ -111,14 +111,14 @@ export function TrustSealBadge({
     <span className={`inline-flex flex-wrap items-center gap-x-2 gap-y-1 ${className}`}>
       <span
         className={stampIn ? 'bizro-stamp-in' : undefined}
-        title={variant === 'verified' ? pick('AI-verified entry', 'تصدیق شدہ انٹری') : pick('Waiting for confirmation', 'تصدیق کا انتظار')}
+        title={variant === 'verified' ? pick('AI-parsed entry, merchant-confirmed', 'اے آئی سے درج، تاجر کی تصدیق شدہ') : pick('Waiting for confirmation', 'تصدیق کا انتظار')}
       >
         <SealGlyph variant={variant} px={px} />
       </span>
       <span className={`flex flex-col ${TEXT_CLASS[size]} leading-tight`}>
         <span className="font-semibold text-ink-black">
           {variant === 'verified' ? (
-            <T en="AI-verified" ur="تصدیق شدہ" />
+            <T en="AI-parsed · confirmed" ur="اے آئی درج · تصدیق شدہ" />
           ) : (
             <T en="Needs your check" ur="تصدیق باقی" />
           )}
