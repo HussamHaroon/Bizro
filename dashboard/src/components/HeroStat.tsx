@@ -57,16 +57,16 @@ export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
   const shown = useCountUp(value);
   const { mode } = useT();
   return (
-    <div className="bizro-card bizro-card-hover flex flex-col gap-2 px-4 py-4 sm:px-5 sm:py-5">
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.08em] text-ink-black opacity-80">
+    <div className="bizro-card bizro-card-hero bizro-card-hover flex flex-col gap-2 px-4 py-4 sm:px-5 sm:py-5">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.04em] text-ink-black opacity-80">
         <span className="inline-flex">{icon}</span>
         <T en={en} ur={ur} />
       </p>
-      {/* Mobile-first numerals (D3): clamp() scales 390px→~35px / desktop→60px,
-          never below the 32px legibility floor. The amount line wraps (prefix
-          drops a line) rather than truncating — amounts are never cut. */}
+      {/* Mobile-first numerals (D3→D3-4): clamp() scales 390px→~38px /
+          desktop→68px, never below the 2.4rem floor. The amount line wraps
+          (prefix drops a line) rather than truncating — amounts are never cut. */}
       <p
-        className={`flex flex-wrap items-baseline gap-x-1 font-numerals font-bold leading-none tabular-nums text-[clamp(2rem,8.9vw,3.75rem)] ${TONE_CLASS[tone]}`}
+        className={`flex flex-wrap items-baseline gap-x-1 font-numerals font-bold leading-none tabular-nums text-[clamp(2.4rem,9.4vw,4.25rem)] ${TONE_CLASS[tone]}`}
       >
         <span className="text-[0.5em] font-semibold opacity-60">Rs</span>
         <bdi>{shown.toLocaleString('en-PK')}</bdi>

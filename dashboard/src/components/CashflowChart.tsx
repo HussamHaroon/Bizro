@@ -127,7 +127,7 @@ export function CashflowChart({ months }: CashflowChartProps) {
                   width={slot - 4}
                   height={BOTTOM - TOP + 34}
                   rx="4"
-                  fill="var(--bizro-paper-cream)"
+                  fill="var(--bizro-paper-cream-raised)"
                   stroke="var(--bizro-rule-line)"
                 />
               )}
