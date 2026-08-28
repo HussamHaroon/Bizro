@@ -48,6 +48,11 @@
   --radius-card: 6px;
   --radius-button: 6px;
   --spacing-touch: 48px; /* --bizro-touch-min: buttons & interactive targets */
+
+  /* ---- Type scale (D3-4): one notch up globally — body copy 15px, meta 13px
+     (older-user skew, design.md §4.7). Mirrored in tailwind.theme.js. -------- */
+  --text-xs: 0.8125rem; /* 13px — was 12px */
+  --text-sm: 0.9375rem; /* 15px — was 14px */
 }
 
 /* ---- Font packaging alias (flagged to Orchestrator in STATUS.agent.md) ------
@@ -170,9 +175,30 @@
     transform: translateY(-2px);
   }
 
+  /* D3-4 button lift: a subtle -1px hover rise + soft shadow (200ms ease-out).
+     Class owns the transition list so utilities never fight it; disabled and
+     reduced-motion states stay planted. */
+  .bizro-btn-lift {
+    transition:
+      background-color var(--bizro-motion-fast),
+      border-color var(--bizro-motion-fast),
+      color var(--bizro-motion-fast),
+      box-shadow var(--bizro-motion-fast),
+      transform var(--bizro-motion-fast);
+  }
+  .bizro-btn-lift:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--bizro-shadow-card);
+  }
+  .bizro-btn-lift:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .bizro-card-hover,
-    .bizro-card-hover:hover {
+    .bizro-card-hover:hover,
+    .bizro-btn-lift,
+    .bizro-btn-lift:hover:not(:disabled) {
       transition: none;
       transform: none;
     }

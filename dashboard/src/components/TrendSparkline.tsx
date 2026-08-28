@@ -54,7 +54,7 @@ export function TrendSparkline({ points, className = '' }: TrendSparklineProps) 
         points={coords.join(' ')}
         fill="none"
         stroke="var(--bizro-seal-gold)"
-        strokeWidth="3"
+        strokeWidth="3.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -62,14 +62,15 @@ export function TrendSparkline({ points, className = '' }: TrendSparklineProps) 
           {pick('readiness over time', 'وقت کے ساتھ تیاری')} · {first.score} → {last.score} ({trendWord})
         </title>
       </polyline>
-      {/* latest point dot — where the seal gauge's score came from */}
+      {/* latest point dot — where the seal gauge's score came from (D3-4:
+          slightly larger, with a raised-paper halo ring so it pops on cream) */}
       <circle
         cx={W - PAD}
         cy={y(last.score)}
-        r="3.5"
+        r="4.5"
         fill="var(--bizro-seal-gold)"
         stroke="var(--bizro-paper-cream-raised)"
-        strokeWidth="1.5"
+        strokeWidth="2"
       />
     </svg>
   );

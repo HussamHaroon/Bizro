@@ -1,7 +1,10 @@
 /* SealGauge — D1-1 §5, the credit-verdict centerpiece (the screenshot the
    judges will see): a 140px seal-gold ring with notary tick marks around the
    edge (the stamp metaphor), the readiness score climbing as a gold arc, the
-   number in Zilla Slab at the center. Score counts up on mount (300ms
+   number in Zilla Slab at the center. D3-4: the arc stroke is a gold gradient
+   (gold-bright → seal-gold → gold-deep) with a soft outer glow
+   (.bizro-glow-seal, drop-shadow follows the ring's alpha — flattened in
+   print), and the score numeral is larger. Score counts up on mount (300ms
    ease-out, skipped under prefers-reduced-motion — the same budget the hero
    stats use; the seal stamp-in remains the ONE decorative animation). */
 
@@ -43,9 +46,18 @@ export function SealGauge({ score, label, className = '' }: SealGaugeProps) {
       role="img"
       aria-label={label}
       focusable="false"
-      className={`shrink-0 print-color-exact ${className}`.trim()}
+      className={`bizro-glow-seal shrink-0 print-color-exact ${className}`.trim()}
       style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
     >
+      <defs>
+        {/* D3-4: the gold ring gradient, stops resolved from the gradient
+            token's ends (270deg: bright where the arc completes, deep behind). */}
+        <linearGradient id="bizroRing" x1={SIZE} y1={0} x2={0} y2={0}>
+          <stop offset="0" style={{ stopColor: 'var(--bizro-gold-bright)' }} />
+          <stop offset="0.55" style={{ stopColor: 'var(--bizro-seal-gold)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--bizro-gold-deep)' }} />
+        </linearGradient>
+      </defs>
       {/* stamp tick marks — notary edge, quarter ticks longer */}
       <g stroke="var(--bizro-seal-gold)" strokeWidth="2" strokeLinecap="round">
         {ticks.map((t, i) => (
@@ -66,7 +78,7 @@ export function SealGauge({ score, label, className = '' }: SealGaugeProps) {
         cy={SIZE / 2}
         r={R_ARC}
         fill="none"
-        stroke="var(--bizro-seal-gold)"
+        stroke="url(#bizroRing)"
         strokeWidth="10"
         strokeLinecap="round"
         strokeDasharray={CIRC}
@@ -75,11 +87,11 @@ export function SealGauge({ score, label, className = '' }: SealGaugeProps) {
       />
       <text
         x={SIZE / 2}
-        y={SIZE / 2 + 2}
+        y={SIZE / 2 + 4}
         textAnchor="middle"
         className="font-numerals"
         fontFamily="var(--bizro-font-numerals)"
-        fontSize="40"
+        fontSize="46"
         fontWeight="700"
         fill="var(--bizro-ink-black)"
       >
@@ -87,10 +99,10 @@ export function SealGauge({ score, label, className = '' }: SealGaugeProps) {
       </text>
       <text
         x={SIZE / 2}
-        y={SIZE / 2 + 26}
+        y={SIZE / 2 + 30}
         textAnchor="middle"
         fontFamily="var(--bizro-font-body)"
-        fontSize="13"
+        fontSize="12.5"
         fill="var(--bizro-ink-black)"
         opacity="0.7"
       >

@@ -31,8 +31,8 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
             <T
               en="Udhar Radar"
               ur="ادھار راڈار"
-              className="font-numerals text-xl font-semibold text-ink-black"
-              urClassName="text-xl font-semibold text-ink-black"
+              className="font-numerals text-[22px] font-semibold text-ink-black"
+              urClassName="text-[22px] font-semibold text-ink-black"
             />
           </h2>
           <p className="text-xs text-ink-black opacity-75">
@@ -65,10 +65,10 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                   </span>
                 </span>
               </div>
-              {/* Proportional bar — ink-green fill on the rule-line track; the
-                  number + name carry the meaning, the bar is a glance. */}
+              {/* Proportional bar (D3-4: horizontal ink gradient, rounded caps) —
+                  the number + name carry the meaning, the bar is a glance. */}
               <div
-                className="h-2 w-full overflow-hidden rounded-card bg-rule-line"
+                className="h-2.5 w-full overflow-hidden rounded-card bg-rule-line/70"
                 role="img"
                 aria-label={pick(
                   `${u.name}: Rs ${u.outstanding_pkd.toLocaleString('en-PK')} outstanding`,
@@ -76,8 +76,11 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                 )}
               >
                 <div
-                  className="h-full rounded-card bg-ink-green transition-[width] duration-200 ease-out"
-                  style={{ width: `${Math.max(4, Math.round((u.outstanding_pkd / max) * 100))}%` }}
+                  className="h-full rounded-card transition-[width] duration-200 ease-out"
+                  style={{
+                    width: `${Math.max(4, Math.round((u.outstanding_pkd / max) * 100))}%`,
+                    backgroundImage: 'var(--bizro-gradient-udhar-h)',
+                  }}
                 />
               </div>
             </li>
