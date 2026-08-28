@@ -66,7 +66,7 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
             step={1}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="min-h-touch rounded-button border border-rule-line bg-paper-cream px-3 font-numerals text-base text-ink-black"
+            className="min-h-touch rounded-button border border-rule-line bg-paper-raised px-3 font-numerals text-base text-ink-black"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm text-ink-black">
@@ -75,7 +75,7 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="min-h-touch rounded-button border border-rule-line bg-paper-cream px-3 text-base text-ink-black"
+            className="min-h-touch rounded-button border border-rule-line bg-paper-raised px-3 text-base text-ink-black"
           />
         </label>
       </div>
