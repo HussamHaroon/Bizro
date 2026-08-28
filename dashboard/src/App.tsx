@@ -86,7 +86,7 @@ function BottomNav() {
     `flex min-h-touch flex-1 flex-col items-center justify-center gap-0.5 rounded-button border-t-2 px-2 py-1 text-xs font-semibold transition-colors duration-200 ease-out ${
       isActive
         ? 'border-seal-gold bg-paper-raised text-ink-green'
-        : 'border-transparent text-ink-green opacity-60'
+        : 'border-transparent text-ink-green'
     }`;
   return (
     <nav
