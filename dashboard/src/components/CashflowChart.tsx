@@ -1,10 +1,10 @@
-/* CashflowChart — D1-1 §3: the credit screen's monthly in/out becomes a clean
-   SVG grouped bar chart (settled-teal in / ledger-red out, rounded 4px caps,
-   rule-line gridlines, value labels on hover/focus of a month group). The
-   exact-number table stays in the DOM as visually-hidden markup at the call
-   site, so screen-reader quality does not regress. Color is never the only
-   signal: legend words + the sr-only table + per-group aria-labels carry the
-   numbers. */
+/* CashflowChart — D1-1 §3, richer per D3-4: the credit screen's monthly in/out
+   SVG grouped bar chart — vertical token-gradient fills (teal in / red out),
+   6px rounded caps, faint rule-line gridlines, tinted value chips on hover/
+   focus of a month group. The exact-number table stays in the DOM as
+   visually-hidden markup at the call site, so screen-reader quality does not
+   regress. Color is never the only signal: legend words + the sr-only table +
+   per-group aria-labels carry the numbers. */
 
 import { useState } from 'react';
 import { T, useT } from '../i18n';
@@ -84,6 +84,20 @@ export function CashflowChart({ months }: CashflowChartProps) {
             role="group"
             aria-label={pick('Monthly cash-flow bars', 'ماہانہ نقد رواں')}
           >
+        {/* D3-4 viz fills: subtle vertical token gradients (teal in / red out),
+            resolved from the gradient tokens' stops so tokens stay the source
+            of truth. */}
+        <defs>
+          <linearGradient id="bizroBarIn" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" style={{ stopColor: 'var(--bizro-teal-bright)' }} />
+            <stop offset="1" style={{ stopColor: 'var(--bizro-settled-teal)' }} />
+          </linearGradient>
+          <linearGradient id="bizroBarOut" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" style={{ stopColor: 'var(--bizro-ledger-red-hover)' }} />
+            <stop offset="1" style={{ stopColor: 'var(--bizro-ledger-red)' }} />
+          </linearGradient>
+        </defs>
+
         {/* rule-line gridlines at quarters */}
         {[0, 0.25, 0.5, 0.75, 1].map((p) => (
           <line
@@ -95,6 +109,7 @@ export function CashflowChart({ months }: CashflowChartProps) {
             stroke="var(--bizro-rule-line)"
             strokeWidth="1"
             strokeDasharray={p === 0 ? undefined : '3 4'}
+            opacity="0.7"
           />
         ))}
 
@@ -131,18 +146,69 @@ export function CashflowChart({ months }: CashflowChartProps) {
                   stroke="var(--bizro-rule-line)"
                 />
               )}
-              <rect x={inX} y={BOTTOM - inH} width={BAR_W} height={inH} rx="4" fill="var(--bizro-settled-teal)" />
-              <rect x={outX} y={BOTTOM - outH} width={BAR_W} height={outH} rx="4" fill="var(--bizro-ledger-red)" />
-              {isActive && (
-                <g fontFamily="var(--bizro-font-numerals)" fontSize="12" fontWeight="600" textAnchor="middle">
-                  <text x={inX + BAR_W / 2} y={BOTTOM - inH - 6} fill="var(--bizro-settled-teal)">
-                    {(m.inflow_pkd / 1000).toFixed(m.inflow_pkd % 1000 === 0 ? 0 : 1)}k
-                  </text>
-                  <text x={outX + BAR_W / 2} y={BOTTOM - outH - 6} fill="var(--bizro-ledger-red)">
-                    {(m.outflow_pkd / 1000).toFixed(m.outflow_pkd % 1000 === 0 ? 0 : 1)}k
-                  </text>
-                </g>
-              )}
+              <rect x={inX} y={BOTTOM - inH} width={BAR_W} height={inH} rx="6" fill="url(#bizroBarIn)" />
+              <rect x={outX} y={BOTTOM - outH} width={BAR_W} height={outH} rx="6" fill="url(#bizroBarOut)" />
+              {/* D3-4 hover value chips: tinted rounded chips above the bars
+                  (the exact figures always live in the sr-only table). When the
+                  pair's bar tops sit in the same band, the two chips would
+                  collide — one combined chip carries both values instead. */}
+              {isActive &&
+                (() => {
+                  const topIn = BOTTOM - inH;
+                  const topOut = BOTTOM - outH;
+                  const inK = `${(m.inflow_pkd / 1000).toFixed(m.inflow_pkd % 1000 === 0 ? 0 : 1)}k`;
+                  const outK = `${(m.outflow_pkd / 1000).toFixed(m.outflow_pkd % 1000 === 0 ? 0 : 1)}k`;
+                  const chip = (
+                    x: number,
+                    top: number,
+                    label: string,
+                    fill: string,
+                    line: string,
+                    text: string,
+                  ) => (
+                    <g key={`${label}-${x}`}>
+                      <rect
+                        x={x - (label.length * 4 + 7)}
+                        y={top - 26}
+                        width={label.length * 8 + 14}
+                        height={20}
+                        rx="7"
+                        fill={fill}
+                        stroke={line}
+                      />
+                      <text x={x} y={top - 11.5} fill={text}>
+                        {label}
+                      </text>
+                    </g>
+                  );
+                  if (Math.abs(topIn - topOut) >= 26) {
+                    return (
+                      <g fontFamily="var(--bizro-font-numerals)" fontSize="12" fontWeight="700" textAnchor="middle">
+                        {chip(inX + BAR_W / 2, topIn, inK, 'var(--bizro-tint-teal)', 'var(--bizro-tint-teal-line)', 'var(--bizro-teal-ink)')}
+                        {chip(outX + BAR_W / 2, topOut, outK, 'var(--bizro-tint-red)', 'var(--bizro-tint-red-line)', 'var(--bizro-ledger-red)')}
+                      </g>
+                    );
+                  }
+                  const label = `${inK} · ${outK}`;
+                  return (
+                    <g fontFamily="var(--bizro-font-numerals)" fontSize="12" fontWeight="700" textAnchor="middle">
+                      <rect
+                        x={cx - (label.length * 4 + 8)}
+                        y={Math.min(topIn, topOut) - 26}
+                        width={label.length * 8 + 16}
+                        height={20}
+                        rx="7"
+                        fill="var(--bizro-tint-neutral)"
+                        stroke="var(--bizro-tint-neutral-line)"
+                      />
+                      <text x={cx} y={Math.min(topIn, topOut) - 11.5}>
+                        <tspan fill="var(--bizro-teal-ink)">{inK}</tspan>
+                        <tspan fill="var(--bizro-ink-black)" opacity="0.55"> · </tspan>
+                        <tspan fill="var(--bizro-ledger-red)">{outK}</tspan>
+                      </text>
+                    </g>
+                  );
+                })()}
               <text
                 x={cx}
                 y={H - 14}

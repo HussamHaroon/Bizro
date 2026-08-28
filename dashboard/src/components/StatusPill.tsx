@@ -1,6 +1,9 @@
 /* StatusPill — schema.md §1 `status` (pending | confirmed | edited | rejected).
-   Always icon + word (design.md §4.7 — never a bare colored dot). Radius stays 6px
-   (tokens: "crisp, stamp-like — no pill shapes" even though the name says pill). */
+   Always icon + word (design.md §4.7 — never a bare colored dot). D3-4: soft
+   tinted chip (10–12% alpha of the token color + hairline border) instead of
+   outline-only. Text pairs per tokens.css AA list: teal-ink on tint-teal,
+   ledger-red on tint-red, ink-black on tint-gold / tint-neutral. Radius stays
+   6px (tokens: "crisp, stamp-like — no pill shapes"). */
 
 import type { TransactionStatus } from '../types/schema';
 import { IconCheck, IconEdited, IconPending, IconRejected } from './icons';
@@ -23,25 +26,25 @@ const SPECS: Record<TransactionStatus, PillSpec> = {
     icon: IconPending,
     en: 'Confirm pending',
     ur: 'تصدیق باقی',
-    classes: 'bg-paper-raised text-ink-black border-rule-line',
+    classes: 'bizro-tint-neutral text-ink-black',
   },
   confirmed: {
     icon: IconCheck,
     en: 'Verified',
     ur: 'تصدیق شدہ',
-    classes: 'bg-paper-raised text-settled-teal border-rule-line',
+    classes: 'bizro-tint-teal text-teal-ink',
   },
   edited: {
     icon: IconEdited,
     en: 'Edited',
     ur: 'ترمیم شدہ',
-    classes: 'bg-paper-raised text-ink-black border-seal-gold',
+    classes: 'bizro-tint-gold text-ink-black',
   },
   rejected: {
     icon: IconRejected,
     en: 'Rejected',
     ur: 'مسترد',
-    classes: 'bg-paper-raised text-ledger-red border-rule-line',
+    classes: 'bizro-tint-red text-ledger-red',
   },
 };
 
@@ -49,7 +52,7 @@ export function StatusPill({ status, className = '' }: StatusPillProps) {
   const { icon: Icon, en, ur, classes } = SPECS[status];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-card border px-2 py-0.5 text-xs font-semibold ${classes} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-card border px-2.5 py-1 text-xs font-semibold ${classes} ${className}`}
     >
       <Icon className="h-[18px] w-[18px]" />
       <T en={en} ur={ur} />

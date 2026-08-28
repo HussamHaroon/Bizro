@@ -1,7 +1,8 @@
 /* Button — design.md §4.4: solid ink-green, 48px+ touch target, ONE primary action
    per screen (enforced at usage sites, not by the API). Secondary = quiet cream
    surface + rule-line border. Danger-quiet = red text for destructive corrections.
-   Motion: hover/press transitions use the 200ms fast token only. */
+   D3-4: .bizro-btn-lift adds the subtle -1px hover rise + soft shadow (the only
+   motion tokens: 200ms fast, flattened under prefers-reduced-motion). */
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
@@ -34,7 +35,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={`inline-flex min-h-touch items-center justify-center gap-2 rounded-button px-4 py-3 font-semibold transition-colors duration-200 ease-out disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`bizro-btn-lift inline-flex min-h-touch items-center justify-center gap-2 rounded-button px-4 py-3 font-semibold disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${className}`}
       {...rest}
     >
       {icon}

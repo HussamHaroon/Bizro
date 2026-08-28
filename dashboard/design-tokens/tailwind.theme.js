@@ -41,6 +41,12 @@ module.exports = {
         numerals: ['"Zilla Slab"', '"IBM Plex Sans"', 'serif'],
         displayUr: ['"Noto Nastaliq Urdu"', 'serif'],
       },
+      fontSize: {
+        /* D3-4 type-scale bump (mirrors the @theme overrides in src/index.css):
+           body copy 15px, meta 13px — one notch up globally. */
+        xs: '13px',
+        sm: '15px',
+      },
       borderRadius: {
         card: '6px',
         button: '6px',
