@@ -15,7 +15,7 @@ export function MockBanner() {
   return (
     <p
       role="status"
-      className="bizro-no-print bg-seal-gold px-4 py-2 text-center text-sm font-semibold text-ink-black"
+      className="bizro-no-print border-b-[3px] border-ink-line bg-fill-gold px-4 py-2 text-center text-sm font-semibold text-ink-line"
     >
       <T
         en="Live server unreachable — showing clearly-labeled demo data"

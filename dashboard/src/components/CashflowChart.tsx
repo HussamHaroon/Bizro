@@ -1,7 +1,8 @@
-/* CashflowChart — D1-1 §3, richer per D3-4: the credit screen's monthly in/out
-   SVG grouped bar chart — vertical token-gradient fills (teal in / red out),
-   6px rounded caps, faint rule-line gridlines, tinted value chips on hover/
-   focus of a month group. The exact-number table stays in the DOM as
+/* CashflowChart — D1-1 §3, D4-1 restyle: the credit screen's monthly in/out
+   SVG grouped bar chart — FLAT fills (green-fill in / red-fill out) with 2px
+   ink-line strokes on every bar, square caps, gridlines as 1px ink at 20%
+   alpha, and sticker value chips (raised, ink-bordered, tiny tilt) on
+   hover/focus of a month group. The exact-number table stays in the DOM as
    visually-hidden markup at the call site, so screen-reader quality does not
    regress. Color is never the only signal: legend words + the sr-only table +
    per-group aria-labels carry the numbers. */
@@ -55,13 +56,13 @@ export function CashflowChart({ months }: CashflowChartProps) {
   return (
     <div className="flex flex-col gap-2">
       {/* Legend — color + word, never color alone. */}
-      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-ink-black">
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-ink-line">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-card bg-settled-teal" aria-hidden="true" />
+          <span className="inline-block h-3 w-3 rounded-chip border border-ink-line bg-fill-green" aria-hidden="true" />
           <T en="Money in" ur="آمدنی" />
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-card bg-ledger-red" aria-hidden="true" />
+          <span className="inline-block h-3 w-3 rounded-chip border border-ink-line bg-fill-red" aria-hidden="true" />
           <T en="Money out" ur="خرچ" />
         </span>
       </p>
@@ -84,21 +85,7 @@ export function CashflowChart({ months }: CashflowChartProps) {
             role="group"
             aria-label={pick('Monthly cash-flow bars', 'ماہانہ نقد رواں')}
           >
-        {/* D3-4 viz fills: subtle vertical token gradients (teal in / red out),
-            resolved from the gradient tokens' stops so tokens stay the source
-            of truth. */}
-        <defs>
-          <linearGradient id="bizroBarIn" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" style={{ stopColor: 'var(--bizro-teal-bright)' }} />
-            <stop offset="1" style={{ stopColor: 'var(--bizro-settled-teal)' }} />
-          </linearGradient>
-          <linearGradient id="bizroBarOut" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" style={{ stopColor: 'var(--bizro-ledger-red-hover)' }} />
-            <stop offset="1" style={{ stopColor: 'var(--bizro-ledger-red)' }} />
-          </linearGradient>
-        </defs>
-
-        {/* rule-line gridlines at quarters */}
+        {/* D4-1 gridlines: 1px ink at 20% alpha; the baseline rides 2px ink. */}
         {[0, 0.25, 0.5, 0.75, 1].map((p) => (
           <line
             key={p}
@@ -106,10 +93,8 @@ export function CashflowChart({ months }: CashflowChartProps) {
             x2={RIGHT}
             y1={BOTTOM - p * (BOTTOM - TOP)}
             y2={BOTTOM - p * (BOTTOM - TOP)}
-            stroke="var(--bizro-rule-line)"
-            strokeWidth="1"
-            strokeDasharray={p === 0 ? undefined : '3 4'}
-            opacity="0.7"
+            stroke={p === 0 ? 'var(--bizro-ink-line)' : 'var(--bizro-gridline)'}
+            strokeWidth={p === 0 ? 2 : 1}
           />
         ))}
 
@@ -141,15 +126,32 @@ export function CashflowChart({ months }: CashflowChartProps) {
                   y={TOP - 20}
                   width={slot - 4}
                   height={BOTTOM - TOP + 34}
-                  rx="4"
-                  fill="var(--bizro-paper-cream-raised)"
-                  stroke="var(--bizro-rule-line)"
+                  fill="var(--bizro-paper)"
+                  stroke="var(--bizro-ink-line)"
+                  strokeWidth="2"
                 />
               )}
-              <rect x={inX} y={BOTTOM - inH} width={BAR_W} height={inH} rx="6" fill="url(#bizroBarIn)" />
-              <rect x={outX} y={BOTTOM - outH} width={BAR_W} height={outH} rx="6" fill="url(#bizroBarOut)" />
-              {/* D3-4 hover value chips: tinted rounded chips above the bars
-                  (the exact figures always live in the sr-only table). When the
+              {/* D4-1 bars: flat fill + 2px ink-line stroke, square caps. */}
+              <rect
+                x={inX}
+                y={BOTTOM - inH}
+                width={BAR_W}
+                height={inH}
+                fill="var(--bizro-green-fill)"
+                stroke="var(--bizro-ink-line)"
+                strokeWidth="2"
+              />
+              <rect
+                x={outX}
+                y={BOTTOM - outH}
+                width={BAR_W}
+                height={outH}
+                fill="var(--bizro-red-fill)"
+                stroke="var(--bizro-ink-line)"
+                strokeWidth="2"
+              />
+              {/* Sticker value chips (D4-1): raised, ink-bordered, tiny tilt —
+                  the exact figures always live in the sr-only table. When the
                   pair's bar tops sit in the same band, the two chips would
                   collide — one combined chip carries both values instead. */}
               {isActive &&
@@ -162,19 +164,17 @@ export function CashflowChart({ months }: CashflowChartProps) {
                     x: number,
                     top: number,
                     label: string,
-                    fill: string,
-                    line: string,
                     text: string,
                   ) => (
-                    <g key={`${label}-${x}`}>
+                    <g key={`${label}-${x}`} transform={`rotate(-3 ${x} ${top - 16})`}>
                       <rect
                         x={x - (label.length * 4 + 7)}
                         y={top - 26}
                         width={label.length * 8 + 14}
                         height={20}
-                        rx="7"
-                        fill={fill}
-                        stroke={line}
+                        fill="var(--bizro-paper-raised)"
+                        stroke="var(--bizro-ink-line)"
+                        strokeWidth="2"
                       />
                       <text x={x} y={top - 11.5} fill={text}>
                         {label}
@@ -184,26 +184,32 @@ export function CashflowChart({ months }: CashflowChartProps) {
                   if (Math.abs(topIn - topOut) >= 26) {
                     return (
                       <g fontFamily="var(--bizro-font-numerals)" fontSize="12" fontWeight="700" textAnchor="middle">
-                        {chip(inX + BAR_W / 2, topIn, inK, 'var(--bizro-tint-teal)', 'var(--bizro-tint-teal-line)', 'var(--bizro-teal-ink)')}
-                        {chip(outX + BAR_W / 2, topOut, outK, 'var(--bizro-tint-red)', 'var(--bizro-tint-red-line)', 'var(--bizro-ledger-red)')}
+                        {chip(inX + BAR_W / 2, topIn, inK, 'var(--bizro-ink-green)')}
+                        {chip(outX + BAR_W / 2, topOut, outK, 'var(--bizro-ledger-red)')}
                       </g>
                     );
                   }
                   const label = `${inK} · ${outK}`;
                   return (
-                    <g fontFamily="var(--bizro-font-numerals)" fontSize="12" fontWeight="700" textAnchor="middle">
+                    <g
+                      fontFamily="var(--bizro-font-numerals)"
+                      fontSize="12"
+                      fontWeight="700"
+                      textAnchor="middle"
+                      transform={`rotate(-3 ${cx} ${Math.min(topIn, topOut) - 16})`}
+                    >
                       <rect
                         x={cx - (label.length * 4 + 8)}
                         y={Math.min(topIn, topOut) - 26}
                         width={label.length * 8 + 16}
                         height={20}
-                        rx="7"
-                        fill="var(--bizro-tint-neutral)"
-                        stroke="var(--bizro-tint-neutral-line)"
+                        fill="var(--bizro-paper-raised)"
+                        stroke="var(--bizro-ink-line)"
+                        strokeWidth="2"
                       />
                       <text x={cx} y={Math.min(topIn, topOut) - 11.5}>
-                        <tspan fill="var(--bizro-teal-ink)">{inK}</tspan>
-                        <tspan fill="var(--bizro-ink-black)" opacity="0.55"> · </tspan>
+                        <tspan fill="var(--bizro-ink-green)">{inK}</tspan>
+                        <tspan fill="var(--bizro-ink-line)" opacity="0.55"> · </tspan>
                         <tspan fill="var(--bizro-ledger-red)">{outK}</tspan>
                       </text>
                     </g>
@@ -216,7 +222,7 @@ export function CashflowChart({ months }: CashflowChartProps) {
                 fontFamily="var(--bizro-font-body)"
                 fontSize="13"
                 fontWeight="600"
-                fill="var(--bizro-ink-black)"
+                fill="var(--bizro-ink-line)"
                 opacity="0.85"
               >
                 {mode === 'ur' ? urduMonth(m.month) : mode === 'en' ? shortMonth(m.month) : `${shortMonth(m.month)} · ${urduMonth(m.month)}`}
@@ -227,13 +233,14 @@ export function CashflowChart({ months }: CashflowChartProps) {
           </svg>
         </div>
         {/* Scroll affordance (phones only): right-edge fade over the scroll
-            region — the token's raised-paper color to transparent. */}
+            region — the card's raised-paper color to transparent (a functional
+            mask, not a decorative gradient). */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-[linear-gradient(to_left,var(--bizro-paper-cream-raised),transparent)] sm:hidden"
+          className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-[linear-gradient(to_left,var(--bizro-paper-raised),transparent)] sm:hidden"
         />
       </div>
-      <p className="flex items-center gap-1 text-xs text-ink-black opacity-70 sm:hidden">
+      <p className="flex items-center gap-1 text-xs text-ink-line opacity-70 sm:hidden">
         <T en="Swipe for more months" ur="مزید مہینوں کے لیے پھیریں" />
         <span aria-hidden="true" className="font-numerals font-semibold">→</span>
       </p>

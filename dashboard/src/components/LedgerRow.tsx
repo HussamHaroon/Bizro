@@ -61,7 +61,7 @@ const FLAG_SPEC: Record<Exclude<TransactionFlag, 'none'>, { en: string; ur: stri
 function SourceChip({ type }: { type: SourceType }) {
   const { icon: Icon, en, ur } = SOURCE_SPEC[type];
   return (
-    <span className="inline-flex items-center gap-1 rounded-card bg-paper-cream px-1.5 py-0.5 text-ink-black opacity-90">
+    <span className="inline-flex items-center gap-1 rounded-chip bizro-tint-neutral px-1.5 py-0.5 text-ink-line">
       <Icon className="h-[15px] w-[15px] text-ink-green" />
       <T en={en} ur={ur} />
     </span>
@@ -71,7 +71,7 @@ function SourceChip({ type }: { type: SourceType }) {
 function FlagChip({ flag }: { flag: Exclude<TransactionFlag, 'none'> }) {
   const { en, ur } = FLAG_SPEC[flag];
   return (
-    <span className="inline-flex items-center gap-1 rounded-card border border-rule-line bg-paper-cream px-1.5 py-0.5 font-semibold text-ledger-red">
+    <span className="inline-flex items-center gap-1 rounded-chip border-2 border-ink-line bizro-tint-red px-1.5 py-0.5 font-semibold text-ledger-red">
       <span aria-hidden="true">▲</span>
       <T en={en} ur={ur} />
     </span>
@@ -101,16 +101,16 @@ export function LedgerRow({
           type="button"
           onClick={onToggleDetails}
           aria-expanded={expanded}
-          className="flex min-h-touch flex-1 items-center gap-3 rounded-button px-1 py-1 text-left transition-colors duration-200 ease-out hover:bg-paper-cream"
+          className="flex min-h-touch flex-1 items-center gap-3 rounded-button px-1 py-1 text-left transition-colors duration-200 ease-out hover:bg-paper"
         >
           <KindIcon className={`h-8 w-8 ${kind.tone}`} />
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-baseline gap-x-2">
-              <span className="font-semibold text-ink-black">
+              <span className="font-semibold text-ink-line">
                 <T en={kind.en} ur={kind.ur} />
               </span>
               {t.counterparty && (
-                <span className="truncate text-sm text-ink-black opacity-80">· {t.counterparty.name}</span>
+                <span className="truncate text-sm text-ink-line opacity-80">· {t.counterparty.name}</span>
               )}
               {aiSourced && (
                 <SealMark
@@ -121,7 +121,7 @@ export function LedgerRow({
               )}
             </span>
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-              <span className="text-ink-black opacity-75">{formatDateTime(t.occurred_at)}</span>
+              <span className="text-ink-line opacity-75">{formatDateTime(t.occurred_at)}</span>
               <SourceChip type={t.source.type} />
               {t.flag !== 'none' && <FlagChip flag={t.flag} />}
               <StatusPill status={t.status} />
@@ -140,7 +140,7 @@ export function LedgerRow({
             <button
               type="button"
               onClick={() => onEdit(t)}
-              className="inline-flex min-h-touch items-center gap-1.5 rounded-button border border-rule-line bg-paper-raised px-2.5 text-sm font-semibold text-ink-black transition-colors duration-200 ease-out hover:bg-paper-cream"
+              className="bizro-btn-press inline-flex min-h-touch items-center gap-1.5 rounded-button border-[3px] border-ink-line bg-paper-raised px-2.5 text-sm font-semibold text-ink-line"
             >
               <IconEdit className="h-[18px] w-[18px] text-ink-green" />
               <T en="Edit" ur="بدلیں" />
@@ -150,7 +150,7 @@ export function LedgerRow({
             <button
               type="button"
               onClick={() => onConfirm(t)}
-              className="inline-flex min-h-touch items-center gap-1.5 rounded-button bg-ink-green px-3 text-sm font-semibold text-paper-cream transition-colors duration-200 ease-out hover:bg-ink-green-hover"
+              className="bizro-btn-press inline-flex min-h-touch items-center gap-1.5 rounded-button border-[3px] border-ink-line bg-fill-green px-3 text-sm font-semibold text-paper"
             >
               <T en="Confirm" ur="تصدیق" />
             </button>
@@ -175,7 +175,7 @@ export function LedgerRow({
 /** Day-group heading between ledger rule runs — generous spacing on touch (D3). */
 export function LedgerDayHeader({ children }: { children: ReactNode }) {
   return (
-    <li className="bizro-rule-h bg-paper-cream/60">
+    <li className="bizro-rule-h bizro-tint-neutral">
       <p className="px-1 py-2 font-numerals text-sm font-semibold tracking-wide text-ink-green sm:py-1.5">
         {children}
       </p>

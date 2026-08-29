@@ -1,7 +1,8 @@
 /* /dev/components — the component gallery (bizro-frontend-agent SKILL.md: Storybook
    is overkill; this route renders every library component in its states). Also the
    fastest place to re-check the token law and the a11y pairs (icon+word, color
-   never alone, 48px targets) before qa-agent does. */
+   never alone, 48px targets) before qa-agent does. D4-1: shows the
+   stamped-ledger language — hard shadow ramp, semantic fills, the rubber stamp. */
 
 import { useMemo, useState } from 'react';
 import type { Transaction } from '../types/schema';
@@ -25,16 +26,24 @@ import { IconExpense, IconLedger, IconReport, IconSale } from '../components/ico
 import { MOCK_TRANSACTIONS, deriveUdhar } from '../api/mockData';
 
 const TOKENS: { name: string; hex: string; note: string }[] = [
-  { name: 'canvas', hex: '#FAFAF8', note: 'page canvas — cool near-white (D3-4)' },
-  { name: 'ink-green', hex: '#0B5D3B', note: 'brand · primary actions · headers' },
-  { name: 'ink-deep', hex: '#073D27', note: 'gradient end — header band (D3-4)' },
-  { name: 'paper-cream', hex: '#F7F2E7', note: 'CARD surface — ledger paper on canvas' },
-  { name: 'ledger-red', hex: '#A6332B', note: 'debit / udhar / expenses' },
-  { name: 'seal-gold', hex: '#C98A2C', note: 'AI-verified seal · fills only, never text on cream' },
-  { name: 'settled-teal', hex: '#1F7A6C', note: 'paid / settled' },
-  { name: 'teal-ink', hex: '#176156', note: 'AA text on teal tints (D3-4 chips)' },
-  { name: 'ink-black', hex: '#211E1A', note: 'body text' },
-  { name: 'rule-line', hex: '#DCD3BE', note: 'ledger rules · card borders' },
+  { name: 'paper', hex: '#F5F1E6', note: 'page canvas — warm ledger cream (D4-1)' },
+  { name: 'paper-raised', hex: '#FCF9F0', note: 'cards, stickers, raised surfaces (D4-1)' },
+  { name: 'ink-line', hex: '#1F1B16', note: 'ALL borders + type baseline (D4-1)' },
+  { name: 'ink-green', hex: '#0B5D3B', note: 'brand · primary actions (= green-fill)' },
+  { name: 'ledger-red', hex: '#A6332B', note: 'debit / udhar / expenses (= red-fill)' },
+  { name: 'seal-gold', hex: '#C98A2C', note: 'seal/stamp accent — fills only, never text on cream' },
+  { name: 'settled-teal', hex: '#1F7A6C', note: 'paid / settled (= teal-fill)' },
+  { name: 'teal-ink', hex: '#176156', note: 'AA text on teal tints' },
+  { name: 'gold-fill', hex: '#E9A93D', note: 'punchy gold fill — ink text (D4-1)' },
+  { name: 'paper-cream', hex: '#F7F2E7', note: 'EXTERNAL anchor — invoice/report renderers only' },
+  { name: 'rule-line', hex: '#DCD3BE', note: 'EXTERNAL anchor — invoice/report renderers only' },
+];
+
+const FILLS: { name: string; cls: string }[] = [
+  { name: 'green-fill', cls: 'bg-fill-green text-paper' },
+  { name: 'red-fill', cls: 'bg-fill-red text-paper' },
+  { name: 'gold-fill', cls: 'bg-fill-gold text-ink-line' },
+  { name: 'teal-fill', cls: 'bg-fill-teal text-paper' },
 ];
 
 function Section({
@@ -48,8 +57,8 @@ function Section({
 }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-numerals text-xl font-semibold text-ink-black">{title}</h2>
-      {note && <p className="text-sm text-ink-black opacity-75">{note}</p>}
+      <h2 className="font-numerals text-xl font-semibold text-ink-line">{title}</h2>
+      {note && <p className="text-sm text-ink-line opacity-75">{note}</p>}
       {children}
     </section>
   );
@@ -82,16 +91,16 @@ export function ComponentsGallery() {
         purpose="Every part, every state"
       />
 
-      <Section title="1 · Color tokens" note="Locked set from design-tokens/tokens.css — nothing outside this palette ships.">
+      <Section title="1 · Color tokens" note="Locked set from design-tokens/tokens.css — nothing outside this palette ships. paper-cream/rule-line stay ONLY as external-renderer anchors.">
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {TOKENS.map((t) => (
             <li key={t.name} className="bizro-card flex items-center gap-3 px-3 py-2">
               <span
-                className="h-10 w-10 shrink-0 rounded-card border border-rule-line"
+                className="h-10 w-10 shrink-0 rounded-chip border-[3px] border-ink-line"
                 style={{ backgroundColor: t.hex }}
                 aria-hidden="true"
               />
-              <span className="text-sm text-ink-black">
+              <span className="text-sm text-ink-line">
                 <span className="font-semibold">{t.name}</span>{' '}
                 <span className="font-mono text-xs opacity-75">{t.hex}</span>
                 <br />
@@ -102,28 +111,31 @@ export function ComponentsGallery() {
         </ul>
       </Section>
 
-      <Section title="2 · Substrate (D3-4)" note="Page canvas + cream cards + gradient header + soft tint chips — all from the token files, nothing improvised.">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-3 rounded-card border border-rule-line bg-canvas px-3 py-3">
-            <span className="rounded-card border bizro-tint-teal px-2.5 py-1 text-xs font-semibold text-teal-ink">tint-teal chip</span>
-            <span className="rounded-card border bizro-tint-red px-2.5 py-1 text-xs font-semibold text-ledger-red">tint-red chip</span>
-            <span className="rounded-card border bizro-tint-gold px-2.5 py-1 text-xs font-semibold text-ink-black">tint-gold chip</span>
-            <span className="rounded-card border bizro-tint-neutral px-2.5 py-1 text-xs font-semibold text-ink-black">tint-neutral chip</span>
+      <Section title="2 · Stamp system (D4-1)" note="Hard offset shadows, zero blur, ink-line color · 3px card borders · square (radius-0) chips · semantic fills with fixed AA text pairs · one rotated sticker per screen (the seal).">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="bizro-card rounded-chip px-4 py-2 text-sm font-semibold text-ink-line">card · shadow-hard-md</span>
+            <span className="bizro-card bizro-card-hero rounded-chip px-4 py-2 text-sm font-semibold text-ink-line">hero card · shadow-hard-lg</span>
+            <span className="rounded-chip border-[3px] border-ink-line bg-paper-raised px-4 py-2 text-sm font-semibold text-ink-line shadow-hard-sm">raised · shadow-hard-sm</span>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="bizro-gradient-header rounded-card px-4 py-2 text-sm font-semibold text-paper-cream">gradient header</span>
-            <span
-              className="rounded-card border border-rule-line px-4 py-2 text-sm font-semibold text-ink-black"
-              style={{ backgroundImage: 'var(--bizro-gradient-card)' }}
-            >
-              hero card gradient
-            </span>
+            {FILLS.map((f) => (
+              <span key={f.name} className={`rounded-chip border-[3px] border-ink-line px-3 py-2 text-sm font-semibold ${f.cls}`}>
+                {f.name}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-chip border-2 border-ink-line bizro-tint-teal px-2.5 py-1 text-xs font-semibold text-teal-ink">tint-teal sticker chip</span>
+            <span className="rounded-chip border-2 border-ink-line bizro-tint-red px-2.5 py-1 text-xs font-semibold text-ledger-red">tint-red sticker chip</span>
+            <span className="rounded-chip border-2 border-ink-line bizro-tint-gold px-2.5 py-1 text-xs font-semibold text-ink-line">tint-gold sticker chip</span>
+            <span className="rounded-chip border-2 border-ink-line bizro-tint-neutral px-2.5 py-1 text-xs font-semibold text-ink-line">tint-neutral sticker chip</span>
           </div>
         </div>
       </Section>
 
-      <Section title="3 · Type tokens" note="Body IBM Plex Sans · numerals/headers Zilla Slab · Urdu UI Noto Sans · Nastaliq display only. Type scale one notch up (D3-4): body 15px, meta 13px.">
-        <div className="bizro-card flex flex-col gap-2 px-4 py-4 text-ink-black">
+      <Section title="3 · Type tokens" note="Body IBM Plex Sans · numerals/headers Zilla Slab · Urdu UI Noto Sans · Nastaliq display only. Type scale: body 15px, meta 13px.">
+        <div className="bizro-card flex flex-col gap-2 px-4 py-4 text-ink-line">
           <p className="text-base">Body · The ledger remembers so you don't have to.</p>
           <p className="font-numerals text-2xl font-semibold">Numerals · Rs 12,450</p>
           <p className="bizro-urdu text-base" lang="ur">اردو UI متن · ادھار اور وصولی</p>
@@ -131,7 +143,7 @@ export function ComponentsGallery() {
         </div>
       </Section>
 
-      <Section title="4 · Button" note="48px targets · one primary per screen · solid ink-green.">
+      <Section title="4 · Button" note="48px targets · one primary per screen · solid fill + 3px ink border + hard-sm shadow · ACTIVE presses down (translate 2px,2px, shadow gone).">
         <div className="flex flex-wrap items-center gap-3">
           <Button>Confirm <span className="bizro-urdu font-normal" lang="ur">تصدیق</span></Button>
           <Button variant="secondary">Back <span className="bizro-urdu font-normal" lang="ur">واپس</span></Button>
@@ -140,7 +152,7 @@ export function ComponentsGallery() {
         </div>
       </Section>
 
-      <Section title="5 · StatusPill" note="Icon + word (EN + UR) — color is never the only signal.">
+      <Section title="5 · StatusPill" note="Square sticker chips: tinted bg (10–14% alpha) + 2px ink border + radius 0. Icon + word (EN + UR) — color is never the only signal.">
         <div className="flex flex-wrap gap-3">
           <StatusPill status="pending" />
           <StatusPill status="confirmed" />
@@ -159,7 +171,7 @@ export function ComponentsGallery() {
         </div>
       </Section>
 
-      <Section title="7 · TrustSealBadge + stamp thud" note="Always-visible edit affordance (design.md §7.2). Replay fires the 300ms ease-out stamp animation.">
+      <Section title="7 · Rubber stamp + stamp thud" note="TrustSealBadge IS a rubber stamp now: 2px dashed ink border, uppercase, rotate(-4deg), green ink (verified) / red ink (pending). Replay fires the 300ms ease-out stamp animation. The always-visible edit affordance stays (design.md §7.2).">
         <div className="bizro-card flex flex-col gap-4 px-4 py-4">
           <TrustSealBadge
             key={`v-${stampKey}`}
@@ -185,10 +197,10 @@ export function ComponentsGallery() {
         </div>
       </Section>
 
-      <Section title="8 · ReceiptCard" note="Perforated top via inline SVG · rule-line border · no shadow.">
+      <Section title="8 · ReceiptCard" note="3px ink-line border + hard-md shadow · 2px radius · no perforation, no gradients.">
         <ReceiptCard title="Month summary — Demo" titleUr="ماہانہ خلاصہ" meta="31 entries · 27 AI-verified">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-ink-black">
+            <p className="text-sm text-ink-line">
               Net position · <span className="bizro-urdu" lang="ur">خالص</span>
             </p>
             <AmountText value={9350} tone="in" size="lg" />
@@ -196,8 +208,8 @@ export function ComponentsGallery() {
         </ReceiptCard>
       </Section>
 
-      <Section title="9 · LedgerRow" note="Horizontal rules, never floating cards. Kind = icon + word + position + color. Pending row: Confirm fires the seal thud; every AI row carries Edit.">
-        <ul className="border-t border-rule-line">
+      <Section title="9 · LedgerRow" note="2px ink-line horizontal rules (the book, bolder). Kind = icon + word + position + color. Pending row: Confirm fires the seal thud; every AI row carries Edit.">
+        <ul className="border-t-2 border-ink-line">
           {(['sale', 'expense', 'udhar_given', 'udhar_settlement'] as const).map((k) => {
             const t = samples.byKind(k);
             return (
@@ -249,11 +261,11 @@ export function ComponentsGallery() {
         </ul>
       </Section>
 
-      <Section title="10 · UdharRadar" note="Design.md §7.1 — money owed TO the shop, derived per schema.md §3.">
+      <Section title="10 · UdharRadar" note="Design.md §7.1 — money owed TO the shop, derived per schema.md §3. Flat red-fill bars with 2px ink borders on a 20%-ink track.">
         <UdharRadar items={udhar} />
       </Section>
 
-      <Section title="11 · AuditTrail" note="Voice sample (with transcript) and OCR sample (with item lines).">
+      <Section title="11 · AuditTrail" note="Voice sample (with transcript) and OCR sample (with item lines) on the hard card.">
         <div className="flex flex-col gap-4">
           {samples.voiceTx && (
             <AuditTrail
@@ -282,15 +294,15 @@ export function ComponentsGallery() {
         />
       </Section>
 
-      <Section title="13 · Elevation (D1-1)" note="Cards pair the rule-line border with the shadow ramp ('stamped paper'); ledger rows stay pure rule-lines ('book').">
-        <p className="bizro-card px-5 py-4 text-sm text-ink-black">
-          Cards: cream-raised surface, 1px rule-line border, box-shadow shadow-card, hover lifts to
-          shadow-raise (200ms ease-out). Ledger rows: horizontal rules only, never floating shadow
-          cards.
-        </p>
+      <Section title="13 · Elevation (D4-1)" note="Zero-blur hard offset shadows in ink-line: sm 3px · md 5px · lg 8px. Cards hover-lift translate(-2px,-2px) into hard-lg; ledger rows ride 2px rules, never shadows.">
+        <div className="flex flex-wrap items-center gap-5">
+          <p className="rounded-chip border-[3px] border-ink-line bg-paper-raised px-4 py-3 text-sm font-semibold text-ink-line shadow-hard-sm">hard-sm</p>
+          <p className="bizro-card rounded-chip px-4 py-3 text-sm font-semibold text-ink-line">hard-md</p>
+          <p className="bizro-card bizro-card-hover rounded-chip px-4 py-3 text-sm font-semibold text-ink-line">hard-lg (hover me)</p>
+        </div>
       </Section>
 
-      <Section title="14 · D1-1 hero stat, seal gauge, cash-flow chart" note="Hero numbers count up (300ms, reduced-motion safe); the gauge is the credit verdict; bars show values on hover/focus.">
+      <Section title="14 · Hero stat, seal gauge, cash-flow chart" note="Hero numerals slab-black clamp(2.5→4.5rem) and count up; the gauge is a flat chunky ring on a tilted sticker card; bars are flat fills with ink strokes and tilted sticker value chips on hover/focus.">
         <div className="flex flex-col gap-5">
           <div className="grid gap-4 sm:grid-cols-3">
             <HeroStat en="Money in" ur="آمدنی" value={45300} tone="in" icon={<IconSale className="h-6 w-6 text-settled-teal" />} />
@@ -299,7 +311,7 @@ export function ComponentsGallery() {
           </div>
           <div className="bizro-card flex flex-wrap items-center gap-6 px-5 py-5">
             <SealGauge score={78} label="Readiness score 78 of 100 — demo" />
-            <p className="text-sm text-ink-black">SealGauge — 140px gold ring, tick marks, Zilla Slab score.</p>
+            <p className="text-sm text-ink-line">SealGauge — 10px ink track, flat gold-fill arc, slab score, sticker card rotated -2°.</p>
           </div>
           <div className="bizro-card px-5 py-5">
             <CashflowChart
@@ -314,8 +326,8 @@ export function ComponentsGallery() {
       </Section>
 
       <Section
-        title="14 · D3 trend sparkline + streak chip"
-        note="Readiness-over-time (GET /report/history, schema.md §7.2) and savings streak (GET /streak, §7.3). Both render nothing when the endpoint/data is absent."
+        title="15 · Trend sparkline + streak chip"
+        note="Flat gold-fill stroke over an ink underlay (≥3:1 non-text contrast), square endpoint; streak chip is a square gold sticker. Both render nothing when the endpoint/data is absent."
       >
         <div className="flex flex-wrap items-center gap-6">
           <div className="bizro-card flex flex-wrap items-center gap-5 px-5 py-5">

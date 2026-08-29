@@ -1,9 +1,12 @@
 /* TrendSparkline (D3-3) — readiness over time, from GET /api/merchants/{id}/
    report/history (schema.md §7.2: {history: [{generated_at, score, band}, …]}
-   oldest→newest). A single seal-gold polyline next to the credit screen's seal
-   gauge: the shape is a glance, the exact scores travel in the aria-label and
-   the title tooltip. Renders ONLY with ≥2 points (client filters) — a missing
-   endpoint degrades to nothing, never an error, never a fabricated trend. */
+   oldest→newest). A single polyline next to the credit screen's seal gauge:
+   the shape is a glance, the exact scores travel in the aria-label and the
+   title tooltip. D4-1: FLAT gold-fill stroke over a thin ink underlay (keeps
+   the line ≥3:1 against paper for WCAG 1.4.11 — gold alone misses it), with a
+   square endpoint marker. Renders ONLY with ≥2 points (client filters) — a
+   missing endpoint degrades to nothing, never an error, never a fabricated
+   trend. */
 
 import type { ReadinessHistoryPoint } from '../types/schema';
 import { useT } from '../i18n';
@@ -41,35 +44,45 @@ export function TrendSparkline({ points, className = '' }: TrendSparklineProps) 
       focusable="false"
       aria-label={pick('readiness over time', 'وقت کے ساتھ تیاری')}
     >
-      {/* baseline rule (the register line the trend is read against) */}
+      {/* baseline rule — 1px ink at 20% (D4-1 gridline token) */}
       <line
         x1={PAD}
         x2={W - PAD}
         y1={H - PAD}
         y2={H - PAD}
-        stroke="var(--bizro-rule-line)"
+        stroke="var(--bizro-gridline)"
         strokeWidth="1"
+      />
+      {/* ink underlay: guarantees ≥3:1 non-text contrast under the flat gold */}
+      <polyline
+        points={coords.join(' ')}
+        fill="none"
+        stroke="var(--bizro-ink-line)"
+        strokeWidth="5"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
       />
       <polyline
         points={coords.join(' ')}
         fill="none"
-        stroke="var(--bizro-seal-gold)"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        stroke="var(--bizro-gold-fill)"
+        strokeWidth="2.5"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
       >
         <title>
           {pick('readiness over time', 'وقت کے ساتھ تیاری')} · {first.score} → {last.score} ({trendWord})
         </title>
       </polyline>
-      {/* latest point dot — where the seal gauge's score came from (D3-4:
-          slightly larger, with a raised-paper halo ring so it pops on cream) */}
-      <circle
-        cx={W - PAD}
-        cy={y(last.score)}
-        r="4.5"
-        fill="var(--bizro-seal-gold)"
-        stroke="var(--bizro-paper-cream-raised)"
+      {/* latest point marker — where the seal gauge's score came from (D4-1:
+          square dot, ink-bordered, on the flat gold) */}
+      <rect
+        x={W - PAD - 4.5}
+        y={y(last.score) - 4.5}
+        width="9"
+        height="9"
+        fill="var(--bizro-gold-fill)"
+        stroke="var(--bizro-ink-line)"
         strokeWidth="2"
       />
     </svg>

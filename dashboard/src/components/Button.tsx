@@ -1,8 +1,9 @@
-/* Button — design.md §4.4: solid ink-green, 48px+ touch target, ONE primary action
-   per screen (enforced at usage sites, not by the API). Secondary = quiet cream
-   surface + rule-line border. Danger-quiet = red text for destructive corrections.
-   D3-4: .bizro-btn-lift adds the subtle -1px hover rise + soft shadow (the only
-   motion tokens: 200ms fast, flattened under prefers-reduced-motion). */
+/* Button — design.md §4.4 + D4-1: solid fills + 3px ink-line border +
+   shadow-hard-sm (via .bizro-btn-press); ACTIVE = translate(2px,2px) +
+   shadow-none — the tactile "press" onto the page. 48px+ touch target, ONE
+   primary action per screen (enforced at usage sites, not by the API).
+   Secondary = quiet raised surface + ink text. Danger-quiet = red text for
+   destructive corrections. */
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
@@ -17,11 +18,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-ink-green text-paper-cream border border-ink-green hover:bg-ink-green-hover hover:border-ink-green-hover active:bg-ink-green disabled:bg-ink-green-disabled disabled:border-ink-green-disabled',
+    'border-ink-line bg-fill-green text-paper hover:bg-ink-green-hover disabled:bg-ink-green-disabled disabled:text-paper',
   secondary:
-    'bg-paper-raised text-ink-black border border-rule-line hover:bg-paper-cream disabled:text-ink-green-disabled',
+    'border-ink-line bg-paper-raised text-ink-line hover:bg-paper disabled:border-ink-green-disabled disabled:text-ink-green-disabled',
   danger:
-    'bg-paper-raised text-ledger-red border border-rule-line hover:bg-paper-cream disabled:text-ink-green-disabled',
+    'border-ink-line bg-paper-raised text-ledger-red hover:bg-paper disabled:border-ink-green-disabled disabled:text-ink-green-disabled',
 };
 
 export function Button({
@@ -35,7 +36,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={`bizro-btn-lift inline-flex min-h-touch items-center justify-center gap-2 rounded-button px-4 py-3 font-semibold disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`bizro-btn-press inline-flex min-h-touch items-center justify-center gap-2 rounded-button border-[3px] px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:shadow-none ${VARIANT_CLASSES[variant]} ${className}`}
       {...rest}
     >
       {icon}

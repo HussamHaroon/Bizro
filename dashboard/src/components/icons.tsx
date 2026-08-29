@@ -4,7 +4,7 @@
    (aria-hidden); the label carries the meaning.
 
    Form: a filled circular badge (currentColor) with the glyph knocked out in
-   paper-cream — reads as a solid stamp at any size and keeps one visual weight
+   paper — reads as a solid stamp at any size and keeps one visual weight
    across the set. Arrow direction encodes money direction:
      sale ↓ in · expense ↑ out · udhar_given → out · udhar_settlement ← in
    (design.md §4.7: color is never the only signal — direction + label + position
@@ -25,11 +25,12 @@ function Badge({ children, className = '', ...rest }: IconProps & { children: Re
       {...rest}
     >
       <circle cx="12" cy="12" r="11" fill="currentColor" />
-      {/* Glyph fill defaults to paper-cream (dark circle on light surface). On
-          surfaces where currentColor is LIGHT (cream tab on the ink-green top
-          bar), the cascade in index.css flips .bizro-badge-glyph to ink-green —
-          presentation attributes lose to CSS, so no per-call-site props. */}
-      <g fill="var(--bizro-paper-cream)" className="bizro-badge-glyph">
+      {/* Glyph fill defaults to paper (dark circle on light surface). Where
+          currentColor is LIGHT (paper glyph-circles on green-fill active
+          tabs/segments), the cascade in index.css flips .bizro-badge-glyph to
+          ink-line — presentation attributes lose to CSS, so no per-call-site
+          props. */}
+      <g fill="var(--bizro-paper)" className="bizro-badge-glyph">
         {children}
       </g>
     </svg>
