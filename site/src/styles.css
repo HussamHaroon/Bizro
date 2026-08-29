@@ -980,3 +980,108 @@ h3 {
     transform: none;
   }
 }
+
+/* ============================================================
+   Formatting polish pass (owner review 2026-08-23) — appended
+   layer; only refines rhythm/alignment, changes no design law.
+   ============================================================ */
+
+/* Anchor chips never break mid-word (model names, section tags) */
+.chip,
+.chip--gold,
+.chip--green,
+.chip--red,
+.chip--teal {
+  white-space: nowrap;
+}
+
+/* Stat cards: aligned baselines, tabular digits, breathing room */
+.card.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.card.stat > strong,
+.stat-num {
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+.stat-grid,
+.grid-2 {
+  align-items: stretch;
+}
+.card.stat p:last-child {
+  margin-top: auto; /* labels sit at equal depth across cards */
+}
+
+/* Rotated stamp: never clips neighbors or the band edge */
+.stamp,
+.stamp--seal,
+[class*="stamp"] {
+  transform-origin: center;
+  isolation: isolate;
+}
+.section:has([class*="stamp"]) {
+  padding-inline: max(1.25rem, 3vw);
+}
+
+/* CTAs: full-width thumb targets on small phones, tidy gap */
+@media (max-width: 480px) {
+  .cta-row,
+  .band-ctas {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .cta-row .btn,
+  .band-ctas .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Urdu display text: Nastaliq needs taller lines to not collide */
+.urdu,
+.wordmark__urdu,
+.hero__urdu {
+  line-height: 2;
+}
+
+/* Footer: calmer stacking, clearer hierarchy */
+.footer-grid {
+  row-gap: 1.5rem;
+}
+.fine {
+  line-height: 1.7;
+  max-width: 62ch;
+}
+
+/* Focus visibility across the page (keyboard judges) */
+a:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* How-it-works steps: equal-height cards, arrows breathe on mobile */
+.card.step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.flow-arrow {
+  margin-block: 0.5rem;
+}
+
+/* Mawakhat wide card: footnote stays attached to its card */
+.mawakmat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.mawakmat-card .fine,
+.mawakmat-card small {
+  margin-top: auto;
+}
