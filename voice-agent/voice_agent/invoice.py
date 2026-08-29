@@ -1,13 +1,24 @@
-"""Branded WhatsApp invoice renderer — Khata Modern house style (design.md §4).
+"""Branded WhatsApp invoice renderer — D4-1 "stamped-ledger" neobrutalism.
 
-HTML template built ONLY from dashboard/design-tokens/tokens.json values (token law:
-no improvised colors/fonts). Rendered to PNG via Playwright using the SYSTEM EDGE
-channel (verified working — voice-agent/notes.md §3); any failure falls back to a
-ledger-style plain-text receipt. Rendering NEVER blocks the confirmation text path
-(SKILL.md deliverable 4).
+Owner ruling D4-1 (design.md §4 addendum, 2026-08-23) OVERRIDES the old
+elevation rule for this surface: the invoice is now the strongest expression
+of the stamp motif — ledger-cream canvas, 3px ink borders, hard offset
+shadows (no blur, no gradients), radius <=2px, slab numerals BIG for the
+amount, and the trust seal restyled as a rotated dashed RUBBER STAMP reading
+"AI-PARSED" + confidence. §4.7 accessibility law is unchanged (icon+word,
+digits AND Urdu words, color never the sole signal, AA contrast).
 
-Torn/perforated top edge appears HERE ONLY (khata-modern skill: reserved for the
-WhatsApp invoice image). Elevation rule: 1px rule-line borders, NO box-shadow.
+Colors/fonts still come from dashboard/design-tokens/tokens.json (token law).
+New D4-1 keys are read with `tokens.get(key, fallback)` so the renderer works
+before/after the frontend-agent lands the additive token extension — existing
+key names are never renamed. Rendered to PNG via Playwright using the SYSTEM
+EDGE channel (verified working — voice-agent/notes.md §3); any failure falls
+back to a plain-text receipt. Rendering NEVER blocks the confirmation text
+path (SKILL.md deliverable 4).
+
+Torn/perforated top edge appears HERE ONLY (khata-modern skill: reserved for
+the WhatsApp invoice image) — restyled bolder under D4-1, still inside the
+3px ink frame so it reads as a serrated ticket edge, not noise.
 """
 
 from __future__ import annotations
@@ -27,6 +38,17 @@ from voice_agent.confirmation import amount_in_urdu_words, to_numeral_digits
 
 _TOKEN_CACHE: dict | None = None
 
+# D4-1 fallback values for token keys the additive tokens.json extension will
+# introduce. Single source of truth — tests import this to build the allowed
+# color set. When tokens.json grows these keys, the file wins.
+D4_TOKEN_FALLBACKS: dict[str, str] = {
+    "ledgerCream": "#F5F1E6",   # canvas — ledger cream
+    "ink": "#1F1B16",           # borders + text ink
+    "goldAccent": "#E9A93D",    # gold accents (ink text on gold)
+    "shadowHard": "5px 5px 0 #1F1B16",  # card — hard offset, zero blur
+    "shadowHardSm": "3px 3px 0 #1F1B16",  # chips/stamp — same law, smaller
+}
+
 
 def load_tokens(settings: Settings | None = None) -> dict:
     global _TOKEN_CACHE
@@ -35,6 +57,12 @@ def load_tokens(settings: Settings | None = None) -> dict:
         path = root / "dashboard" / "design-tokens" / "tokens.json"
         _TOKEN_CACHE = json.loads(path.read_text(encoding="utf-8"))
     return _TOKEN_CACHE
+
+
+def _d4(tokens: dict, key: str) -> str:
+    """D4-1 token with documented fallback (keys additive; never renamed)."""
+    section, _, name = key.partition(".")
+    return tokens.get(section, {}).get(name) or D4_TOKEN_FALLBACKS[name]
 
 
 # ---------------------------------------------------------------------------
@@ -88,84 +116,108 @@ _URDU_MONTHS = [
     "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر",
 ]
 
+# Bolder D4-1 serration: 24px tall, 20px period (was 18px/15px), ink-green fill
+# merging into the header band. Stays INSIDE the 3px ink frame (no fighting).
+_TORN_PATH = (
+    "M0,24 L0,12 L10,3 L30,13 L50,6 L70,15 L90,4 L110,14 L130,3 L150,13 L170,6 "
+    "L190,15 L210,4 L230,14 L250,3 L270,13 L290,6 L310,15 L330,4 L350,14 L370,3 "
+    "L390,13 L410,6 L430,15 L450,4 L470,14 L490,3 L510,13 L520,8 L520,24 Z"
+)
+
 _TEMPLATE = string.Template("""<!DOCTYPE html>
 <html lang="ur" dir="rtl">
 <head>
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Noto+Sans+Urdu:wght@400;700&family=Noto+Nastaliq+Urdu:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=Zilla+Slab:wght@500;700&family=Noto+Sans+Urdu:wght@400;700&family=Noto+Nastaliq+Urdu:wght@600&display=swap" rel="stylesheet">
 <style>
   :root { }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:${pageBg}; font-family:${fontBody}; color:${inkBlack};
-         -webkit-font-smoothing:antialiased; padding:24px; }
-  #invoice { width:420px; margin:0 auto; background:${cardBg};
-             border:1px solid ${ruleLine}; border-radius:6px; overflow:hidden; }
+  body { background:${ledgerCream}; font-family:${fontBody}; color:${ink};
+         -webkit-font-smoothing:antialiased; }
+  /* shot wrapper keeps the hard offset shadow inside the element screenshot */
+  #shot { width:fit-content; margin:0 auto; padding:10px; background:${ledgerCream}; }
+  #invoice { width:520px; background:${cardBg}; border:3px solid ${ink};
+             border-radius:2px; box-shadow:${shadowHard}; overflow:hidden; }
 
-  /* torn/perforated top edge — reserved flourish (HERE ONLY) */
-  .torn { display:block; width:100%; height:18px; }
+  /* torn/perforated top edge — reserved flourish (HERE ONLY), bolder per D4-1 */
+  .torn { display:block; width:100%; height:24px; }
 
-  .head { background:${inkGreen}; color:${cardBg}; padding:14px 18px 10px;
-          display:flex; justify-content:space-between; align-items:center; }
-  .brand { font-family:${fontDisplay}; font-size:26px; line-height:1.9; direction:rtl; }
-  .head-meta { font-size:11px; text-align:left; direction:ltr; opacity:.9; line-height:1.6; }
+  .head { background:${inkGreen}; color:${cardBg}; padding:14px 20px 12px;
+          display:flex; justify-content:space-between; align-items:center;
+          border-bottom:3px solid ${ink}; }
+  .brand { font-family:${fontDisplay}; font-size:30px; line-height:1.9; direction:rtl; }
+  .head-meta { font-size:12px; text-align:left; direction:ltr; line-height:1.7;
+               font-family:${fontNumerals}; font-weight:600; opacity:.95; }
+  .gold-strip { height:8px; background:${goldAccent}; border-bottom:3px solid ${ink}; }
 
-  .greet { font-family:${fontDisplay}; font-size:17px; line-height:2.6;
-           text-align:center; padding:14px 18px 4px; color:${inkBlack}; }
+  .greet { font-family:${fontDisplay}; font-size:18px; line-height:2.6;
+           text-align:center; padding:16px 20px 4px; color:${ink}; }
 
-  .kind { display:flex; align-items:center; gap:10px; justify-content:center;
-          padding:6px 18px 12px; }
-  .kind .icon { width:34px; height:34px; border-radius:50%; background:${kindColor};
+  .kind { display:flex; align-items:center; gap:12px; justify-content:center;
+          padding:8px 20px 12px; }
+  .kind .icon { width:40px; height:40px; border-radius:2px; background:${kindColor};
+                border:2px solid ${ink}; box-shadow:${shadowHardSm};
                 color:${cardBg}; display:flex; align-items:center; justify-content:center;
-                font-size:16px; font-family:${fontNumerals}; }
-  .kind .ur { font-size:20px; font-weight:700; color:${kindColor}; }
-  .kind .en { font-size:10px; letter-spacing:2px; color:${inkBlack}; opacity:.65;
-              font-family:${fontNumerals}; direction:ltr; }
+                font-size:18px; font-family:${fontNumerals}; font-weight:700; }
+  .kind .ur { font-size:22px; font-weight:700; color:${kindColor}; }
+  .kind .en { font-size:11px; letter-spacing:2px; color:${ink}; direction:ltr;
+              font-family:${fontNumerals}; font-weight:700;
+              background:${goldAccent}; border:2px solid ${ink}; border-radius:2px;
+              padding:3px 8px; }
 
-  .amount { text-align:center; padding:2px 18px 14px; }
-  .amount .digits { font-family:${fontNumerals}; font-size:52px; font-weight:700;
-                    color:${kindColor}; direction:ltr; line-height:1.15; }
-  .amount .digits .cur { font-size:22px; vertical-align:14px; color:${inkBlack}; }
-  .amount .words { font-size:15px; padding-top:2px; }
-  .amount .direction { font-size:13px; color:${inkBlack}; opacity:.75; padding-top:3px; }
+  .amount { text-align:center; padding:4px 20px 16px; }
+  .amount .digits { font-family:${fontNumerals}; font-size:78px; font-weight:700;
+                    color:${kindColor}; direction:ltr; line-height:1.05; }
+  .amount .digits .cur { font-size:26px; vertical-align:24px; color:${ink}; }
+  .amount .words { font-size:16px; padding-top:4px; font-weight:600; }
+  .amount .direction { font-size:13px; color:${ink}; opacity:.75; padding-top:3px; }
 
-  table.items { width:100%; border-collapse:collapse; margin:0 0 6px; }
-  table.items th { font-size:11px; font-weight:400; color:${inkBlack}; opacity:.6;
-                   border-top:1px solid ${ruleLine}; border-bottom:1px solid ${ruleLine};
-                   padding:6px 10px; text-align:right; }
-  table.items td { padding:7px 10px; border-bottom:1px solid ${ruleLine}; font-size:13px; }
-  table.items .num { font-family:${fontNumerals}; direction:ltr; text-align:left; }
-  tr:last-child td { border-bottom:1px solid ${ruleLine}; }
+  table.items { width:100%; border-collapse:collapse; margin:0 0 8px; }
+  table.items th { font-size:11px; font-weight:700; color:${ink};
+                   border-top:2px solid ${ink}; border-bottom:2px solid ${ink};
+                   padding:7px 12px; text-align:right; letter-spacing:1px; }
+  table.items td { padding:8px 12px; border-bottom:1px solid ${ink}; font-size:13px; }
+  table.items .num { font-family:${fontNumerals}; direction:ltr; text-align:left;
+                     font-weight:600; }
 
-  .meta { padding:10px 18px 4px; font-size:13px; line-height:2; }
+  .meta { padding:12px 20px 4px; font-size:14px; line-height:2; }
   .meta b { font-weight:700; }
 
-  .seal-row { display:flex; align-items:center; gap:12px; padding:10px 18px 16px; }
-  .seal { transform:rotate(-8deg); flex:0 0 auto; }
-  .seal-copy { font-size:11px; line-height:1.9; }
-  .seal-copy .en { font-family:${fontNumerals}; letter-spacing:1px; color:${sealGold};
-                   font-weight:700; direction:ltr; display:block; }
-  .seal-copy .conf { color:${inkBlack}; opacity:.7; }
-  .edit-hint { margin:0 18px 14px; padding:8px 10px; border:1px solid ${ruleLine};
-               border-radius:6px; font-size:12px; line-height:1.9; }
+  /* trust seal → RUBBER STAMP (D4-1): dashed ink ring, rotated, AI-PARSED */
+  .stamp-row { display:flex; align-items:center; gap:16px; padding:14px 20px 18px; }
+  .stamp { transform:rotate(-6deg); flex:0 0 auto; direction:ltr; text-align:center;
+           border:2px dashed ${stampInk}; border-radius:2px; padding:8px 14px;
+           font-family:${fontNumerals}; background:transparent; }
+  .stamp .t1 { font-size:17px; font-weight:700; letter-spacing:3px; color:${stampInk};
+               text-transform:uppercase; }
+  .stamp .t2 { font-size:11px; font-weight:600; letter-spacing:1px; color:${stampInk};
+               margin-top:2px; }
+  .stamp-copy .en { font-family:${fontNumerals}; letter-spacing:1.5px; color:${ink};
+                    font-weight:700; direction:ltr; display:block; font-size:11px; }
+  .stamp-copy .conf { color:${ink}; opacity:.75; font-size:12px; line-height:1.9; }
+  .edit-hint { margin:0 20px 16px; padding:10px 12px; background:${goldAccent};
+               border:2px solid ${ink}; border-radius:2px; box-shadow:${shadowHardSm};
+               font-size:13px; line-height:1.9; font-weight:600; color:${ink}; }
 
-  .foot { border-top:1px solid ${ruleLine}; padding:9px 18px; font-size:11px;
-          display:flex; justify-content:space-between; opacity:.8; }
+  .foot { border-top:3px solid ${ink}; padding:10px 20px; font-size:11px;
+          display:flex; justify-content:space-between; opacity:.85; }
   .mock-band { background:${ledgerRed}; color:${cardBg}; text-align:center;
-               font-size:12px; letter-spacing:3px; padding:5px 0; direction:ltr;
+               font-size:13px; font-weight:700; letter-spacing:4px; padding:6px 0;
+               direction:ltr; border-top:3px solid ${ink};
                font-family:${fontNumerals}; }
 </style>
 </head>
 <body>
-  <div id="invoice">
-    <svg class="torn" viewBox="0 0 420 18" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,18 L0,10 L15,3 L30,12 L45,2 L60,11 L75,4 L90,12 L105,2 L120,10 L135,3 L150,12 L165,2 L180,11 L195,4 L210,12 L225,2 L240,10 L255,3 L270,12 L285,2 L300,11 L315,4 L330,12 L345,2 L360,10 L375,3 L390,12 L405,2 L420,10 L420,18 Z"
-            fill="${inkGreen}"/>
+  <div id="shot"><div id="invoice">
+    <svg class="torn" viewBox="0 0 520 24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="${tornPath}" fill="${inkGreen}"/>
     </svg>
     <div class="head">
       <div class="brand">بِزرو</div>
       <div class="head-meta">${merchantHtml}<br>${dateHtml}</div>
     </div>
+    <div class="gold-strip"></div>
 
     <div class="greet">شکریہ! آپ کا اندراج محفوظ ہو گیا</div>
 
@@ -188,23 +240,14 @@ _TEMPLATE = string.Template("""<!DOCTYPE html>
       ${lowConfidenceHtml}
     </div>
 
-    <div class="seal-row">
-      <svg class="seal" width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="32" cy="32" r="30" fill="none" stroke="${sealGold}" stroke-width="2.5"/>
-        <circle cx="32" cy="32" r="24.5" fill="none" stroke="${sealGold}" stroke-width="1"/>
-        <path id="sealArc" d="M32,32 m-19,0 a19,19 0 1,1 38,0 a19,19 0 1,1 -38,0"
-              fill="none" stroke="none"/>
-        <text font-size="6.2" fill="${sealGold}" font-family="Georgia, serif" letter-spacing="1.1">
-          <textPath href="#sealArc" startOffset="4%">ALIBABA CLOUD AI VERIFIED · BIZRO ·</textPath>
-        </text>
-        <text x="32" y="30" text-anchor="middle" font-size="13" font-weight="bold"
-              fill="${sealGold}" font-family="Georgia, serif">AI</text>
-        <text x="32" y="42" text-anchor="middle" font-size="10" fill="${sealGold}"
-              font-family="Georgia, serif">✓</text>
-      </svg>
-      <div class="seal-copy">
-        <span class="en">ALIBABA CLOUD AI VERIFIED</span>
-        <span class="conf">${confidenceLine}</span>
+    <div class="stamp-row">
+      <div class="stamp">
+        <div class="t1">AI-PARSED</div>
+        <div class="t2">${stampConfidence}</div>
+      </div>
+      <div class="stamp-copy">
+        <span class="en">ALIBABA CLOUD &middot; AI-PARSED</span>
+        <span class="conf">آواز کا اندراج — مصنوعی ذہانت سے پڑھا گیا</span>
       </div>
     </div>
 
@@ -215,7 +258,7 @@ _TEMPLATE = string.Template("""<!DOCTYPE html>
       <span style="direction:ltr">${txRef}</span>
     </div>
     ${mockBand}
-  </div>
+  </div></div>
 </body>
 </html>""")
 
@@ -247,8 +290,9 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
     if flag != "none":
         warn = "یہ اندراج پکا نہیں — تصدیق ضروری ہے" if flag == "low_confidence" else "توجہ: رقم میں فرق ہے" if flag == "total_mismatch" else "توجہ بھیجانا ضروری ہے"
         low_conf_html = (
-            f'<div style="margin-top:6px;padding:6px 10px;border:1px solid {color["ledgerRed"]};'
-            f'border-radius:6px;color:{color["ledgerRed"]};font-size:12px;line-height:1.9">⚠ {warn}</div>'
+            f'<div style="margin-top:6px;padding:6px 10px;border:2px solid {color["ledgerRed"]};'
+            f'border-radius:2px;box-shadow:{_d4(tokens, "shadow.shadowHardSm")};'
+            f'color:{color["ledgerRed"]};font-size:12px;line-height:1.9;font-weight:600">⚠ {warn}</div>'
         )
 
     rows = ""
@@ -273,15 +317,21 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
 
     src = tx.get("source") or {}
     conf = src.get("confidence")
-    conf_line = (
-        f"AI امانت: {to_numeral_digits(int(round(conf*100)), numeral_style)}%"
-        if isinstance(conf, (int, float)) else "AI امانت: —"
-    )
+    conf_pct = to_numeral_digits(int(round(conf * 100)), numeral_style) if isinstance(conf, (int, float)) else None
+    stamp_conf = f"AI امانت {conf_pct}%" if conf_pct is not None else "AI امانت —"
+
+    # Rubber-stamp ink: red when the entry needs attention, green when clean
+    # (color + flag wording both signal — §4.7 color never the sole signal).
+    stamp_ink = color["ledgerRed"] if flag != "none" else color["inkGreen"]
 
     mock_band = '<div class="mock-band">MOCK DATA — NOT A REAL ENTRY</div>' if tx.get("mock") else ""
 
     return _TEMPLATE.substitute(
-        pageBg=color["paperCream"],
+        ledgerCream=_d4(tokens, "color.ledgerCream"),
+        ink=_d4(tokens, "color.ink"),
+        goldAccent=_d4(tokens, "color.goldAccent"),
+        shadowHard=_d4(tokens, "shadow.shadowHard"),
+        shadowHardSm=_d4(tokens, "shadow.shadowHardSm"),
         cardBg=color["paperCreamRaised"],
         inkGreen=color["inkGreen"],
         inkBlack=color["inkBlack"],
@@ -292,6 +342,7 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
         fontBody=font["body"],
         fontNumerals=font["numerals"],
         fontDisplay=font["displayUrdu"],
+        tornPath=_TORN_PATH,
         merchantHtml=merchant_html,
         dateHtml=date_html,
         kindUr=kind_ur, kindEn=kind_en, kindIcon=kind_icon, kindDirection=kind_dir,
@@ -300,7 +351,8 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
         itemsHtml=items_html,
         counterpartyHtml=cp_html,
         lowConfidenceHtml=low_conf_html,
-        confidenceLine=conf_line,
+        stampInk=stamp_ink,
+        stampConfidence=stamp_conf,
         txRef=esc(str(tx.get("source", {}).get("media_id") or "voice-entry")),
         mockBand=mock_band,
     )
@@ -337,7 +389,7 @@ def build_invoice_text(tx: dict, numeral_style: str = "western") -> str:
     lines += [
         "—",
         f"تاریخ: {to_numeral_digits(when.day, numeral_style)} {_URDU_MONTHS[when.month-1]} {to_numeral_digits(when.year, numeral_style)}",
-        "Alibaba Cloud AI Verified — اگر غلط ہو تو جواب میں لکھیں۔",
+        "AI-PARSED · Alibaba Cloud AI Verified — اگر غلط ہو تو جواب میں لکھیں۔",
     ]
     if (tx.get("flag") or "none") != "none":
         lines.append("⚠ یہ اندراج پکا نہیں — تصدیق ضروری ہے")
@@ -373,7 +425,7 @@ def _render_png(page_html: str) -> bytes | None:
                     continue
                 try:
                     page = browser.new_page(
-                        viewport={"width": 480, "height": 900}, device_scale_factor=2
+                        viewport={"width": 560, "height": 1400}, device_scale_factor=2
                     )
                     page.goto(data_url, wait_until="domcontentloaded", timeout=20000)
                     try:
@@ -381,7 +433,8 @@ def _render_png(page_html: str) -> bytes | None:
                         page.wait_for_timeout(400)
                     except Exception:
                         pass
-                    el = page.locator("#invoice")
+                    # shoot the wrapper so the 5px hard shadow stays in frame
+                    el = page.locator("#shot")
                     return el.screenshot(type="png")
                 finally:
                     browser.close()

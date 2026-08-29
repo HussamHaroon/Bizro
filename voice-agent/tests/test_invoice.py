@@ -1,8 +1,10 @@
-"""Invoice renderer tests: token-law HTML, PNG render via system Edge (if available),
-and the never-block text fallback. Also decode-step tests (ffmpeg via imageio-ffmpeg)."""
+"""Invoice renderer tests: D4-1 stamped-ledger token-law HTML, PNG render via system
+Edge (if available), and the never-block text fallback. Also decode-step tests
+(ffmpeg via imageio-ffmpeg)."""
 
 from __future__ import annotations
 
+import re
 import struct
 import wave
 from pathlib import Path
@@ -10,7 +12,13 @@ from pathlib import Path
 import pytest
 
 from voice_agent.config import Settings
-from voice_agent.invoice import build_invoice_html, build_invoice_text, load_tokens, render_invoice
+from voice_agent.invoice import (
+    D4_TOKEN_FALLBACKS,
+    build_invoice_html,
+    build_invoice_text,
+    load_tokens,
+    render_invoice,
+)
 from voice_agent.decode import DecodeError, decode_audio, looks_like_ogg
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -44,17 +52,44 @@ def udhar_tx() -> dict:
 # --- token law ------------------------------------------------------------------
 
 
-def test_html_uses_only_token_colors(udhar_tx):
+def test_html_colors_from_tokens_or_d4_1_fallbacks(udhar_tx):
+    """Token law under D4-1: every hex comes from tokens.json OR the documented
+    fallback set for the additive neobrutalist token extension (no renames)."""
     tokens = load_tokens(_settings())
     html = build_invoice_html(udhar_tx, tokens, "western")
-    allowed = set(tokens["color"].values())
-    # every hex we emit must come from tokens.json
-    import re
+    allowed = {c.upper() for c in tokens["color"].values()}
+    allowed |= {v.upper() for v in D4_TOKEN_FALLBACKS.values() if v.startswith("#")}
 
     for hexcode in set(re.findall(r"#[0-9A-Fa-f]{6}\b", html)):
-        assert hexcode.upper() in {c.upper() for c in allowed}, hexcode
-    assert "box-shadow" not in html  # elevation rule: rule-lines, never shadows
-    assert html.count('xmlns="http://www.w3.org/2000/svg"') >= 1  # torn edge + seal
+        assert hexcode.upper() in allowed, hexcode
+
+
+def test_html_enforces_stamped_ledger_law(udhar_tx):
+    """D4-1 (owner ruling, supersedes the old no-shadow elevation rule HERE):
+    hard offset shadows only (zero blur), no gradients, 3px ink frame,
+    rubber-stamp seal (dashed, rotated), torn edge present."""
+    tokens = load_tokens(_settings())
+    html = build_invoice_html(udhar_tx, tokens, "western")
+
+    for shadow in re.findall(r"box-shadow:\s*([^;\"}]+)", html):
+        assert re.fullmatch(r"-?\d+px -?\d+px 0 .+", shadow.strip()), shadow
+    assert "linear-gradient" not in html and "radial-gradient" not in html
+    assert "border:3px solid" in html                      # ink frame
+    assert "rotate(-6deg)" in html and "dashed" in html    # rubber stamp
+    assert "AI-PARSED" in html                             # stamp wording (no overclaim)
+    assert html.count('xmlns="http://www.w3.org/2000/svg"') >= 1  # torn edge (here only)
+
+
+def test_stamp_ink_signals_flag_state(udhar_tx):
+    """Rubber-stamp ink: green when the entry is clean, red when flagged —
+    the flag warning wording also appears, so color is never the sole signal."""
+    tokens = load_tokens(_settings())
+    clean = build_invoice_html(udhar_tx, tokens)
+    flagged = build_invoice_html({**udhar_tx, "flag": "low_confidence"}, tokens)
+    green, red = tokens["color"]["inkGreen"], tokens["color"]["ledgerRed"]
+    assert f"border:2px dashed {green}" in clean
+    assert f"border:2px dashed {red}" in flagged
+    assert "پکا نہیں" in flagged and "پکا نہیں" not in clean
 
 
 def test_html_distinguishes_debit_vs_settled_by_more_than_color():
