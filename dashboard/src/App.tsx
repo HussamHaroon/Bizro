@@ -1,17 +1,19 @@
 /* App shell — two demo surfaces (design.md §6 screens 3–4) + the /dev/components
-   gallery. D1-1 visual elevation: a sticky deep ink-green top bar (cream text,
-   Nastaliq brand word + slab "Bizro", tab switcher, language segmented control,
-   seal-gold bottom rule) replaces the old paper band — this single move kills the
-   "beige website" first impression. Nav links are icon+word pairs (§4.3: never
-   icon-only); the Nastaliq بزرو is the one display moment allowed in dense UI.
+   gallery. D4-1 "stamped-ledger" restyle: the sticky top bar is PAPER with a 3px
+   ink-line bottom rule and a 6px seal-gold accent segment; the brand wordmark is
+   slab bold ink; screen tabs and the language control are chunky bordered
+   segments (active = green-fill with paper text); nav links stay icon+word
+   pairs (§4.3: never icon-only); the Nastaliq بزرو is the one display moment
+   allowed in dense UI.
 
    D3 MOBILE-FIRST PASS (owner priority: "the most important part is the UI and
    also ui for the mobile phones"): below md the screen tabs move out of the top
-   bar into a fixed BOTTOM tab bar (thumb-reachable, 48px+ targets, cream surface
-   + rule-line top border, safe-area inset). The top bar keeps brand + language
-   control only. No hamburger menus (bizro-ui-design anti-pattern) — the same two
-   icon+word tabs stay one tap away at every width. Desktop (≥md) keeps top tabs
-   and never shows the bottom bar. */
+   bar into a fixed BOTTOM tab bar (thumb-reachable, 48px+ targets, paper surface
+   + 3px ink-line top border, safe-area inset; active tab = green-fill raised
+   chip with a hard shadow). The top bar keeps brand + language control only.
+   No hamburger menus (bizro-ui-design anti-pattern) — the same two icon+word
+   tabs stay one tap away at every width. Desktop (≥md) keeps top tabs and never
+   shows the bottom bar. */
 
 import { BrowserRouter, Link, NavLink, Route, Routes, Navigate } from 'react-router-dom';
 import { MerchantPicker } from './components/MerchantPicker';
@@ -32,14 +34,14 @@ const SCREEN_TABS = [
 function TopBar() {
   const { pick } = useT();
   const tabClass = ({ isActive }: { isActive: boolean }) =>
-    `bizro-topbar-tab inline-flex min-h-touch items-center gap-2 rounded-button px-3 text-sm font-semibold transition-colors duration-200 ease-out ${
+    `bizro-topbar-tab inline-flex min-h-touch items-center gap-2 rounded-chip border-[3px] px-3 text-sm font-semibold transition-colors duration-200 ease-out ${
       isActive
-        ? 'bg-paper-cream text-ink-green'
-        : 'text-paper-cream hover:bg-ink-green-hover'
+        ? 'border-ink-line bg-fill-green text-paper shadow-hard-sm'
+        : 'border-transparent text-ink-line hover:border-ink-line hover:bg-paper-raised'
     }`;
   return (
     <header
-      className="bizro-no-print bizro-gradient-header sticky top-0 z-40 border-b-2 border-seal-gold text-paper-cream shadow-card"
+      className="bizro-no-print sticky top-0 z-40 border-b-[3px] border-ink-line bg-paper text-ink-line"
     >
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6 sm:py-3">
         <Link
@@ -47,17 +49,17 @@ function TopBar() {
           className="flex items-center gap-2.5 py-1"
           aria-label={pick('Bizro home — ledger', 'بزرو — کھاتہ')}
         >
-          <span className="bizro-display-ur text-2xl leading-none text-paper-cream" lang="ur">
+          <span className="bizro-display-ur text-2xl leading-none text-ink-green" lang="ur">
             بزرو
           </span>
-          <span className="font-numerals text-2xl font-bold tracking-wide text-paper-cream">
+          <span className="font-numerals text-2xl font-bold tracking-wide text-ink-line">
             Bizro
           </span>
         </Link>
         {/* Desktop tabs — on phones these move to the bottom tab bar below. */}
         <nav
           aria-label={pick('Screens', 'اسکرین')}
-          className="ml-2 hidden flex-wrap items-center gap-1 md:flex"
+          className="ml-2 hidden flex-wrap items-center gap-1.5 md:flex"
         >
           {SCREEN_TABS.map(({ to, icon: Icon, en, ur }) => (
             <NavLink key={to} to={to} className={tabClass}>
@@ -73,30 +75,36 @@ function TopBar() {
           <LanguageControl />
         </div>
       </div>
+      {/* 6px seal-gold accent segment riding the bottom ink rule (D4-1) */}
+      <span
+        aria-hidden="true"
+        className="absolute bottom-[-4px] left-4 h-[6px] w-24 bg-seal-gold sm:left-6"
+      />
     </header>
   );
 }
 
 /** Fixed bottom tab bar — phones/tablet-portrait only (<md). Thumb-reachable
-    icon+word pairs (§4.7), 48px+ targets, cream surface + rule-line top border,
-    notch-safe padding. Hidden on desktop and in print. */
+    icon+word pairs (§4.7), 48px+ targets, paper surface + 3px ink-line top
+    border, active tab = green-fill raised chip with a hard shadow, notch-safe
+    padding. Hidden on desktop and in print. */
 function BottomNav() {
   const { pick } = useT();
   const tabClass = ({ isActive }: { isActive: boolean }) =>
-    `flex min-h-touch flex-1 flex-col items-center justify-center gap-0.5 rounded-button border-t-2 px-2 py-1 text-xs font-semibold transition-colors duration-200 ease-out ${
+    `bizro-topbar-tab flex min-h-touch flex-1 flex-col items-center justify-center gap-0.5 rounded-chip border-[3px] px-2 py-1 text-xs font-semibold transition-colors duration-200 ease-out ${
       isActive
-        ? 'border-seal-gold bg-paper-raised text-ink-green'
-        : 'border-transparent text-ink-green'
+        ? 'border-ink-line bg-fill-green text-paper shadow-hard-sm'
+        : 'border-transparent text-ink-line'
     }`;
   return (
     <nav
       aria-label={pick('Screens', 'اسکرین')}
-      className="bizro-no-print bizro-safe-b fixed inset-x-0 bottom-0 z-40 border-t-2 border-rule-line bg-paper-cream shadow-card md:hidden"
+      className="bizro-no-print bizro-safe-b fixed inset-x-0 bottom-0 z-40 border-t-[3px] border-ink-line bg-paper md:hidden"
     >
-      {/* Merchant switcher sits ABOVE the tabs on mobile (D3-2) — rule-line
+      {/* Merchant switcher sits ABOVE the tabs on mobile (D3-2) — 2px ink rule
           separated, full-width target. Renders nothing at ≤1 merchant. */}
-      <div className="border-b border-rule-line px-3 py-2">
-        <MerchantPicker className="w-full" selectClassName="max-w-none border-rule-line" />
+      <div className="border-b-2 border-ink-line px-3 py-2">
+        <MerchantPicker className="w-full" selectClassName="max-w-none" />
       </div>
       <div className="mx-auto flex w-full max-w-md items-stretch gap-1 px-2 py-1">
         {SCREEN_TABS.map(({ to, icon: Icon, en, ur }) => (
@@ -122,7 +130,7 @@ export function App() {
     <BrowserRouter>
       {/* pb reserves the fixed bottom tab bar's height + notch inset on <md so
           the footer/ledger tail is never covered. */}
-      <div className={`flex min-h-dvh flex-col bg-canvas ${reserveClass}`}>
+      <div className={`flex min-h-dvh flex-col bg-paper ${reserveClass}`}>
         <MockBanner />
         <TopBar />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
@@ -133,9 +141,9 @@ export function App() {
             <Route path="/dev/components" element={<ComponentsGallery />} />
           </Routes>
         </main>
-        <footer className="bizro-no-print border-t border-rule-line px-4 py-3">
-          <p className="mx-auto max-w-6xl text-xs text-ink-black opacity-70">
-            <T en="Bizro control room · Khata Modern" ur="بزرو کنٹرول روم" /> ·{' '}
+        <footer className="bizro-no-print border-t border-gridline px-4 py-3">
+          <p className="mx-auto max-w-6xl text-xs text-ink-line opacity-70">
+            <T en="Bizro control room · stamped-ledger edition" ur="بزرو کنٹرول روم" /> ·{' '}
             <Link to="/dev/components" className="font-semibold underline">
               <T en="Component gallery" ur="اجزاء کی نمائش" />
             </Link>

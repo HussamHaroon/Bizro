@@ -31,11 +31,11 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
             <T
               en="Udhar Radar"
               ur="ادھار راڈار"
-              className="font-numerals text-[22px] font-semibold text-ink-black"
-              urClassName="text-[22px] font-semibold text-ink-black"
+              className="font-numerals text-[22px] font-semibold text-ink-line"
+              urClassName="text-[22px] font-semibold text-ink-line"
             />
           </h2>
-          <p className="text-xs text-ink-black opacity-75">
+          <p className="text-xs text-ink-line opacity-75">
             <T en="Who owes you" ur="کون مقروض ہے" />
           </p>
         </div>
@@ -47,7 +47,7 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
       </header>
 
       {items.length === 0 ? (
-        <p className="px-1 py-3 text-sm text-ink-black">
+        <p className="px-1 py-3 text-sm text-ink-line">
           <T en="No udhar outstanding — everyone has paid up." ur="کوئی ادھار باقی نہیں" />
         </p>
       ) : (
@@ -57,7 +57,7 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <span className="flex min-w-0 items-center gap-2">
                   <IconCustomer className="h-6 w-6 shrink-0 text-ink-green" />
-                  <span className="truncate font-semibold text-ink-black">{u.name}</span>
+                  <span className="truncate font-semibold text-ink-line">{u.name}</span>
                 </span>
                 <span className="text-right">
                   <span className="font-numerals text-lg font-semibold tabular-nums text-ledger-red">
@@ -65,10 +65,11 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                   </span>
                 </span>
               </div>
-              {/* Proportional bar (D3-4: horizontal ink gradient, rounded caps) —
-                  the number + name carry the meaning, the bar is a glance. */}
+              {/* Proportional bar (D4-1: flat red-fill + 2px ink-line border,
+                  square caps, 20%-ink track) — the number + name carry the
+                  meaning, the bar is a glance. */}
               <div
-                className="h-2.5 w-full overflow-hidden rounded-card bg-rule-line/70"
+                className="h-3.5 w-full rounded-chip bg-gridline"
                 role="img"
                 aria-label={pick(
                   `${u.name}: Rs ${u.outstanding_pkd.toLocaleString('en-PK')} outstanding`,
@@ -76,10 +77,9 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                 )}
               >
                 <div
-                  className="h-full rounded-card transition-[width] duration-200 ease-out"
+                  className="h-full rounded-chip border-2 border-ink-line bg-fill-red transition-[width] duration-200 ease-out"
                   style={{
                     width: `${Math.max(4, Math.round((u.outstanding_pkd / max) * 100))}%`,
-                    backgroundImage: 'var(--bizro-gradient-udhar-h)',
                   }}
                 />
               </div>

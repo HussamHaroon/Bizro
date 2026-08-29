@@ -33,12 +33,12 @@ export function EmptyState({
         <T
           en={title}
           ur={titleUr}
-          className="font-numerals text-lg font-semibold text-ink-black"
-          urClassName="text-lg font-semibold text-ink-black"
+          className="font-numerals text-lg font-semibold text-ink-line"
+          urClassName="text-lg font-semibold text-ink-line"
         />
       </p>
       {hint && (
-        <p className="max-w-xs text-sm text-ink-black opacity-80">
+        <p className="max-w-xs text-sm text-ink-line opacity-80">
           {hintUr ? <T en={hint} ur={hintUr} /> : hint}
         </p>
       )}

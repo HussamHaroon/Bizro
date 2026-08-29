@@ -24,7 +24,7 @@ export interface AmountTextProps {
 const TONE_CLASS: Record<AmountTone, string> = {
   in: 'text-settled-teal',
   out: 'text-ledger-red',
-  neutral: 'text-ink-black',
+  neutral: 'text-ink-line',
 };
 
 const SIZE_CLASS: Record<NonNullable<AmountTextProps['size']>, string> = {
@@ -49,7 +49,7 @@ export function AmountText({
         {formatPkr(value)}
       </span>
       {wordsVisible && value > 0 && (
-        <span className="bizro-urdu text-xs text-ink-black opacity-80" lang="ur">
+        <span className="bizro-urdu text-xs text-ink-line opacity-80" lang="ur">
           {urduAmountWords(Math.round(value))} روپے
         </span>
       )}

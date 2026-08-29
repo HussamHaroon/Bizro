@@ -42,9 +42,9 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
         />
       )}
       {!ai && (
-        <p className="flex flex-wrap items-baseline gap-x-2 font-semibold text-ink-black">
+        <p className="flex flex-wrap items-baseline gap-x-2 font-semibold text-ink-line">
           <T en={src.en} ur={src.ur} />
-          <span className="text-ink-black opacity-70">— <T en="no AI involved in this entry" ur="اس انٹری میں کوئی اے آئی شامل نہیں" /></span>
+          <span className="text-ink-line opacity-70">— <T en="no AI involved in this entry" ur="اس انٹری میں کوئی اے آئی شامل نہیں" /></span>
         </p>
       )}
 
@@ -53,7 +53,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
             <T en="When" ur="کب" />
           </dt>
-          <dd className="text-ink-black">{formatDateTime(t.occurred_at)}</dd>
+          <dd className="text-ink-line">{formatDateTime(t.occurred_at)}</dd>
         </div>
         <div className="flex flex-col gap-0.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
@@ -67,7 +67,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
             <T en="Source" ur="ماخذ" />
           </dt>
-          <dd className="flex flex-col gap-0.5 text-ink-black">
+          <dd className="flex flex-col gap-0.5 text-ink-line">
             <span>
               <T en={src.en} ur={src.ur} />
             </span>
@@ -80,16 +80,16 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
             <T en="Model" ur="ماڈل" />
           </dt>
-          <dd className="flex flex-col gap-1 text-ink-black">
+          <dd className="flex flex-col gap-1 text-ink-line">
             <span>{t.source.model ?? '— (manual entry)'}</span>
             {ai && (
               <span className="flex items-center gap-2">
                 <span
-                  className="inline-block h-2.5 w-24 overflow-hidden rounded-card border border-rule-line bg-paper-cream"
+                  className="inline-block h-2.5 w-24 overflow-hidden rounded-card border-2 border-ink-line bg-paper-raised"
                   aria-hidden="true"
                 >
                   <span
-                    className="block h-full bg-seal-gold"
+                    className="block h-full bg-fill-gold"
                     style={{ width: `${Math.round((t.source.confidence ?? 0) * 100)}%` }}
                   />
                 </span>
@@ -109,7 +109,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-green">
             <T en="What we heard" ur="سنی گئی بات" />
           </p>
-          <p className="bizro-urdu rounded-card border border-rule-line bg-paper-cream px-3 py-2 text-ink-black" lang="ur">
+          <p className="bizro-urdu rounded-card border-2 border-ink-line bg-paper-raised px-3 py-2 text-ink-line" lang="ur">
             {(t.source.raw_output as { transcript?: string }).transcript}
           </p>
         </div>
@@ -120,7 +120,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-green">
             <T en="Items read from receipt" ur="رسید کی اشیاء" />
           </p>
-          <table className="w-full border-collapse text-ink-black">
+          <table className="w-full border-collapse text-ink-line">
             <thead>
               <tr className="bizro-rule-h text-left text-xs uppercase tracking-wide opacity-70">
                 <th className="py-1 pr-2 font-semibold"><T en="Item" ur="شے" /></th>
@@ -152,7 +152,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-green">
             <T en="WhatsApp confirmation" ur="تصدیقی پیغام" />
           </p>
-          <p className="bizro-urdu rounded-card border border-rule-line bg-paper-cream px-3 py-2 text-ink-black" lang="ur">
+          <p className="bizro-urdu rounded-card border-2 border-ink-line bg-paper-raised px-3 py-2 text-ink-line" lang="ur">
             {t.confirmation_ur}
           </p>
         </div>
@@ -163,7 +163,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           <Button onClick={onConfirm}>
             <T en="Confirm this entry" ur="تصدیق کریں" />
           </Button>
-          <p className="text-xs text-ink-black opacity-75">
+          <p className="text-xs text-ink-line opacity-75">
             <T
               en="Low confidence entries stay pending until you confirm (schema.md §1)."
               ur="کم اعتماد انٹریاں آپ کی تصدیق تک انتظار میں رہتی ہیں۔"
