@@ -22,12 +22,12 @@ export function MerchantPicker({ className = '', selectClassName = '' }: Merchan
   if (merchants.length <= 1) return null;
   return (
     <label className={`inline-flex min-h-touch items-center gap-2 ${className}`.trim()}>
-      <IconCustomer className="h-6 w-6 shrink-0 text-seal-gold" />
+      <IconCustomer className="h-6 w-6 shrink-0 text-ink-green" />
       <select
         value={merchantId}
         onChange={(e) => setMerchant(e.target.value)}
         aria-label={pick('Choose merchant', 'دکاندار چنیں')}
-        className={`min-h-touch w-full max-w-44 rounded-button border border-paper-cream/40 bg-paper-raised px-2 text-base font-semibold text-ink-black ${selectClassName}`.trim()}
+        className={`min-h-touch w-full max-w-44 rounded-chip border-[3px] border-ink-line bg-paper-raised px-2 text-base font-semibold text-ink-line ${selectClassName}`.trim()}
       >
         {merchants.map((m) => (
           <option key={m.id} value={m.id}>

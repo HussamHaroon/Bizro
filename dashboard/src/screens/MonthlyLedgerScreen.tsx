@@ -173,7 +173,7 @@ export function MonthlyLedgerScreen() {
             <button
               type="button"
               onClick={() => setMonth((m) => shiftMonth(m, -1))}
-              className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-button border border-rule-line bg-paper-raised text-ink-black transition-colors duration-200 ease-out hover:bg-paper-cream"
+              className="bizro-btn-press inline-flex min-h-touch min-w-touch items-center justify-center rounded-button border-[3px] border-ink-line bg-paper-raised text-ink-line"
               aria-label={pick(
                 `Previous month (${formatMonth(shiftMonth(month, -1))})`,
                 `پچھلا مہینہ (${urduMonth(shiftMonth(month, -1))})`,
@@ -185,7 +185,7 @@ export function MonthlyLedgerScreen() {
               <span className="block font-numerals text-lg font-semibold text-ink-green">
                 {formatMonth(month)}
               </span>
-              <span className="bizro-urdu block text-sm font-semibold text-ink-black" lang="ur">
+              <span className="bizro-urdu block text-sm font-semibold text-ink-line" lang="ur">
                 {urduMonth(month)} {month.slice(0, 4)}
               </span>
             </p>
@@ -193,7 +193,7 @@ export function MonthlyLedgerScreen() {
               type="button"
               onClick={() => setMonth((m) => shiftMonth(m, 1))}
               disabled={month >= currentMonth}
-              className="inline-flex min-h-touch min-w-touch items-center justify-center rounded-button border border-rule-line bg-paper-raised text-ink-black transition-colors duration-200 ease-out hover:bg-paper-cream disabled:cursor-not-allowed disabled:text-ink-green-disabled disabled:hover:bg-paper-raised"
+              className="bizro-btn-press inline-flex min-h-touch min-w-touch items-center justify-center rounded-button border-[3px] border-ink-line bg-paper-raised text-ink-line disabled:cursor-not-allowed disabled:text-ink-green-disabled disabled:shadow-none"
               aria-label={pick(
                 `Next month (${formatMonth(shiftMonth(month, 1))})`,
                 `اگلا مہینہ (${urduMonth(shiftMonth(month, 1))})`,
@@ -254,13 +254,13 @@ export function MonthlyLedgerScreen() {
       {stats && stats.entries > 0 && (
         <section
           aria-label={pick('Month split', 'ماہ کا خلاصہ')}
-          className="bizro-card grid grid-cols-2 sm:grid-cols-4 sm:divide-x sm:divide-rule-line [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(-n+2)]:border-rule-line [&>*:nth-child(odd)]:border-r [&>*:nth-child(odd)]:border-rule-line sm:[&>*:nth-child(-n+2)]:border-b-0 sm:[&>*:nth-child(odd)]:border-r-0"
+          className="bizro-card grid grid-cols-2 sm:grid-cols-4 sm:divide-x sm:divide-ink-line [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(-n+2)]:border-ink-line [&>*:nth-child(odd)]:border-r [&>*:nth-child(odd)]:border-ink-line sm:[&>*:nth-child(-n+2)]:border-b-0 sm:[&>*:nth-child(odd)]:border-r-0"
         >
           <SplitCell icon={<IconSale className="h-7 w-7 text-settled-teal" />} en="Sales" ur="فروخت" amount={stats.sales} tone="in" />
           <SplitCell icon={<IconExpense className="h-7 w-7 text-ledger-red" />} en="Expenses" ur="خرچ" amount={stats.expenses} tone="out" />
           <SplitCell icon={<IconUdharGiven className="h-7 w-7 text-ledger-red" />} en="Udhar given" ur="ادھار" amount={stats.udharGiven} tone="out" />
           <SplitCell icon={<IconUdharSettled className="h-7 w-7 text-settled-teal" />} en="Collected" ur="وصولی" amount={stats.collected} tone="in" />
-          <p className="col-span-2 flex flex-wrap items-center gap-2 border-t border-rule-line px-4 py-3 text-sm text-ink-black sm:col-span-4">
+          <p className="col-span-2 flex flex-wrap items-center gap-2 border-t-2 border-ink-line px-4 py-3 text-sm text-ink-line sm:col-span-4">
             <SealMark variant="verified" />
             <span className="font-numerals font-semibold">
               {Math.round((stats.aiEntries / stats.entries) * 100)}%
@@ -272,7 +272,8 @@ export function MonthlyLedgerScreen() {
 
       {udhar && <UdharRadar items={udhar} />}
 
-      {/* Kind filter — every chip is word-paired (EN + UR), never icon-only. */}
+      {/* Kind filter — every chip is word-paired (EN + UR), never icon-only.
+          D4-1: square sticker chips; active = green-fill with paper text. */}
       <div role="group" aria-label={pick('Filter entries', 'انٹریاں چھانیں')} className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
@@ -280,10 +281,10 @@ export function MonthlyLedgerScreen() {
             type="button"
             onClick={() => setFilter(f.key)}
             aria-pressed={filter === f.key}
-            className={`inline-flex min-h-touch items-center gap-2 rounded-button border px-4 text-sm font-semibold transition-colors duration-200 ease-out ${
+            className={`inline-flex min-h-touch items-center gap-2 rounded-chip border-[3px] px-4 text-sm font-semibold transition-colors duration-200 ease-out ${
               filter === f.key
-                ? 'border-ink-green bg-ink-green text-paper-cream'
-                : 'border-rule-line bg-paper-raised text-ink-black hover:bg-paper-cream'
+                ? 'border-ink-line bg-fill-green text-paper shadow-hard-sm'
+                : 'border-ink-line bg-paper-raised text-ink-line hover:bg-paper'
             }`}
           >
             <T en={f.en} ur={f.ur} />
@@ -292,7 +293,7 @@ export function MonthlyLedgerScreen() {
       </div>
 
       {filtered === null && !error && (
-        <p className="px-1 py-6 text-center text-sm text-ink-black opacity-75">
+        <p className="px-1 py-6 text-center text-sm text-ink-line opacity-75">
           <T en="Reading the khata…" ur="کھاتہ کھل رہا ہے" />
         </p>
       )}
@@ -314,12 +315,12 @@ export function MonthlyLedgerScreen() {
       )}
 
       {groups.length > 0 && (
-        <section aria-label={pick('Entries', 'انٹریاں')} className="border-t border-rule-line">
+        <section aria-label={pick('Entries', 'انٹریاں')} className="border-t-2 border-ink-line">
           {groups.map(([day, rows]) => (
             <ul key={day} aria-label={formatDay(day)}>
               <LedgerDayHeader>
                 {formatDay(day)}{' '}
-                <span className="font-normal text-ink-black opacity-70">
+                <span className="font-normal text-ink-line opacity-70">
                   · {rows.length}{' '}
                   {pick(
                     rows.length === 1 ? 'entry' : 'entries',
@@ -375,7 +376,7 @@ function SplitCell({
     <div className="flex items-center gap-3 px-4 py-3">
       {icon}
       <div className="flex min-w-0 flex-col">
-        <span className="flex flex-wrap items-baseline gap-x-1.5 text-sm font-semibold text-ink-black">
+        <span className="flex flex-wrap items-baseline gap-x-1.5 text-sm font-semibold text-ink-line">
           <T en={en} ur={ur} />
         </span>
         <AmountText value={amount} tone={tone} />

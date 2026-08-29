@@ -113,7 +113,7 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
       <button
         type="button"
         onClick={() => setLightboxOpen(true)}
-        className="w-fit overflow-hidden rounded-card border border-rule-line transition-shadow duration-200 ease-out hover:shadow-raise focus-visible:shadow-raise"
+        className="w-fit overflow-hidden rounded-chip border-[3px] border-ink-line shadow-hard-sm transition-shadow duration-200 ease-out hover:shadow-hard-md focus-visible:shadow-hard-md"
         aria-label={pick('Show the original receipt photo larger', 'اصل رسید کی تصویر بڑی کریں')}
       >
         <img
@@ -126,7 +126,7 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
       </button>
       {lightboxOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink-black/80 p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink-line/80 p-6"
           role="dialog"
           aria-modal="true"
           aria-label={pick('Receipt photo — press Escape to close', 'رسید کی تصویر — بند کرنے کے لیے Escape دبائیں')}
@@ -138,7 +138,7 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
           <img
             src={state.url}
             alt={pick('Original receipt photo, full size', 'اصل رسید کی تصویر، مکمل سائز')}
-            className="max-h-[85vh] max-w-full rounded-card border-2 border-paper-cream"
+            className="max-h-[85vh] max-w-full rounded-chip border-[3px] border-paper"
           />
         </div>
       )}
@@ -148,7 +148,7 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
 
 function Note({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-card border border-dashed border-rule-line bg-paper-cream px-3 py-2 text-xs text-ink-black opacity-80">
+    <p className="rounded-chip border-2 border-dashed border-ink-line bizro-tint-neutral px-3 py-2 text-xs text-ink-line opacity-80">
       {children}
     </p>
   );

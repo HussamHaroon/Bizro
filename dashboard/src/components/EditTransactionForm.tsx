@@ -53,11 +53,11 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
         void save();
       }}
     >
-      <p className="text-sm font-semibold text-ink-black">
+      <p className="text-sm font-semibold text-ink-line">
         <T en="Correct this entry" ur="اس انٹری میں ترمیم کریں" />
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm text-ink-black">
+        <label className="flex flex-col gap-1 text-sm text-ink-line">
           <T en="Amount (PKR)" ur="رقم" />
           <input
             type="number"
@@ -66,16 +66,16 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
             step={1}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="min-h-touch rounded-button border border-rule-line bg-paper-raised px-3 font-numerals text-base text-ink-black"
+            className="min-h-touch rounded-button border-2 border-ink-line bg-paper-raised px-3 font-numerals text-base text-ink-line"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm text-ink-black">
+        <label className="flex flex-col gap-1 text-sm text-ink-line">
           <T en="Note" ur="تفصیل" />
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="min-h-touch rounded-button border border-rule-line bg-paper-raised px-3 text-base text-ink-black"
+            className="min-h-touch rounded-button border-2 border-ink-line bg-paper-raised px-3 text-base text-ink-line"
           />
         </label>
       </div>
@@ -92,7 +92,7 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
           <T en="Cancel" ur="محو کریں" />
         </Button>
       </div>
-      <p className="text-xs text-ink-black opacity-75">
+      <p className="text-xs text-ink-line opacity-75">
         <T
           en="The original values stay on record for the audit trail (schema.md §4 PATCH)."
           ur="اصل قیمتیں ریکارڈ میں محفوظ رہتی ہیں۔"

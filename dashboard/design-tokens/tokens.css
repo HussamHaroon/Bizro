@@ -1,94 +1,103 @@
-/* Bizro "Khata Modern" design tokens — extracted from design.md §4.1–4.2.
-   SINGLE SOURCE OF TRUTH for colors, fonts, elevation, motion, touch targets.
-   Rule (AGENTS.md frontend-agent prompt): nothing enters the dashboard that isn't
-   defined here. Missing token → ask the Orchestrator, don't improvise. */
+/* Bizro design tokens — SINGLE SOURCE OF TRUTH for colors, fonts, elevation,
+   motion, touch targets (design.md §4 + D4-1 ruling: "stamped-ledger"
+   neobrutalism on the khata palette; §4.7 accessibility law unchanged).
+
+   D4-1 (2026-08-23, binding): the live token set is the neobrutalist extension.
+   The D3-4 substrate tokens (cool canvas, gradients, glow, soft shadows) are
+   RETIRED from the dashboard — zero-blur hard offset shadows only. The D1-1
+   anchors (ink-green / ledger-red / seal-gold / settled-teal semantics, slab
+   numerals, Nastaliq display moments) stay. Legacy keys marked EXTERNAL below
+   remain ONLY because the WhatsApp invoice renderer (voice-agent) and the
+   printable credit report (credit-agent) read them from tokens.json — the
+   dashboard itself does not use them.
+
+   Rule (AGENTS.md frontend-agent prompt): nothing enters the dashboard that
+   isn't defined here. Missing token → ask the Orchestrator, don't improvise. */
 
 :root {
-  /* ---- Color — design.md §4.1 ------------------------------------------- */
-  --bizro-ink-green:    #0B5D3B;   /* brand, primary actions, headers */
-  --bizro-paper-cream:  #F7F2E7;   /* app background — ledger paper, not clinical white */
-  --bizro-ledger-red:   #A6332B;   /* debit / udhar / expenses — real khata red ink */
-  --bizro-seal-gold:    #C98A2C;   /* AI-verified seal, credit-readiness highlights */
+  /* ---- Color — khata palette (design.md §4.1, anchors kept per D4-1) ------- */
+  --bizro-ink-green:    #0B5D3B;   /* brand, primary actions (green-fill alias) */
+  --bizro-ledger-red:   #A6332B;   /* debit / udhar / expenses — khata red ink */
+  --bizro-seal-gold:    #C98A2C;   /* seal/stamp accent — never body text on cream */
   --bizro-settled-teal: #1F7A6C;   /* paid/settled — deliberately distinct from ink-green */
-  --bizro-ink-black:    #211E1A;   /* body text — warm black, never pure #000 */
-  --bizro-rule-line:    #DCD3BE;   /* ledger-rule dividers, card borders */
 
-  /* Derived same-family tints — ONLY for hover / pressed / disabled states */
-  --bizro-ink-green-hover:  #0E7A4C;
+  /* Derived same-family states — hover / pressed / disabled only */
+  --bizro-ink-green-hover:    #0E7A4C;
   --bizro-ink-green-disabled: #7FA392;
-  --bizro-ledger-red-hover: #C04A41;
-  --bizro-paper-cream-raised: #FDFAF2; /* raised surface ON cream cards (inputs, inactive chips) */
+  --bizro-ledger-red-hover:   #C04A41;
 
-  /* ---- D3-4 substrate extension (Orchestrator ruling 2026-08-23) ------------
-     Canvas + depth: the page becomes a cool near-white CANVAS; the khata cream
-     warmth now lives in CARDS against it. ink-deep is the gradient end for the
-     header band. gold/teal bright+deep ends exist only inside gradient tokens
-     below (viz fills, seal ring). teal-ink is the AA text pair for text on
-     teal tints (settled-teal itself is 4.35:1 on its 10% tint — one notch short
-     of AA, so chips darken text one step). */
-  --bizro-canvas:        #FAFAF8;  /* page canvas — cool near-white */
-  --bizro-ink-deep:      #073D27;  /* gradient end: ink-green → ink-deep header */
-  --bizro-gold-bright:   #E3AC55;  /* seal-ring gradient light end */
-  --bizro-gold-deep:     #A8731F;  /* seal-ring gradient dark end */
-  --bizro-teal-bright:   #2F9C8A;  /* viz bar gradient light end (in) */
-  --bizro-teal-ink:      #176156;  /* AA text on teal tint surfaces (6.1:1) */
+  /* ---- D4-1 neobrutalist extension — the stamped-ledger substrate -----------
+     Canvas is warm ledger CREAM (back from the D3-4 cool white): `paper` is the
+     page, `paper-raised` is cards/stickers on it. `ink-line` is the ONE border
+     and type baseline — every border and body-text pair rides on it. Punchy
+     semantic FILLS carry the chips/stickers/active states; text on a fill is
+     strictly paper (white) on green/red/teal, ink on gold (AA pairs below). */
+  --bizro-paper:      #F5F1E6;  /* page canvas — warm ledger cream */
+  --bizro-paper-raised: #FCF9F0; /* cards, stickers, raised surfaces */
+  --bizro-ink-line:   #1F1B16;  /* warm black — ALL borders + type baseline */
+  --bizro-green-fill: #0B5D3B;  /* chip/sticker fill — paper text (AA) */
+  --bizro-red-fill:   #A6332B;  /* chip/sticker fill — paper text (AA) */
+  --bizro-gold-fill:  #E9A93D;  /* brighter gold fill — ink text (AA) */
+  --bizro-teal-fill:  #1F7A6C;  /* chip/sticker fill — paper text (AA) */
 
-  /* Gradient + glow tokens (D3-4). Stops reference the color tokens above so
-     the color set stays the single source of truth. */
-  --bizro-gradient-header: linear-gradient(135deg, var(--bizro-ink-green) 0%, var(--bizro-ink-deep) 100%);
-  --bizro-gradient-card:   linear-gradient(180deg, var(--bizro-paper-cream-raised) 0%, var(--bizro-paper-cream) 100%);
-  --bizro-gradient-bar-in:  linear-gradient(180deg, var(--bizro-teal-bright) 0%, var(--bizro-settled-teal) 100%);
-  --bizro-gradient-bar-out: linear-gradient(180deg, var(--bizro-ledger-red-hover) 0%, var(--bizro-ledger-red) 100%);
-  --bizro-gradient-ring:  linear-gradient(270deg, var(--bizro-gold-bright) 0%, var(--bizro-seal-gold) 55%, var(--bizro-gold-deep) 100%);
-  --bizro-gradient-udhar-h: linear-gradient(90deg, var(--bizro-ink-green-hover) 0%, var(--bizro-ink-deep) 100%);
-  --bizro-glow-seal: drop-shadow(0 2px 12px rgba(201, 138, 44, 0.28)); /* soft outer glow for the seal gauge (alpha kept in the 20–30% taste band) */
+  /* Sticker tints (StatusPill/StreakChip): 10–14% alpha of their token colors
+     over paper-raised, always paired with a 2px ink-line border. rgba values
+     resolved from the tokens above (recompute if a color token changes). */
+  --bizro-tint-teal:    rgba(31, 122, 108, 0.10);
+  --bizro-tint-red:     rgba(166, 51, 43, 0.12);
+  --bizro-tint-gold:    rgba(233, 169, 61, 0.14);
+  --bizro-tint-neutral: rgba(31, 27, 22, 0.10);
 
-  /* Soft tint surfaces (D3-4 chips) — 10–12% alpha of their token colors,
-     rgba values resolved from the tokens above (recompute if a color token
-     changes). `-line` variants are the matching hairline borders at ~30%. */
-  --bizro-tint-teal:       rgba(31, 122, 108, 0.10);
-  --bizro-tint-teal-line:  rgba(31, 122, 108, 0.30);
-  --bizro-tint-red:        rgba(166, 51, 43, 0.10);
-  --bizro-tint-red-line:   rgba(166, 51, 43, 0.30);
-  --bizro-tint-gold:       rgba(201, 138, 44, 0.12);
-  --bizro-tint-gold-line:  rgba(201, 138, 44, 0.32);
-  --bizro-tint-neutral:      rgba(33, 30, 26, 0.07);
-  --bizro-tint-neutral-line: rgba(33, 30, 26, 0.16);
+  /* Chart gridlines: 1px ink at 20% alpha (D4-1 chart spec). */
+  --bizro-gridline: rgba(31, 27, 22, 0.20);
 
-  /* WCAG AA-approved text/background pairs (design.md §4.1 — non-negotiable):
-     ink-black on canvas · ink-black on paper-cream · ink-black on paper-cream-raised
-     ink-green on canvas · ink-green on paper-cream (also on cream-raised)
-     ledger-red on canvas · ledger-red on paper-cream · settled-teal on canvas
-     settled-teal-ink on tint-teal (D3-4 chips) · paper-cream on ink-green and
-     on the gradient-header (ink-deep end is darker → higher contrast)
-     paper-cream on ink-green (buttons/headers) · ink-black on seal-gold (stamp)
-     seal-gold is NOT AA as text on cream — use only for stamp/badge fills/borders. */
+  /* AA text pair for text on teal tints (settled-teal itself is one notch
+     short of AA on its 10% tint — chips darken text one step). */
+  --bizro-teal-ink: #176156;  /* 6.1:1 on tint-teal */
 
-  /* ---- Typography — design.md §4.2 --------------------------------------- */
+  /* EXTERNAL anchors (voice-agent invoice + credit-agent report read these
+     from tokens.json; the dashboard uses paper/paper-raised instead). */
+  --bizro-paper-cream:        #F7F2E7;
+  --bizro-paper-cream-raised: #FDFAF2;
+  --bizro-ink-black:          #211E1A;
+  --bizro-rule-line:          #DCD3BE;
+
+  /* WCAG AA-approved text/background pairs (design.md §4.1 — non-negotiable,
+     audited programmatically in dashboard/scripts/aa-audit.mjs):
+     ink-line on paper · ink-line on paper-raised · ink-line on tint-* chips
+     paper on green-fill · paper on red-fill · paper on teal-fill (buttons,
+     active tabs, sticker chips) · ink-line on gold-fill
+     ink-green on paper / paper-raised · ledger-red on paper / paper-raised
+     teal-ink on tint-teal · ink-line on seal-gold (legacy stamp pair)
+     seal-gold is NOT AA as text on paper — fills/borders only. */
+
+  /* ---- Typography — design.md §4.2 (unchanged) ---------------------------- */
   --bizro-font-body:     "IBM Plex Sans", "Noto Sans Urdu", system-ui, sans-serif;
   --bizro-font-numerals: "Zilla Slab", "IBM Plex Sans", serif;      /* amounts + section headers */
   --bizro-font-display-ur: "Noto Nastaliq Urdu", serif;             /* display moments ONLY:
                                                        app name, invoice greeting, WA template header.
                                                        Too tall/slow for dense UI text. */
 
-  /* ---- Spacing & shape — ledger feels ruled and flat, not floating -------- */
+  /* ---- Spacing & shape — D4-1: stamps are square-ish; chips dead square --- */
   --bizro-space-1: 4px;   --bizro-space-2: 8px;   --bizro-space-3: 12px;
   --bizro-space-4: 16px;  --bizro-space-5: 24px;  --bizro-space-6: 32px;
 
-  --bizro-radius-card:   6px;   /* crisp, stamp-like — no pill shapes */
-  --bizro-radius-button: 6px;
-  --bizro-radius-seal:   50%;   /* circular trust-seal stamp only */
+  --bizro-radius-card:   2px;   /* cards, buttons, stickers — near-square */
+  --bizro-radius-button: 2px;
+  --bizro-radius-chip:   0px;   /* chips: fully square (D4-1) */
 
-  /* ---- Elevation — design.md §4.4 + D1-1 addendum: cards may pair the rule-line
-     border with a soft shadow ("stamped paper on a desk"); ledger ROWS stay
-     pure rule-lines (shadows read "app", rules read "book"). ------------------- */
-  --bizro-border-card: 1px solid var(--bizro-rule-line);
-  --bizro-rule-h:      1px solid var(--bizro-rule-line);
+  /* ---- Elevation — D4-1: ZERO-BLUR hard offset shadows, ink-line color.
+     The D1-1/D3-4 soft shadow ramp is retired. Ledger ROWS stay pure rules
+     (2px ink-line) — the book, bolder; cards/stickers carry the hard shadow. */
+  --bizro-border-card: 3px solid var(--bizro-ink-line);
+  --bizro-rule-h:      2px solid var(--bizro-ink-line);
   --bizro-shadow-none: none;
-  --bizro-shadow-card: 0 1px 2px rgba(33, 30, 26, 0.06), 0 4px 14px rgba(33, 30, 26, 0.07);
-  --bizro-shadow-raise: 0 2px 4px rgba(33, 30, 26, 0.08), 0 10px 28px rgba(33, 30, 26, 0.10);
+  --bizro-shadow-hard-sm: 3px 3px 0 var(--bizro-ink-line);
+  --bizro-shadow-hard-md: 5px 5px 0 var(--bizro-ink-line);
+  --bizro-shadow-hard-lg: 8px 8px 0 var(--bizro-ink-line);
 
-  /* ---- Motion — design.md §4.6: minimal, purposeful, slow ----------------- */
+  /* ---- Motion — design.md §4.6 + D4-1 ③: press/translate interactions +
+     the seal stamp are the whole motion budget ------------------------------- */
   --bizro-motion-fast:  200ms ease-out;
   --bizro-motion-stamp: 300ms ease-out;   /* the one animation worth budget: seal "thud" */
 

@@ -1,8 +1,13 @@
-/* Bizro dashboard — Khata Modern stylesheet.
-   TOKEN LAW (design-tokens/README.md): the ONLY allowed colors/fonts/spacing/motion are
-   defined in ../design-tokens/tokens.css (LOCKED, source of truth). The Tailwind v4
-   `@theme` block below mirrors tokens.css 1:1 (per bizro-frontend-agent SKILL.md).
-   If a value seems missing → request a token from the Orchestrator; never improvise. */
+/* Bizro dashboard — D4-1 "stamped-ledger" neobrutalism stylesheet.
+   TOKEN LAW (design-tokens/README.md): the ONLY allowed colors/fonts/spacing/motion
+   are defined in ../design-tokens/tokens.css (LOCKED, source of truth). The
+   Tailwind v4 `@theme` block below mirrors tokens.css 1:1 (per bizro-frontend-agent
+   SKILL.md). If a value seems missing → request a token from the Orchestrator;
+   never improvise.
+
+   Art direction (D4-1, binding): cream canvas, black-bordered cards, hard offset
+   shadows with ZERO blur, square chips, tactile press interactions, rubber-stamp
+   seals. §4.7 accessibility law unchanged. Print flattens the hard shadows. */
 
 @import "tailwindcss";
 @import "../design-tokens/tokens.css";
@@ -12,47 +17,51 @@
   --color-ink-green: #0b5d3b;
   --color-ink-green-hover: #0e7a4c;
   --color-ink-green-disabled: #7fa392;
-  --color-ink-black: #211e1a;
+  --color-ink-line: #1f1b16;
 
+  --color-paper: #f5f1e6;        /* page canvas — warm ledger cream */
+  --color-paper-raised: #fcf9f0; /* cards, stickers */
+
+  /* EXTERNAL anchors (voice-agent invoice + credit-agent report) — kept stable
+     for tokens.json consumers; the dashboard uses paper/paper-raised. */
   --color-paper-cream: #f7f2e7;
-  --color-paper-raised: #fdfaf2;
-
-  /* D3-4 substrate extension (mirror of the tokens.css D3-4 block) */
-  --color-canvas: #fafaf8;      /* page canvas — cool near-white */
-  --color-ink-deep: #073d27;    /* gradient end (header band) */
-  --color-gold-bright: #e3ac55; /* seal-ring gradient light end */
-  --color-gold-deep: #a8731f;   /* seal-ring gradient dark end */
-  --color-teal-bright: #2f9c8a; /* viz bar gradient light end */
-  --color-teal-ink: #176156;    /* AA text on teal tint surfaces */
+  --color-paper-cream-raised: #fdfaf2;
+  --color-rule-line: #dcd3be;
 
   --color-ledger-red: #a6332b;
   --color-ledger-red-hover: #c04a41;
 
   --color-seal-gold: #c98a2c;
   --color-settled-teal: #1f7a6c;
+  --color-teal-ink: #176156;
 
-  --color-rule-line: #dcd3be;
+  /* D4-1 punchy semantic fills — paper text on green/red/teal, ink on gold. */
+  --color-fill-green: #0b5d3b;
+  --color-fill-red: #a6332b;
+  --color-fill-gold: #e9a93d;
+  --color-fill-teal: #1f7a6c;
 
-  /* ---- Elevation (D1-1): cards may pair the rule-line border with a soft
-     shadow ("stamped paper on a desk"); ledger ROWS stay pure rule-lines.
-     Mirrors --bizro-shadow-card / --bizro-shadow-raise in tokens.css. -------- */
-  --shadow-card: 0 1px 2px rgba(33, 30, 26, 0.06), 0 4px 14px rgba(33, 30, 26, 0.07);
-  --shadow-raise: 0 2px 4px rgba(33, 30, 26, 0.08), 0 10px 28px rgba(33, 30, 26, 0.10);
+  --color-gridline: rgba(31, 27, 22, 0.2); /* chart gridlines: 1px ink @20% */
+
+  /* ---- Elevation (D4-1): hard offset shadows, zero blur, ink-line --------- */
+  --shadow-hard-sm: 3px 3px 0 #1f1b16;
+  --shadow-hard-md: 5px 5px 0 #1f1b16;
+  --shadow-hard-lg: 8px 8px 0 #1f1b16;
 
   /* ---- Typography ---------------------------------------------------------- */
   --font-body: "IBM Plex Sans", "Noto Sans Urdu", system-ui, sans-serif;
   --font-numerals: "Zilla Slab", "IBM Plex Sans", serif;
   --font-display-ur: "Noto Nastaliq Urdu", serif; /* display moments ONLY (design.md §4.2) */
 
-  /* ---- Shape & spacing ----------------------------------------------------- */
-  --radius-card: 6px;
-  --radius-button: 6px;
+  /* ---- Shape & spacing (D4-1: near-square cards, dead-square chips) -------- */
+  --radius-card: 2px;
+  --radius-button: 2px;
+  --radius-chip: 0px;
   --spacing-touch: 48px; /* --bizro-touch-min: buttons & interactive targets */
 
-  /* ---- Type scale (D3-4): one notch up globally — body copy 15px, meta 13px
-     (older-user skew, design.md §4.7). Mirrored in tailwind.theme.js. -------- */
-  --text-xs: 0.8125rem; /* 13px — was 12px */
-  --text-sm: 0.9375rem; /* 15px — was 14px */
+  /* ---- Type scale (D3-4 bump kept): body 15px, meta 13px (§4.7 older users) - */
+  --text-xs: 0.8125rem; /* 13px */
+  --text-sm: 0.9375rem; /* 15px */
 }
 
 /* ---- Font packaging alias (flagged to Orchestrator in STATUS.agent.md) ------
@@ -84,101 +93,84 @@
 
 @layer base {
   html {
-    background-color: var(--bizro-canvas);
+    background-color: var(--bizro-paper);
   }
 
   body {
     font-family: var(--bizro-font-body);
-    color: var(--bizro-ink-black);
-    background-color: var(--bizro-canvas);
+    color: var(--bizro-ink-line);
+    background-color: var(--bizro-paper);
     -webkit-font-smoothing: antialiased;
   }
 
-  /* One consistent focus treatment (D1-1 art direction): a seal-gold stamp ring.
-     tokens.css sanctions seal-gold for stamp/badge fills AND borders — never
-     body-text color on cream. */
+  /* One consistent focus treatment (D4-1): a hard ink outline — maximum
+     contrast on the cream canvas (a gold ring misses the 3:1 non-text
+     minimum on paper). Keyboard-only, offset off the 3px borders. */
   :focus-visible {
-    outline: 2px solid var(--bizro-seal-gold);
+    outline: 3px solid var(--bizro-ink-line);
     outline-offset: 2px;
     border-radius: 2px;
   }
 
   ::selection {
-    background-color: var(--bizro-rule-line);
+    background-color: var(--bizro-seal-gold);
+    color: var(--bizro-ink-line);
   }
 }
 
-/* ---- Khata Modern component classes --------------------------------------- */
+/* ---- Stamped-ledger component classes (D4-1) -------------------------------- */
 
 @layer components {
-  /* Elevation (design.md §4.4 + D1-1, substrate refresh D3-4): the page is a
-     cool near-white CANVAS; cards are the khata CREAM (warmth lives in cards
-     against the canvas), 1px rule-line border + shadow-card. Ledger ROWS stay
-     pure rule-lines — shadows read as "app", rules as "book". */
+  /* THE card: paper-raised surface, 3px ink-line border, hard-md shadow,
+     2px radius. Ledger ROWS never use this — they ride .bizro-rule-h. */
   .bizro-card {
-    background-color: var(--bizro-paper-cream);
+    background-color: var(--bizro-paper-raised);
     border: var(--bizro-border-card);
     border-radius: var(--bizro-radius-card);
-    box-shadow: var(--bizro-shadow-card);
+    box-shadow: var(--bizro-shadow-hard-md);
   }
 
-  /* Hero/verdict cards (D3-4): a whisper cream gradient for depth + the raise
-     shadow. Sits on top of .bizro-card (adds background-image, overrides the
-     shadow). Hover still lifts via .bizro-card-hover. */
+  /* Hero/verdict cards step up to hard-lg for extra punch. Sits on top of
+     .bizro-card (overrides the shadow only). */
   .bizro-card-hero {
-    background-image: var(--bizro-gradient-card);
-    box-shadow: var(--bizro-shadow-raise);
+    box-shadow: var(--bizro-shadow-hard-lg);
   }
 
-  /* D3-4 header band: deep gradient ink (ink-green → ink-deep). Cream text on
-     both ends clears WCAG AA (7.1:1 at the ink-green end, higher at ink-deep). */
-  .bizro-gradient-header {
-    background-image: var(--bizro-gradient-header);
-  }
-
-  /* D3-4 seal glow: a soft outer glow for the gauge — drop-shadow follows the
-     ring's alpha channel (not the bounding box), so the glow is ring-shaped.
-     Flattened in print (see the print block below). */
-  .bizro-glow-seal {
-    filter: var(--bizro-glow-seal);
-  }
-
-  /* D3-4 soft tint chips: 10–12% alpha surfaces with matching hairline
-     borders. Pair text per tokens.css AA list: teal-ink on tint-teal,
-     ledger-red on tint-red, ink-black on tint-gold / tint-neutral. */
+  /* Sticker tints (D4-1 StatusPill/StreakChip): 10–14% alpha surfaces —
+     borders come from the 2px ink-line pairing at the usage site. Text pairs
+     per tokens.css AA list: teal-ink on tint-teal, ledger-red on tint-red,
+     ink-line on tint-gold / tint-neutral. */
   .bizro-tint-teal {
     background-color: var(--bizro-tint-teal);
-    border-color: var(--bizro-tint-teal-line);
   }
   .bizro-tint-red {
     background-color: var(--bizro-tint-red);
-    border-color: var(--bizro-tint-red-line);
   }
   .bizro-tint-gold {
     background-color: var(--bizro-tint-gold);
-    border-color: var(--bizro-tint-gold-line);
   }
   .bizro-tint-neutral {
     background-color: var(--bizro-tint-neutral);
-    border-color: var(--bizro-tint-neutral-line);
   }
 
-  /* Micro-interaction (D1-1 art direction §7): 200ms ease-out hover; the card
-     lifts to the raise shadow. Disabled under prefers-reduced-motion. */
+  /* Card micro-interaction (D4-1): hover lifts the card INTO its shadow —
+     translate(-2px,-2px) + hard-lg, 200ms ease-out. Off under reduced motion. */
   .bizro-card-hover {
     transition:
       box-shadow var(--bizro-motion-fast),
       transform var(--bizro-motion-fast);
   }
   .bizro-card-hover:hover {
-    box-shadow: var(--bizro-shadow-raise);
-    transform: translateY(-2px);
+    box-shadow: var(--bizro-shadow-hard-lg);
+    transform: translate(-2px, -2px);
   }
 
-  /* D3-4 button lift: a subtle -1px hover rise + soft shadow (200ms ease-out).
-     Class owns the transition list so utilities never fight it; disabled and
+  /* Tactile button press (D4-1): rest = hard-sm shadow; ACTIVE pushes the
+     button down onto its base — translate(2px,2px), shadow-none. Class owns
+     the transition list so utilities never fight it; disabled and
      reduced-motion states stay planted. */
-  .bizro-btn-lift {
+  .bizro-btn-press {
+    box-shadow: var(--bizro-shadow-hard-sm);
     transition:
       background-color var(--bizro-motion-fast),
       border-color var(--bizro-motion-fast),
@@ -186,40 +178,59 @@
       box-shadow var(--bizro-motion-fast),
       transform var(--bizro-motion-fast);
   }
-  .bizro-btn-lift:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--bizro-shadow-card);
+  .bizro-btn-press:hover:not(:disabled) {
+    box-shadow: var(--bizro-shadow-hard-md);
   }
-  .bizro-btn-lift:active:not(:disabled) {
-    transform: translateY(0);
+  .bizro-btn-press:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: var(--bizro-shadow-none);
   }
 
   @media (prefers-reduced-motion: reduce) {
     .bizro-card-hover,
     .bizro-card-hover:hover,
-    .bizro-btn-lift,
-    .bizro-btn-lift:hover:not(:disabled) {
+    .bizro-btn-press,
+    .bizro-btn-press:hover:not(:disabled),
+    .bizro-btn-press:active:not(:disabled) {
       transition: none;
       transform: none;
     }
   }
 
-  /* Ledger rows sit on horizontal rules like a physical register (design.md §4.4). */
+  /* Ledger rows ride 2px ink-line rules — the book, bolder (D4-1). */
   .bizro-rule-h {
     border-bottom: var(--bizro-rule-h);
   }
 
+  /* The rubber STAMP (D4-1 TrustSealBadge): 2px dashed ink border, uppercase
+     bold ink text, tilted like it was hit by hand. Variants color the text:
+     green ink = verified, red ink = pending. This is the ONE rotated sticker
+     allowed per screen — everything else stays square. The tilt uses the
+     independent `rotate` property so the stamp-thud keyframes (scale-only)
+     compose with it instead of fighting it. */
+  .bizro-stamp {
+    display: inline-block;
+    border: 2px dashed var(--bizro-ink-line);
+    border-radius: var(--bizro-radius-chip);
+    padding: 0.2em 0.55em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    rotate: -4deg;
+  }
+
   /* Badge-glyph knockout (icons.tsx): the filled badge circle uses currentColor
-     and the glyph defaults to paper-cream. Where currentColor is LIGHT (cream
-     inactive states on the ink-green top bar) the circle is light, so the glyph
-     flips to ink-green; active/dark states keep the cream knockout. */
+     and the glyph defaults to paper. In the header/tab/segment contexts the
+     circle is DARK (ink-line, inactive on paper) → paper glyph; on ACTIVE
+     fill states currentColor is LIGHT (paper on green-fill) → the glyph flips
+     to ink-line. Presentation attributes lose to CSS, so no per-site props. */
   .bizro-topbar-tab .bizro-badge-glyph,
   .bizro-lang-segment .bizro-badge-glyph {
-    fill: var(--bizro-ink-green);
+    fill: var(--bizro-paper);
   }
   .bizro-topbar-tab[aria-current='page'] .bizro-badge-glyph,
   .bizro-lang-segment[aria-pressed='true'] .bizro-badge-glyph {
-    fill: var(--bizro-paper-cream);
+    fill: var(--bizro-ink-line);
   }
 
   /* Urdu inline isolation: keeps RTL runs from disturbing surrounding Latin text. */
@@ -244,8 +255,10 @@
     line-height: 2.2;
   }
 
-  /* The ONE animation worth budget (design.md §4.6): the seal "thud" when an
-     entry gets AI-verified — 300ms ease-out, reinforcing the stamp metaphor. */
+  /* The ONE animation worth budget (design.md §4.6 + D4-1 ③): the stamp
+     "thud" when an entry gets AI-verified — 300ms ease-out. Scale-only so it
+     composes with any static `rotate` (the tilted badge) and with upright
+     marks (the row seal); reduced motion gets the static stamp. */
   .bizro-stamp-in {
     animation: bizro-stamp-thud var(--bizro-motion-stamp);
     transform-origin: center;
@@ -253,15 +266,15 @@
 
   @keyframes bizro-stamp-thud {
     0% {
-      transform: scale(1.5) rotate(-10deg);
+      transform: scale(1.5);
       opacity: 0;
     }
     55% {
-      transform: scale(0.94) rotate(2deg);
+      transform: scale(0.94);
       opacity: 1;
     }
     100% {
-      transform: scale(1) rotate(0deg);
+      transform: scale(1);
       opacity: 1;
     }
   }
@@ -274,9 +287,10 @@
 }
 
 /* ---- Print — the credit report becomes the PDF artifact (design.md §6
-   screen 4): hide chrome (top bar, banner, footer, drill-down controls), keep
-   the token colors exact so the seal gauge prints branded, cards never split
-   across pages. ------------------------------------------------------------------ */
+   screen 4 + D4-1 ④): hide chrome (top bar, banner, footer, drill-down
+   controls), keep the token colors exact, flatten every hard shadow to its
+   border (toner-friendly — the ink borders already carry the structure), and
+   never split a card across pages. --------------------------------------------- */
 @media print {
   * {
     print-color-adjust: exact;
@@ -289,14 +303,14 @@
     max-width: none !important;
     padding: 0 !important;
   }
-  .bizro-card {
+  .bizro-card,
+  .bizro-card-hero,
+  [class*='shadow-hard'] {
     box-shadow: none !important;
-    break-inside: avoid;
   }
-  /* D3-4: gradients are token colors so they print branded; the seal glow
-     flattens to keep the printed artifact crisp. */
-  .bizro-glow-seal {
-    filter: none !important;
+  .bizro-card,
+  .bizro-card-hero {
+    break-inside: avoid;
   }
   .bizro-card-hover,
   .bizro-card-hover:hover {

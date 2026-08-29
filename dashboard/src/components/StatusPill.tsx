@@ -1,9 +1,9 @@
 /* StatusPill — schema.md §1 `status` (pending | confirmed | edited | rejected).
-   Always icon + word (design.md §4.7 — never a bare colored dot). D3-4: soft
-   tinted chip (10–12% alpha of the token color + hairline border) instead of
-   outline-only. Text pairs per tokens.css AA list: teal-ink on tint-teal,
-   ledger-red on tint-red, ink-black on tint-gold / tint-neutral. Radius stays
-   6px (tokens: "crisp, stamp-like — no pill shapes"). */
+   Always icon + word (design.md §4.7 — never a bare colored dot). D4-1:
+   sticker chip — tinted bg (10–14% alpha of the token color) + 2px ink-line
+   border + radius 0 (square). Text pairs per tokens.css AA list: teal-ink on
+   tint-teal, ledger-red on tint-red, ink-line on tint-gold / tint-neutral.
+   Stickers stay SQUARE — the one rotated sticker per screen is the seal. */
 
 import type { TransactionStatus } from '../types/schema';
 import { IconCheck, IconEdited, IconPending, IconRejected } from './icons';
@@ -26,7 +26,7 @@ const SPECS: Record<TransactionStatus, PillSpec> = {
     icon: IconPending,
     en: 'Confirm pending',
     ur: 'تصدیق باقی',
-    classes: 'bizro-tint-neutral text-ink-black',
+    classes: 'bizro-tint-neutral text-ink-line',
   },
   confirmed: {
     icon: IconCheck,
@@ -38,7 +38,7 @@ const SPECS: Record<TransactionStatus, PillSpec> = {
     icon: IconEdited,
     en: 'Edited',
     ur: 'ترمیم شدہ',
-    classes: 'bizro-tint-gold text-ink-black',
+    classes: 'bizro-tint-gold text-ink-line',
   },
   rejected: {
     icon: IconRejected,
@@ -52,7 +52,7 @@ export function StatusPill({ status, className = '' }: StatusPillProps) {
   const { icon: Icon, en, ur, classes } = SPECS[status];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-card border px-2.5 py-1 text-xs font-semibold ${classes} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-chip border-2 border-ink-line px-2.5 py-1 text-xs font-semibold ${classes} ${className}`}
     >
       <Icon className="h-[18px] w-[18px]" />
       <T en={en} ur={ur} />
