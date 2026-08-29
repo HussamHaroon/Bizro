@@ -1,6 +1,7 @@
 """REST API surface — server/schema.md §4.
 
 - GET   /api/merchants/{id}/transactions?from=&to=&kind=
+- GET   /api/merchants/{id}/transactions/export.csv   (loan-officer ledger export)
 - GET   /api/merchants/{id}/udhar                     (derived view, schema.md §3)
 - POST  /api/transactions/{id}/confirm
 - PATCH /api/transactions/{id}                        (audit-preserving correction)
@@ -16,12 +17,14 @@ columns (source_type/media/model/confidence/raw_model_output) are immutable.
 
 from __future__ import annotations
 
+import csv
+import io
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import func, select
 
 from . import dispatch
@@ -135,6 +138,26 @@ def _tx_to_wire(session, tx: Transaction, customer: Customer | None) -> dict:
     )
 
 
+def _filtered_tx_rows(session, merchant_id: str, _from: date | None, to: date | None, kind: str | None):
+    """Shared query behind the list endpoint and the CSV export: the export is
+    bound to exactly the same from/to/kind filters (D4 task 1)."""
+    merchant = _get_merchant(session, merchant_id)
+    q = (
+        select(Transaction, Customer)
+        .outerjoin(Customer, Transaction.customer_id == Customer.id)
+        .where(Transaction.merchant_id == merchant.id)
+        .order_by(Transaction.occurred_at.desc())
+    )
+    if _from is not None:
+        q = q.where(Transaction.occurred_at >= datetime.combine(_from, time.min, tzinfo=timezone.utc))
+    if to is not None:
+        end = datetime.combine(to, time.min, tzinfo=timezone.utc) + timedelta(days=1)
+        q = q.where(Transaction.occurred_at < end)
+    if kind:
+        q = q.where(Transaction.kind == kind)
+    return merchant, session.execute(q).all()
+
+
 @router.get("/merchants/{merchant_id}/transactions")
 def list_transactions(
     merchant_id: str,
@@ -143,22 +166,7 @@ def list_transactions(
     kind: str | None = None,
 ):
     with db_session() as session:
-        merchant = _get_merchant(session, merchant_id)
-        q = (
-            select(Transaction, Customer)
-            .outerjoin(Customer, Transaction.customer_id == Customer.id)
-            .where(Transaction.merchant_id == merchant.id)
-            .order_by(Transaction.occurred_at.desc())
-        )
-        if _from is not None:
-            q = q.where(Transaction.occurred_at >= datetime.combine(_from, time.min, tzinfo=timezone.utc))
-        if to is not None:
-            end = datetime.combine(to, time.min, tzinfo=timezone.utc) + timedelta(days=1)
-            q = q.where(Transaction.occurred_at < end)
-        if kind:
-            q = q.where(Transaction.kind == kind)
-
-        rows = session.execute(q).all()
+        _, rows = _filtered_tx_rows(session, merchant_id, _from, to, kind)
         confirmations = _confirmation_map(session, [tx.id for tx, _ in rows])
         return {
             "count": len(rows),
@@ -172,6 +180,77 @@ def list_transactions(
                 for tx, customer in rows
             ],
         }
+
+
+# Loan-officer export columns (D4 task 1) — fixed order, one row per ledger
+# entry, audit fields included (design.md §7.2): source, model, confidence,
+# flag ride along so the CSV is self-auditing next to the dashboard.
+CSV_COLUMNS = (
+    "occurred_at",
+    "kind",
+    "amount_pkd",
+    "currency",
+    "description",
+    "counterparty_name",
+    "source_type",
+    "source_model",
+    "confidence",
+    "flag",
+    "status",
+    "confirmation_ur",
+    "transaction_id",
+)
+
+
+@router.get("/merchants/{merchant_id}/transactions/export.csv")
+def export_transactions_csv(
+    merchant_id: str,
+    _from: date | None = Query(None, alias="from"),
+    to: date | None = None,
+    kind: str | None = None,
+):
+    """Ledger CSV for loan officers — Excel-safe by construction:
+
+    - UTF-8 BOM prefix, so double-clicking in Excel decodes Urdu correctly
+      instead of mojibake (``احمد`` → ``Ø§Ø­Ù…Ø¯``);
+    - CRLF line endings (Excel's native record separator);
+    - stdlib csv quoting (QUOTE_MINIMAL) for commas/quotes/newlines in
+      descriptions and Urdu confirmation text.
+    'me' is honored like every other merchant route; the filename carries the
+    RESOLVED merchant id (never the literal "me")."""
+    with db_session() as session:
+        merchant, rows = _filtered_tx_rows(session, merchant_id, _from, to, kind)
+        confirmations = _confirmation_map(session, [tx.id for tx, _ in rows])
+
+        buf = io.StringIO()
+        writer = csv.writer(buf, lineterminator="\r\n")  # Excel record separator
+        writer.writerow(CSV_COLUMNS)
+        for tx, customer in rows:
+            writer.writerow(
+                (
+                    tx.occurred_at.isoformat(),
+                    tx.kind,
+                    f"{float(tx.amount_pkd):.2f}",
+                    tx.currency,
+                    tx.description or "",
+                    customer.name if customer else "",
+                    tx.source_type,
+                    tx.source_model or "",
+                    "" if tx.confidence is None else f"{float(tx.confidence):.3f}",
+                    tx.flag,
+                    tx.status,
+                    confirmations.get(tx.id) or "",
+                    str(tx.id),
+                )
+            )
+        content = ("\ufeff" + buf.getvalue()).encode("utf-8")  # BOM first, exactly once
+
+    filename = f"bizro-ledger-{merchant.id}.csv"
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"content-disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/merchants/{merchant_id}/udhar")
