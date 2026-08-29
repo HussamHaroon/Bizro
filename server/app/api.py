@@ -215,9 +215,17 @@ def export_transactions_csv(
       instead of mojibake (``احمد`` → ``Ø§Ø­Ù…Ø¯``);
     - CRLF line endings (Excel's native record separator);
     - stdlib csv quoting (QUOTE_MINIMAL) for commas/quotes/newlines in
-      descriptions and Urdu confirmation text.
+      descriptions and Urdu confirmation text;
+    - formula-injection neutralization: model-extracted strings (descriptions,
+      names) are untrusted, so cells beginning with =/+/-/@ get a leading
+      apostrophe (bizro-security; Orchestrator ruling on the agent's flag).
     'me' is honored like every other merchant route; the filename carries the
     RESOLVED merchant id (never the literal "me")."""
+    def _safe_cell(value: str) -> str:
+        if value[:1] in ("=", "+", "-", "@"):
+            return f"'{value}"
+        return value
+
     with db_session() as session:
         merchant, rows = _filtered_tx_rows(session, merchant_id, _from, to, kind)
         confirmations = _confirmation_map(session, [tx.id for tx, _ in rows])
@@ -232,8 +240,8 @@ def export_transactions_csv(
                     tx.kind,
                     f"{float(tx.amount_pkd):.2f}",
                     tx.currency,
-                    tx.description or "",
-                    customer.name if customer else "",
+                    _safe_cell(tx.description or ""),
+                    _safe_cell(customer.name) if customer else "",
                     tx.source_type,
                     tx.source_model or "",
                     "" if tx.confidence is None else f"{float(tx.confidence):.3f}",
