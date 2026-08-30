@@ -495,13 +495,22 @@ h3 {
   color: var(--red);
 }
 
+/* In flow, below the row it certifies — absolute pinning let it
+   ride up over the PKR amount (owner bug 2026-08-29). Right-
+   aligned like a stamp on an invoice; wraps instead of escaping
+   on very narrow screens. Not rotated: the hero's one rotated
+   element is its sticker (D4-1 law). */
 .flow-invoice .stamp {
-  position: absolute;
-  right: 0.9rem;
-  bottom: 0.7rem;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 0.9rem 0 0 auto;
   font-size: 0.72rem;
+  line-height: 1.4;
   padding: 0.3rem 0.55rem;
   transform: none; /* hero already has its one rotated sticker */
+  white-space: normal;
+  text-align: center;
 }
 
 .demo-frame__link {
@@ -839,12 +848,17 @@ h3 {
   font-size: 0.93rem;
 }
 
+/* In flow. The -4deg rotation grows the bounding box by ~7px top
+   and bottom and ~1-2px at the corners, so margins reserve that
+   room explicitly — it can never graze the "One-tap correct" box
+   above or the card border below (owner bug 2026-08-29). */
 .ledger-mock__stamp {
   display: block;
   width: max-content;
   max-width: 100%;
-  margin: 1rem 0 0 auto;
+  margin: 1.25rem 0.25rem 0.25rem auto;
   font-size: 0.85rem;
+  line-height: 1.4;
   white-space: normal;
   text-align: center;
 }
@@ -1084,4 +1098,97 @@ a:focus-visible,
 .mawakmat-card .fine,
 .mawakmat-card small {
   margin-top: auto;
+}
+
+/* ============================================================
+   Desktop rhythm pass (>=1024px) — owner second-pass review,
+   2026-08-29. Appended layer; spacing/alignment only, no law or
+   content change. Every rule lives inside this media query, so
+   the approved mobile/tablet pass computes identically below
+   1024px. Scale: sections 104px block · head-to-content 48px ·
+   card-grid gutter 2rem · card inset 1.75rem · 2-col splits
+   4rem apart.
+   ============================================================ */
+
+@media (min-width: 1024px) {
+  /* --- 1 · even section pulse --- */
+  .section {
+    padding-block: 6.5rem;
+  }
+
+  .hero {
+    padding-block: 5rem 6.5rem; /* bottom joins the section pulse */
+  }
+
+  .section-head {
+    margin-bottom: 3rem;
+  }
+
+  /* The stamp-clip guard buys nothing once the wrap has real side
+     margins; drop it so the band's columns sit on the same wrap
+     edges as every other section. */
+  .section:has([class*="stamp"]) {
+    padding-inline: 0;
+  }
+
+  /* --- 2 · one gutter scale + one card inset; equal heights come
+     from grid stretch + the existing bottom-pinned copy --- */
+  .stats,
+  .steps,
+  .diff-grid {
+    gap: 2rem;
+  }
+
+  .card.stat,
+  .card.step,
+  .card.diff,
+  .mawakmat-card,
+  .ledger-mock {
+    padding: 1.75rem;
+  }
+
+  /* Wide Mawakhat card: exactly one stat-gutter below the stat
+     row, copy | figures split as specced — edges and rhythm align
+     with the stat cards above it. */
+  .mawakmat-card {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: 1.1fr 1.6fr;
+    column-gap: 2.5rem;
+    align-items: start;
+  }
+
+  /* --- 3 · measure caps on the longest copy blocks --- */
+  .mawakmat-card > div:first-child p {
+    max-width: 62ch;
+  }
+
+  /* --- 4 · hero: copy leads, frame supports; same split rhythm
+     as the trust band below --- */
+  .hero__grid {
+    grid-template-columns: 1.18fr 0.82fr;
+    column-gap: 4rem;
+  }
+
+  .demo-frame {
+    max-width: 30rem;
+  }
+
+  .band-grid {
+    gap: 4rem;
+  }
+
+  /* --- 5 · footer: same wrap, same gutters, generous base --- */
+  .site-footer {
+    padding-block: 3.25rem 4rem;
+  }
+
+  .footer-grid {
+    column-gap: 2rem;
+  }
+
+  .honesty {
+    margin-top: 3rem;
+    max-width: 68ch;
+  }
 }
