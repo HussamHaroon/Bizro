@@ -146,7 +146,8 @@ _TEMPLATE = string.Template("""<!DOCTYPE html>
   .head { background:${inkGreen}; color:${cardBg}; padding:14px 20px 12px;
           display:flex; justify-content:space-between; align-items:center;
           border-bottom:3px solid ${ink}; }
-  .brand { font-family:${fontDisplay}; font-size:30px; line-height:1.9; direction:rtl; }
+  .brand { line-height:1; direction:ltr; }
+  .brand img { display:block; height:44px; width:auto; }
   .head-meta { font-size:12px; text-align:left; direction:ltr; line-height:1.7;
                font-family:${fontNumerals}; font-weight:600; opacity:.95; }
   .gold-strip { height:8px; background:${goldAccent}; border-bottom:3px solid ${ink}; }
@@ -214,7 +215,7 @@ _TEMPLATE = string.Template("""<!DOCTYPE html>
       <path d="${tornPath}" fill="${inkGreen}"/>
     </svg>
     <div class="head">
-      <div class="brand">بِزرو</div>
+      <div class="brand"><img src="${logoDataUri}" alt="Bizro" height="44"></div>
       <div class="head-meta">${merchantHtml}<br>${dateHtml}</div>
     </div>
     <div class="gold-strip"></div>
@@ -262,6 +263,16 @@ _TEMPLATE = string.Template("""<!DOCTYPE html>
 </body>
 </html>""")
 
+
+
+def _logo_data_uri() -> str:
+    """Cream wordmark as a data URI (green band needs cream letters)."""
+    import base64
+    import pathlib
+    p = pathlib.Path(__file__).resolve().parents[2] / "assets" / "brand" / "wordmark-cream-96.png"
+    if not p.is_file():
+        return ""
+    return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
 
 def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -> str:
     color = tokens["color"]
@@ -326,7 +337,9 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
 
     mock_band = '<div class="mock-band">MOCK DATA — NOT A REAL ENTRY</div>' if tx.get("mock") else ""
 
+    logo_uri = _logo_data_uri()
     return _TEMPLATE.substitute(
+        logoDataUri=logo_uri,
         ledgerCream=_d4(tokens, "color.ledgerCream"),
         ink=_d4(tokens, "color.ink"),
         goldAccent=_d4(tokens, "color.goldAccent"),

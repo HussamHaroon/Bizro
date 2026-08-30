@@ -1,2 +1,0 @@
-2026-08-29 19:55:36,219 INFO bizro.main: Bizro server up. dashscope=mock whatsapp=mock signature_validation=disabled mock_mode=auto db=sqlite:///./bizro.db
-2026-08-29 19:55:36,219 WARNING bizro.main: DashScope is in MOCK mode — all model output is clearly-labeled synthetic. Set DASHSCOPE_API_KEY (HANDOFF.md ①) for live calls.
