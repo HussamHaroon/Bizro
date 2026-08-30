@@ -139,6 +139,27 @@ def test_seed_is_deterministic(tmp_path):
     assert ra["readiness"]["band"] in ("ready", "nearly")
 
 
+def test_seed_contrast_profile_demos_range_not_ready(tmp_path):
+    """Bilal Ki Dukan (contrast) must band BELOW the healthy merchant — the
+    loan-officer picker demos range, not two 'ready' rows (D4 block task)."""
+    def run(tag):
+        url = f"sqlite:///{tmp_path/(tag + '.db')}"
+        mid = seed_demo(url, merchant_name="Bilal Ki Dukan", days=60, profile="contrast")
+        return generate_report(mid, period="last_90_days", db_url=url)
+    ra, rb = run("ba"), run("bb")
+    assert ra["readiness"]["score"] == rb["readiness"]["score"]  # deterministic
+    assert ra["readiness"]["band"] in ("nearly", "not_yet")      # never "ready"
+    assert 14 <= int(ra["metrics"][0]["display"]) <= 30          # sparse but scorable
+    anomalies = sum(f["count"] for f in ra["red_flags"] if f["flag"] == "price_anomaly")
+    assert 2 <= anomalies <= 3
+    assert "0 pending" not in ra["pillars"]["consistency"][2]    # pending backlog real
+    assert abs(ra["metrics"][2]["value"]) < 5000                 # net cash-flow ~ zero
+    healthy = generate_report(
+        seed_demo(f"sqlite:///{tmp_path/'h.db'}"), period="last_90_days",
+        db_url=f"sqlite:///{tmp_path/'h.db'}")
+    assert healthy["readiness"]["score"] > ra["readiness"]["score"]
+
+
 def test_rendered_html_escapes_hostile_strings(tmp_path):
     url = _db(tmp_path / "t.db")
     Session = get_sessionmaker(url)
