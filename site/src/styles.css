@@ -1192,3 +1192,23 @@ a:focus-visible,
     max-width: 68ch;
   }
 }
+
+/* Logo image (owner-provided wordmark, background removed programmatically) */
+.wordmark--img {
+  display: inline-flex;
+  align-items: center;
+}
+.wordmark__logo {
+  display: block;
+  height: 40px;
+  width: auto;
+  image-rendering: -webkit-optimize-contrast;
+}
+@media (max-width: 640px) {
+  .wordmark__logo {
+    height: 30px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .wordmark--img:hover .wordmark__logo { transform: none; } /* logos don't wiggle */
+}
