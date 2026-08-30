@@ -57,6 +57,31 @@ class Merchant(Base):
     )
 
 
+class MerchantSettings(Base):
+    """Per-merchant settings (schema.md §8, ruling D4-2): each merchant IS an
+    account, so settings persist server-side and follow the user across
+    browsers/devices. One row per merchant, created on first PUT. A missing
+    row means implied defaults (language 'mixed', numeral_style mirroring the
+    NUMERAL_STYLE env) — the API returns those as 200, never 404."""
+
+    __tablename__ = "merchant_settings"
+    __table_args__ = (
+        CheckConstraint("language IN ('ur','en','mixed')", name="ck_settings_language"),
+        CheckConstraint(
+            "numeral_style IN ('western','urdu')", name="ck_settings_numeral_style"
+        ),
+    )
+
+    merchant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("merchants.id"), primary_key=True
+    )
+    language: Mapped[str] = mapped_column(Text, nullable=False, default="mixed")
+    numeral_style: Mapped[str] = mapped_column(Text, nullable=False, default="western")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+
 class MediaBlob(Base):
     """Raw audit trail — bytes live under media/ (gitignored), never deleted."""
 
