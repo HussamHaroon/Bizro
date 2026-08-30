@@ -127,9 +127,6 @@ export default function App() {
                   Alkhidmat × Alibaba Cloud AI Hackathon 2026
                 </span>
               </p>
-              <p className="hero__urdu urdu" lang="ur" dir="rtl" aria-hidden="true">
-                بزرو
-              </p>
               <h1 id="hero-heading">
                 The paper khata, given a <span className="hl">memory</span>.
               </h1>
@@ -484,12 +481,13 @@ export default function App() {
         <div className="wrap">
           <div className="footer-grid">
             <div>
-              <span className="wordmark">
-                <span className="wordmark__urdu urdu" lang="ur" dir="rtl">
-                  بزرو
-                </span>
-                <span className="wordmark__latin">BIZRO</span>
-              </span>
+              <img
+                src="/brand/wordmark-96.png"
+                alt="Bizro"
+                width={214}
+                height={48}
+                className="wordmark__logo"
+              />
               <p className="footer-tagline">The paper khata, given a memory.</p>
             </div>
 

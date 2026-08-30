@@ -151,6 +151,16 @@ _CSS = Template("""
 """)
 
 
+
+def _logo_data_uri() -> str:
+    """Green wordmark as a data URI for the report header (cream card)."""
+    import base64
+    import pathlib
+    f = pathlib.Path(__file__).resolve().parents[2] / "assets" / "brand" / "wordmark-96.png"
+    if not f.is_file():
+        return ""
+    return "data:image/png;base64," + base64.b64encode(f.read_bytes()).decode()
+
 def render_report_html(report: dict) -> str:
     v = _d4()
     band = report.get("readiness", {}).get("band", "insufficient_data")
@@ -198,6 +208,11 @@ def render_report_html(report: dict) -> str:
         numerals=v["numerals"], body=v["body"], red=v["red"],
     )
 
+    logo_uri = _logo_data_uri()
+    logo_img = (
+        f'<img src="{logo_uri}" alt="Bizro" height="40" '
+        f'style="display:block;height:40px;width:auto">' if logo_uri else ""
+    )
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <title>Bizro Credit Readiness — {_esc(merchant)}</title>
@@ -205,7 +220,7 @@ def render_report_html(report: dict) -> str:
 <div class="sheet">
 {mock_banner}
 <div class="card">
-  <div class="headrow"><h1>Credit Readiness Report</h1>{_stamp()}</div>
+  <div class="headrow">{logo_img}<h1>Credit Readiness Report</h1>{_stamp()}</div>
   <div class="sub">{_esc(merchant)} · {_esc(period.get('start'))} → {_esc(period.get('end'))}</div>
   <div class="band"><div class="score" style="background:{band_fill};color:{fill_text}">{_esc(report.get('readiness',{}).get('score'))}</div>
     <div><div class="bandlabel">{_esc(band.replace('_',' '))}</div>
