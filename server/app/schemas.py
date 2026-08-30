@@ -92,6 +92,17 @@ class TransactionPatch(BaseModel):
     status: Status | None = None
 
 
+class MerchantSettingsPut(BaseModel):
+    """PUT /api/merchants/{id}/settings body — any subset of the two settings
+    (schema.md §8). Unknown keys are a 422 (extra="forbid"): the dashboard
+    write-through must never silently drop a typo'd field name."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    language: Literal["ur", "en", "mixed"] | None = None
+    numeral_style: Literal["western", "urdu"] | None = None
+
+
 def transaction_to_wire(
     tx,
     customer_name: str | None = None,
