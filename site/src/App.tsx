@@ -96,11 +96,14 @@ export default function App() {
 
       <header className="site-header">
         <div className="wrap site-header__inner">
-          <a className="wordmark" href="#top" aria-label="Bizro — back to top">
-            <span className="wordmark__urdu urdu" lang="ur" dir="rtl">
-              بزرو
-            </span>
-            <span className="wordmark__latin">BIZRO</span>
+          <a className="wordmark wordmark--img" href="#top" aria-label="Bizro — back to top">
+            <img
+              src="/brand/wordmark-96.png"
+              alt=""
+              width={214}
+              height={48}
+              className="wordmark__logo"
+            />
           </a>
           <nav className="site-nav" aria-label="Sections">
             <a href="#problem">Problem</a>
