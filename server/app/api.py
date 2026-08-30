@@ -6,6 +6,8 @@
 - POST  /api/transactions/{id}/confirm
 - PATCH /api/transactions/{id}                        (audit-preserving correction)
 - GET   /api/merchants/{id}/report/preview
+- GET   /api/merchants/{id}/settings              (§8; missing row → implied defaults)
+- PUT   /api/merchants/{id}/settings              (§8; partial upsert, unknown keys 422)
 - GET   /api/media/{id}                              (audit trail: original voice note / receipt photo)
 - GET   /health lives in main.py
 
@@ -28,9 +30,10 @@ from fastapi.responses import FileResponse, Response
 from sqlalchemy import func, select
 
 from . import dispatch
-from .db import CreditReport, Customer, Merchant, MediaBlob, OutboundMessage, Transaction, db_session
+from .config import get_settings
+from .db import CreditReport, Customer, Merchant, MerchantSettings, MediaBlob, OutboundMessage, Transaction, db_session
 from .nudges import compute_streak
-from .schemas import TransactionPatch, transaction_to_wire
+from .schemas import MerchantSettingsPut, TransactionPatch, transaction_to_wire
 
 router = APIRouter(prefix="/api")
 
@@ -438,6 +441,78 @@ def merchant_streak(merchant_id: str):
     with db_session() as session:
         merchant = _get_merchant(session, merchant_id)
         return compute_streak(session, merchant.id)
+
+
+# --- per-merchant settings (schema.md §8, ruling D4-2) -----------------------
+
+_NUMERAL_STYLES = ("western", "urdu")
+
+
+def _default_numeral_style() -> str:
+    """§8: the implied numeral_style mirrors the NUMERAL_STYLE env at first
+    read — clamped to the enum so a mis-set env can never leak a value the
+    dashboard doesn't switch on."""
+    value = get_settings().numeral_style
+    return value if value in _NUMERAL_STYLES else "western"
+
+
+def _settings_to_wire(row: MerchantSettings) -> dict[str, Any]:
+    return {
+        "language": row.language,
+        "numeral_style": row.numeral_style,
+        "updated_at": row.updated_at.isoformat(),
+    }
+
+
+@router.get("/merchants/{merchant_id}/settings")
+def get_merchant_settings(merchant_id: str):
+    """Read settings; a missing row is NOT an error (§8): the response carries
+    the implied defaults with updated_at null until the merchant first saves."""
+    with db_session() as session:
+        merchant = _get_merchant(session, merchant_id)
+        row = session.get(MerchantSettings, merchant.id)
+        if row is not None:
+            return _settings_to_wire(row)
+        return {
+            "language": "mixed",
+            "numeral_style": _default_numeral_style(),
+            "updated_at": None,
+        }
+
+
+@router.put("/merchants/{merchant_id}/settings")
+def put_merchant_settings(merchant_id: str, body: MerchantSettingsPut):
+    """Upsert a partial body ({"language": "ur"} is valid — §8): merge over the
+    stored row, or over the implied defaults when no row exists yet, and return
+    the merged row with a fresh updated_at. An empty body is a 422 — a
+    write-through that saves nothing is a client bug we want visible."""
+    updates = body.model_dump(exclude_unset=True)
+    # explicit nulls count as "not provided" (pydantic allows them via the
+    # Optional union) — otherwise they'd reach the NOT NULL columns as a 500.
+    updates = {k: v for k, v in updates.items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=422, detail="no settings provided")
+
+    with db_session() as session:
+        merchant = _get_merchant(session, merchant_id)
+        row = session.get(MerchantSettings, merchant.id)
+        now = datetime.now(timezone.utc)
+        if row is None:
+            # First save: unset columns take the implied defaults (§8).
+            row = MerchantSettings(
+                merchant_id=merchant.id,
+                language=updates.get("language", "mixed"),
+                numeral_style=updates.get("numeral_style", _default_numeral_style()),
+                updated_at=now,
+            )
+            session.add(row)
+        else:
+            for field, value in updates.items():
+                setattr(row, field, value)
+            row.updated_at = now
+        session.commit()
+        session.refresh(row)
+        return _settings_to_wire(row)
 
 
 def _refresh_report(session, mid: uuid.UUID) -> dict:
