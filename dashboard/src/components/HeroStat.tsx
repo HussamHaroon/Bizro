@@ -8,8 +8,8 @@
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { T, useT } from '../i18n';
-import { urduAmountWords } from '../lib/format';
+import { T, useNumerals, useT } from '../i18n';
+import { toNumerals, urduAmountWords } from '../lib/format';
 
 /** 0 → target over `duration` ms, ease-out quad. Reduced motion = instant. */
 export function useCountUp(target: number, duration = 300): number {
@@ -67,6 +67,7 @@ const ICON_TONE_CLASS: Record<HeroTone, string> = {
 export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
   const shown = useCountUp(value);
   const { mode } = useT();
+  const { numerals } = useNumerals(); // schema.md §8 digit style (D5-2)
   return (
     <div className="bizro-card bizro-card-hover flex flex-col gap-2 px-4 py-4 sm:px-5 sm:py-5">
       <p className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.04em] ${ICON_TONE_CLASS[tone]}`}>
@@ -80,7 +81,7 @@ export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
         className={`flex flex-wrap items-baseline gap-x-1 font-numerals font-bold leading-none tabular-nums text-[clamp(2.5rem,9.8vw,4.5rem)] ${TONE_CLASS[tone]}`}
       >
         <span className="text-[0.5em] font-semibold opacity-70">Rs</span>
-        <bdi>{shown.toLocaleString('en-PK')}</bdi>
+        <bdi>{toNumerals(shown.toLocaleString('en-PK'), numerals)}</bdi>
       </p>
       {/* §4.7: headline amounts appear in digits AND Urdu word form (mixed/ur
           modes; digits-only in en per the numeral ruling). */}

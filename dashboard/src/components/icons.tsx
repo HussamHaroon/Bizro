@@ -226,6 +226,34 @@ export function IconLedger({ className, ...rest }: IconProps) {
   );
 }
 
+/** Settings gear (screen identity, D5-2). Pair with "Settings · سیٹنگز".
+    The ticket named the lucide `Settings` glyph — the dashboard has no lucide
+    dependency and its icon law is filled badges (design.md §4.3), so this is
+    the same gear drawn in the house grammar: knockout ring + 8 rounded teeth
+    (cardinal rects + the same group rotated 45°). */
+export function IconSettings({ className, ...rest }: IconProps) {
+  const teeth = (
+    <>
+      <rect x="11.05" y="4.4" width="1.9" height="4" rx="0.5" />
+      <rect x="11.05" y="15.6" width="1.9" height="4" rx="0.5" />
+      <rect x="4.4" y="11.05" width="4" height="1.9" rx="0.5" />
+      <rect x="15.6" y="11.05" width="4" height="1.9" rx="0.5" />
+    </>
+  );
+  return (
+    <Badge className={className} {...rest}>
+      {/* ring with knocked-out hub (evenodd) */}
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 8.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6zm0 1.9a1.9 1.9 0 1 0 0 3.8 1.9 1.9 0 0 0 0-3.8z"
+      />
+      <g>{teeth}</g>
+      <g transform="rotate(45 12 12)">{teeth}</g>
+    </Badge>
+  );
+}
+
 /** Previous / next chevrons (month navigation, paired with month names). */
 export function IconChevronLeft({ className, ...rest }: IconProps) {
   return (

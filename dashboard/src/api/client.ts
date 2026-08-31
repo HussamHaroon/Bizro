@@ -5,6 +5,8 @@
      PATCH /api/transactions/{id}          (correction; server keeps original for audit)
      GET  /api/merchants/{id}/report/preview
      GET  /api/media/{id}                  (audit drill-down: original voice note / photo)
+     GET  /api/merchants/{id}/settings     (schema.md §8 — getSettings/putSettings below)
+     PUT  /api/merchants/{id}/settings
 
    LIVE BY DEFAULT (D1-1 wiring): with VITE_API_BASE_URL unset the client targets
    same-origin /api — the Vite dev proxy already forwards /api to :8000, and a
@@ -26,7 +28,11 @@ import {
 import { adaptCanonicalReport, isCanonicalReport } from './reportAdapter';
 import type {
   CreditReportPreview,
+  LanguageSetting,
+  MerchantSettings,
+  MerchantSettingsPut,
   MerchantSummary,
+  NumeralStyle,
   ReadinessHistoryPoint,
   SavingsStreak,
   Transaction,
@@ -278,6 +284,91 @@ export async function fetchStreak(): Promise<SavingsStreak | null> {
   } catch {
     return null;
   }
+}
+
+/** GET+PUT /api/merchants/{id}/settings (schema.md §8, ruling D4-2) — per-
+    merchant account settings. Standalone functions taking an EXPLICIT merchant
+    id (callers pass the merchant-picker selection), deliberately OUTSIDE the
+    attempt() mock-flip machinery like listMerchants: settings are account
+    config, not financial data, and an older server without the route must
+    never flip the whole app to fixtures.
+    Read: any absence (network, 4xx/5xx, bad shape) → null; the app keeps its
+    localStorage first-paint state (§8). Write: throws on live failure so the
+    Settings screen can show the inline error; in mock mode it writes an
+    in-memory row so the offline demo still saves visibly. */
+
+function normalizeSettings(payload: unknown): MerchantSettings | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const row = payload as Record<string, unknown>;
+  const { language, numeral_style, updated_at } = row;
+  if (language !== 'ur' && language !== 'en' && language !== 'mixed') return null;
+  if (numeral_style !== 'western' && numeral_style !== 'urdu') return null;
+  return {
+    language,
+    numeral_style,
+    updated_at: typeof updated_at === 'string' ? updated_at : null,
+  };
+}
+
+/** Mock-mode stand-in for merchant_settings rows (session-lifetime only). */
+const mockSettingsRows = new Map<string, MerchantSettings>();
+
+export async function getSettings(merchantId: string): Promise<MerchantSettings | null> {
+  if (fellBack) {
+    return (
+      mockSettingsRows.get(merchantId) ?? {
+        language: 'mixed',
+        numeral_style: 'western',
+        updated_at: null,
+      }
+    );
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}/settings`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    // Missing row is a 200 with implied defaults (§8) — only a missing ROUTE
+    // or a down server lands here, and both mean "keep local state".
+    if (!res.ok) return null;
+    return normalizeSettings(await res.json());
+  } catch {
+    return null;
+  }
+}
+
+export async function putSettings(
+  merchantId: string,
+  body: MerchantSettingsPut,
+): Promise<MerchantSettings> {
+  // Nulls count as "not provided" (mirrors the server's MerchantSettingsPut).
+  const clean: { language?: LanguageSetting; numeral_style?: NumeralStyle } = {};
+  if (body.language != null) clean.language = body.language;
+  if (body.numeral_style != null) clean.numeral_style = body.numeral_style;
+  if (clean.language === undefined && clean.numeral_style === undefined) {
+    throw new Error('No settings to save'); // the server 422s an empty body too
+  }
+  if (fellBack) {
+    const current =
+      mockSettingsRows.get(merchantId) ??
+      ({ language: 'mixed', numeral_style: 'western', updated_at: null } as MerchantSettings);
+    const merged: MerchantSettings = {
+      language: clean.language ?? current.language,
+      numeral_style: clean.numeral_style ?? current.numeral_style,
+      updated_at: new Date().toISOString(),
+    };
+    mockSettingsRows.set(merchantId, merged);
+    await new Promise((resolve) => setTimeout(resolve, 120)); // demo-feel parity
+    return merged;
+  }
+  const res = await fetch(`${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(clean),
+  });
+  if (!res.ok) throw new Error(`API ${res.status} ${res.statusText} — could not save settings`);
+  const row = normalizeSettings(await res.json());
+  if (!row) throw new Error('Unexpected settings response from server');
+  return row;
 }
 
 /** Flips to true only when a live call fails BEFORE any live success — after

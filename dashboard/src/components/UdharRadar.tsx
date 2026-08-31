@@ -8,8 +8,8 @@
 import type { UdharOutstanding } from '../types/schema';
 import { AmountText } from './AmountText';
 import { IconCustomer, IconRadar } from './icons';
-import { formatPkr } from '../lib/format';
-import { T, useT } from '../i18n';
+import { formatAmount, toNumerals } from '../lib/format';
+import { T, useNumerals, useT } from '../i18n';
 
 export interface UdharRadarProps {
   items: UdharOutstanding[];
@@ -18,6 +18,7 @@ export interface UdharRadarProps {
 
 export function UdharRadar({ items, className = '' }: UdharRadarProps) {
   const { pick } = useT();
+  const { numerals } = useNumerals(); // schema.md §8 digit style (D5-2)
   const total = items.reduce((s, u) => s + u.outstanding_pkd, 0);
   const top3 = items.slice(0, 3);
   const max = top3.length ? top3[0].outstanding_pkd : 0;
@@ -61,7 +62,7 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                 </span>
                 <span className="text-right">
                   <span className="font-numerals text-lg font-semibold tabular-nums text-ledger-red">
-                    {formatPkr(u.outstanding_pkd)}
+                    {formatAmount(u.outstanding_pkd, numerals)}
                   </span>
                 </span>
               </div>
@@ -72,8 +73,8 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                 className="h-3.5 w-full rounded-chip bg-gridline"
                 role="img"
                 aria-label={pick(
-                  `${u.name}: Rs ${u.outstanding_pkd.toLocaleString('en-PK')} outstanding`,
-                  `${u.name}: ادھار ${u.outstanding_pkd.toLocaleString('en-PK')} روپے`,
+                  `${u.name}: ${formatAmount(u.outstanding_pkd, numerals)} outstanding`,
+                  `${u.name}: ادھار ${toNumerals(u.outstanding_pkd.toLocaleString('en-PK'), numerals)} روپے`,
                 )}
               >
                 <div
