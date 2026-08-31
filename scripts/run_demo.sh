@@ -12,11 +12,12 @@ fi
 PY=.venv/Scripts/python; [ -x "$PY" ] || PY=.venv/bin/python
 "$PY" -m pip install -q --disable-pip-version-check -r requirements.txt
 
-echo "==> 2/4 Dashboard build (skip with BIZRO_SKIP_UI=1 if dist/ already exists)"
+echo "==> 2/4 UI builds (skip with BIZRO_SKIP_UI=1 if dists already exist)"
 if [ "${BIZRO_SKIP_UI:-0}" != "1" ] && command -v npm >/dev/null 2>&1; then
   (cd dashboard && [ -d node_modules ] || npm install --no-audit --no-fund; npm run build)
+  (cd site && [ -d node_modules ] || npm install --no-audit --no-fund; npm run build)
 else
-  echo "    npm not found — using existing dashboard/dist if present"
+  echo "    npm not found — using existing dists if present"
 fi
 
 echo "==> 3/4 Database (seed demo merchant + 90 days of history if empty)"
