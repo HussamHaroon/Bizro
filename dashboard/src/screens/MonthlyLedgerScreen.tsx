@@ -161,7 +161,9 @@ export function MonthlyLedgerScreen() {
   }, [txs]);
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-8">
+    /* D4r fix 2: +~15% vertical rhythm below md so hard-shadow offsets never
+       visually collide — base 24→28px, 640–767 32→36px; ≥md stays 32px. */
+    <div className="flex flex-col gap-7 sm:gap-9 md:gap-8">
       <ScreenHeader
         icon={<IconLedger className="h-9 w-9 text-ink-green" />}
         title="Monthly Ledger"
@@ -217,7 +219,7 @@ export function MonthlyLedgerScreen() {
         <section
           key={month}
           aria-label={pick('Month summary', 'ماہانہ خلاصہ')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 md:gap-5"
+          className="grid grid-cols-2 gap-3.5 sm:gap-4 md:grid-cols-3 md:gap-5"
         >
           {/* Savings streak chip (D3-3) — lives in the hero, spans the grid;
               renders nothing until the streak endpoint reports ≥1 week. */}
@@ -274,7 +276,7 @@ export function MonthlyLedgerScreen() {
 
       {/* Kind filter — every chip is word-paired (EN + UR), never icon-only.
           D4-1: square sticker chips; active = green-fill with paper text. */}
-      <div role="group" aria-label={pick('Filter entries', 'انٹریاں چھانیں')} className="flex flex-wrap gap-2">
+      <div role="group" aria-label={pick('Filter entries', 'انٹریاں چھانیں')} className="flex flex-wrap gap-2.5">
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -315,7 +317,7 @@ export function MonthlyLedgerScreen() {
       )}
 
       {groups.length > 0 && (
-        <section aria-label={pick('Entries', 'انٹریاں')} className="border-t-2 border-ink-line">
+        <section aria-label={pick('Entries', 'انٹریاں')} className="border-t-[1.5px] border-ink-line">
           {groups.map(([day, rows]) => (
             <ul key={day} aria-label={formatDay(day)}>
               <LedgerDayHeader>
@@ -340,7 +342,7 @@ export function MonthlyLedgerScreen() {
                   />
                   {editingId === t.id && (
                     <li className="bizro-rule-h">
-                      <div className="bizro-card my-2 mx-1">
+                      <div className="bizro-card my-[9px] mx-1">
                         <EditTransactionForm
                           transaction={t}
                           onSaved={handleSaved}

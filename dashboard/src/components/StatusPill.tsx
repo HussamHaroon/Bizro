@@ -3,14 +3,22 @@
    sticker chip — tinted bg (10–14% alpha of the token color) + 2px ink-line
    border + radius 0 (square). Text pairs per tokens.css AA list: teal-ink on
    tint-teal, ledger-red on tint-red, ink-line on tint-gold / tint-neutral.
-   Stickers stay SQUARE — the one rotated sticker per screen is the seal. */
+   Stickers stay SQUARE — the one rotated sticker per screen is the seal.
 
-import type { TransactionStatus } from '../types/schema';
+   D4r fix 1 (owner review 2026-08-29, row de-density): in ledger ROWS this is
+   the ONE status chip — an optional `flag` folds the row's price/quality flag
+   INTO the chip (▲ + flag word, red tint) instead of a second chip. The
+   underlying status rides the title attribute; on AI rows the SealMark glyph
+   still shows verified vs pending. */
+
+import type { TransactionFlag, TransactionStatus } from '../types/schema';
 import { IconCheck, IconEdited, IconPending, IconRejected } from './icons';
-import { T } from '../i18n';
+import { T, useT } from '../i18n';
 
 export interface StatusPillProps {
   status: TransactionStatus;
+  /** Fold a transaction flag into the chip (rows only): ▲ + flag word, red. */
+  flag?: Exclude<TransactionFlag, 'none'> | null;
   className?: string;
 }
 
@@ -48,7 +56,33 @@ const SPECS: Record<TransactionStatus, PillSpec> = {
   },
 };
 
-export function StatusPill({ status, className = '' }: StatusPillProps) {
+const FLAG_SPEC: Record<Exclude<TransactionFlag, 'none'>, { en: string; ur: string }> = {
+  price_anomaly: { en: 'Price check', ur: 'قیمت دیکھیں' },
+  total_mismatch: { en: 'Total check', ur: 'کل دیکھیں' },
+  duplicate_suspect: { en: 'Duplicate?', ur: 'نقل؟' },
+  low_confidence: { en: 'Low confidence', ur: 'کم اعتماد' },
+};
+
+export function StatusPill({ status, flag = null, className = '' }: StatusPillProps) {
+  const { pick } = useT();
+
+  // Flagged variant: the flag is the row's most urgent status signal, so its
+  // word + ▲ glyph take the chip; the status word moves to the title (and the
+  // SealMark / drill-down still carry it). Icon + word stays intact (§4.7).
+  if (flag) {
+    const f = FLAG_SPEC[flag];
+    const st = SPECS[status];
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-chip border-2 border-ink-line bizro-tint-red px-2.5 py-1 text-xs font-semibold text-ledger-red ${className}`}
+        title={pick(`${f.en} — ${st.en}`, `${f.ur} — ${st.ur}`)}
+      >
+        <span aria-hidden="true">▲</span>
+        <T en={f.en} ur={f.ur} />
+      </span>
+    );
+  }
+
   const { icon: Icon, en, ur, classes } = SPECS[status];
   return (
     <span

@@ -33,8 +33,12 @@ const SCREEN_TABS = [
 
 function TopBar() {
   const { pick } = useT();
+  /* D4r fix 3 (desktop de-busying): tabs / merchant select / language control
+     all sit at ONE height — 48px target + 2px border = 52px — and the bar's
+     vertical padding is down (py-2), so the header stops being the tallest
+     thing on the screen. Brand stays left; picker + language group right. */
   const tabClass = ({ isActive }: { isActive: boolean }) =>
-    `bizro-topbar-tab inline-flex min-h-touch items-center gap-2 rounded-chip border-[3px] px-3 text-sm font-semibold transition-colors duration-200 ease-out ${
+    `bizro-topbar-tab inline-flex min-h-touch items-center gap-2 rounded-chip border-2 px-3 text-sm font-semibold transition-colors duration-200 ease-out ${
       isActive
         ? 'border-ink-line bg-fill-green text-paper shadow-hard-sm'
         : 'border-transparent text-ink-line hover:border-ink-line hover:bg-paper-raised'
@@ -43,13 +47,15 @@ function TopBar() {
     <header
       className="bizro-no-print sticky top-0 z-40 border-b-[3px] border-ink-line bg-paper text-ink-line"
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6 sm:py-3">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
         <Link
           to="/ledger"
           className="flex items-center gap-2.5 py-1"
           aria-label={pick('Bizro home — ledger', 'بزرو — کھاتہ')}
         >
-          <span className="bizro-display-ur text-2xl leading-none text-ink-green" lang="ur">
+          {/* Nastaliq display moment — line-height 2 (not leading-none) so the
+              tall script never clips inside the slimmer bar (D4r fix 4a). */}
+          <span className="bizro-display-ur text-2xl leading-[2] text-ink-green" lang="ur">
             بزرو
           </span>
           <span className="font-numerals text-2xl font-bold tracking-wide text-ink-line">
@@ -68,10 +74,11 @@ function TopBar() {
             </NavLink>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3">
-          {/* Merchant switcher (D3-2) — desktop top bar; hidden at ≤1 merchant.
-              Phones get it inside the bottom nav sheet instead. */}
-          <MerchantPicker className="hidden md:inline-flex" selectClassName="max-w-40" />
+        <div className="ml-auto flex items-center gap-2">
+          {/* Merchant switcher (D3-2) — desktop top bar, compact select beside
+              the language control at the same 52px height; hidden at ≤1
+              merchant. Phones get it inside the bottom nav sheet instead. */}
+          <MerchantPicker className="hidden md:inline-flex" selectClassName="max-w-36" compact />
           <LanguageControl />
         </div>
       </div>
@@ -133,7 +140,7 @@ export function App() {
       <div className={`flex min-h-dvh flex-col bg-paper ${reserveClass}`}>
         <MockBanner />
         <TopBar />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4.5 py-7 sm:px-6 sm:py-8">
           <Routes>
             <Route path="/" element={<Navigate to="/ledger" replace />} />
             <Route path="/ledger" element={<MonthlyLedgerScreen />} />
