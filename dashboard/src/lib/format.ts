@@ -1,9 +1,31 @@
-/* Formatting helpers — Western digits by default per schema.md §1 (NUMERAL_STYLE env
-   decides outbound text; dashboard renders Western until the real-user test lands). */
+/* Formatting helpers — Western digits by default per schema.md §1; the
+   per-merchant numeral_style setting (schema.md §8, D5-2) switches amount
+   DIGITS to Eastern Arabic-Indic via toNumerals/formatAmount below. */
+
+import type { NumeralStyle } from '../types/schema';
 
 /** "Rs 4,500" — slab-numeral ledger format. Never signed: direction is kind's job. */
 export function formatPkr(amount: number): string {
   return `Rs ${amount.toLocaleString('en-PK')}`;
+}
+
+/* Urdu/Eastern Arabic-Indic digit map (schema.md §8 numeral_style='urdu').
+   The Latin "Rs" prefix and the grouping comma stay — Pakistani print khata
+   mixes them with Urdu digits; §4.7 comprehension is carried by the Urdu word
+   form rendered alongside (AmountText/HeroStat), never by the prefix. */
+const URDU_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+
+/** Map Western digits in any string to ۱-۲-۳ style; 'western' is a no-op. */
+export function toNumerals(text: string, style: NumeralStyle): string {
+  if (style !== 'urdu') return text;
+  return text.replace(/[0-9]/g, (d) => URDU_DIGITS[Number(d)]);
+}
+
+/** The ONE amount formatter that honors the numeral setting (D5-2): pass the
+    merchant's numeral_style and every money figure follows it. Amounts that
+    must match this rendering go through here — never a second digit mapper. */
+export function formatAmount(amount: number, style: NumeralStyle = 'western'): string {
+  return toNumerals(formatPkr(amount), style);
 }
 
 /** "Rs 4,500 · چار ہزار پانچ سو روپے" is composed at call sites; this returns the

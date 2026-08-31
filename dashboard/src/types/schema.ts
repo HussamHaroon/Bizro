@@ -100,6 +100,34 @@ export interface SavingsStreak {
   current_week_positive: boolean;
 }
 
+/* ---- v0.4 addendum (schema.md §8, ruling D4-2) — per-merchant settings --------
+   GET  /api/merchants/{id}/settings → the row below; a MISSING row is 200 with
+   the implied defaults (language 'mixed', numeral_style mirroring the server
+   NUMERAL_STYLE env) and updated_at null — never a 404. The 'me' sentinel id
+   is honored. PUT with any subset of the two fields → validates, upserts,
+   returns the MERGED row with a fresh updated_at; unknown keys are a 422. */
+
+/** schema.md §8 merchant_settings.language CHECK constraint. */
+export type LanguageSetting = 'ur' | 'en' | 'mixed';
+
+/** schema.md §8 merchant_settings.numeral_style CHECK constraint. */
+export type NumeralStyle = 'western' | 'urdu';
+
+/** GET/PUT /api/merchants/{id}/settings response (server/app/api.py
+   _settings_to_wire). updated_at is null until the merchant first saves. */
+export interface MerchantSettings {
+  language: LanguageSetting;
+  numeral_style: NumeralStyle;
+  updated_at: string | null;
+}
+
+/** PUT body — any subset (extra keys are a server-side 422, so the client
+   type stays closed too). */
+export interface MerchantSettingsPut {
+  language?: LanguageSetting;
+  numeral_style?: NumeralStyle;
+}
+
 /* ---- Credit Readiness report preview ----------------------------------------
    GET /api/merchants/{id}/report/preview (schema.md §4). schema.md fixes the storage
    row (credit_reports: report_json JSONB + narrative_ur) but not the JSON's internal

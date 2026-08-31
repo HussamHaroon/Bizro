@@ -5,21 +5,36 @@
    follows the mode. Layout stays LTR in every mode (control-room audience includes
    loan officers); Urdu strings ALWAYS render in their own dir=rtl isolation
    (bizro-ui-design: bidi isolation is not optional), so Urdu text stays correct
-   regardless of mode. */
+   regardless of mode.
+
+   D5-2 (schema.md §8): this provider also owns the numeral-style preference
+   (`western` 1-2-3 / `urdu` ۱-۲-۳). localStorage is the FIRST-PAINT fallback;
+   once the merchant's saved settings row loads (useSettingsHydration in
+   App.tsx) / is saved (SettingsScreen), the server row wins. */
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import type { NumeralStyle } from '../types/schema';
 
 export type LangMode = 'ur' | 'en' | 'mixed';
 
 export const LANG_STORAGE_KEY = 'bizro.lang-mode';
+export const NUMERALS_STORAGE_KEY = 'bizro.numerals';
 
 interface LangState {
   mode: LangMode;
   setMode: (m: LangMode) => void;
+  /** Amount-digit style (schema.md §8) — read by formatAmount call sites. */
+  numerals: NumeralStyle;
+  setNumerals: (n: NumeralStyle) => void;
 }
 
-const LangContext = createContext<LangState>({ mode: 'mixed', setMode: () => {} });
+const LangContext = createContext<LangState>({
+  mode: 'mixed',
+  setMode: () => {},
+  numerals: 'western',
+  setNumerals: () => {},
+});
 
 function readSavedMode(): LangMode {
   try {
@@ -31,8 +46,19 @@ function readSavedMode(): LangMode {
   return 'mixed';
 }
 
+function readSavedNumerals(): NumeralStyle {
+  try {
+    const saved = localStorage.getItem(NUMERALS_STORAGE_KEY);
+    if (saved === 'western' || saved === 'urdu') return saved;
+  } catch {
+    /* private mode / storage disabled — default below */
+  }
+  return 'western';
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<LangMode>(readSavedMode);
+  const [numerals, setNumerals] = useState<NumeralStyle>(readSavedNumerals);
 
   useEffect(() => {
     // <html lang> follows the mode (D1-1). Mixed leads with English, so its
@@ -46,12 +72,26 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [mode]);
 
-  const value = useMemo(() => ({ mode, setMode }), [mode]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(NUMERALS_STORAGE_KEY, numerals);
+    } catch {
+      /* persistence is best-effort, never fatal */
+    }
+  }, [numerals]);
+
+  const value = useMemo(() => ({ mode, setMode, numerals, setNumerals }), [mode, numerals]);
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
 }
 
 export function useLang(): LangState {
   return useContext(LangContext);
+}
+
+/** Numeral-style slice of the preference state (schema.md §8). */
+export function useNumerals(): { numerals: NumeralStyle; setNumerals: (n: NumeralStyle) => void } {
+  const { numerals, setNumerals } = useLang();
+  return { numerals, setNumerals };
 }
 
 export interface TApi {
