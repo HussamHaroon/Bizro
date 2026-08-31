@@ -152,12 +152,13 @@ export function ComponentsGallery() {
         </div>
       </Section>
 
-      <Section title="5 · StatusPill" note="Square sticker chips: tinted bg (10–14% alpha) + 2px ink border + radius 0. Icon + word (EN + UR) — color is never the only signal.">
+      <Section title="5 · StatusPill" note="Square sticker chips: tinted bg (10–14% alpha) + 2px ink border + radius 0. Icon + word (EN + UR) — color is never the only signal. D4r: optional flag prop folds a row's price flag into the ONE row chip (▲ + flag word, red); the underlying status rides the title.">
         <div className="flex flex-wrap gap-3">
           <StatusPill status="pending" />
           <StatusPill status="confirmed" />
           <StatusPill status="edited" />
           <StatusPill status="rejected" />
+          <StatusPill status="edited" flag="price_anomaly" />
         </div>
       </Section>
 
@@ -208,7 +209,7 @@ export function ComponentsGallery() {
         </ReceiptCard>
       </Section>
 
-      <Section title="9 · LedgerRow" note="2px ink-line horizontal rules (the book, bolder). Kind = icon + word + position + color. Pending row: Confirm fires the seal thud; every AI row carries Edit.">
+      <Section title="9 · LedgerRow" note="D4r rows whisper: thin 1.5px ink-line rules, NO shadows, ONE status chip per row (flag folds in via StatusPill flag prop; source detail lives in the drill-down). Kind = icon + word + position + color. Pending row: Confirm fires the seal thud; every AI row carries a quiet 48px Edit.">
         <ul className="border-t-2 border-ink-line">
           {(['sale', 'expense', 'udhar_given', 'udhar_settlement'] as const).map((k) => {
             const t = samples.byKind(k);
@@ -246,7 +247,7 @@ export function ComponentsGallery() {
           )}
           {expandedId && editingId === expandedId && (
             <li className="bizro-rule-h">
-              <div className="bizro-card my-2 mx-1">
+              <div className="bizro-card my-[9px] mx-1">
                 <EditTransactionForm
                   transaction={txs.find((t) => t.id === editingId)!}
                   onSaved={(t) => {
@@ -294,7 +295,7 @@ export function ComponentsGallery() {
         />
       </Section>
 
-      <Section title="13 · Elevation (D4-1)" note="Zero-blur hard offset shadows in ink-line: sm 3px · md 5px · lg 8px. Cards hover-lift translate(-2px,-2px) into hard-lg; ledger rows ride 2px rules, never shadows.">
+      <Section title="13 · Elevation (D4-1 + D4r)" note="Zero-blur hard offset shadows in ink-line: sm 3px · md 5px · lg 8px. Cards hover-lift translate(-2px,-2px) into hard-lg; ledger rows ride thin 1.5px rules, never shadows — cards shout, rows whisper.">
         <div className="flex flex-wrap items-center gap-5">
           <p className="rounded-chip border-[3px] border-ink-line bg-paper-raised px-4 py-3 text-sm font-semibold text-ink-line shadow-hard-sm">hard-sm</p>
           <p className="bizro-card rounded-chip px-4 py-3 text-sm font-semibold text-ink-line">hard-md</p>

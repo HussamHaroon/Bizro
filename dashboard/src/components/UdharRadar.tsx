@@ -77,7 +77,7 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                 )}
               >
                 <div
-                  className="h-full rounded-chip border-2 border-ink-line bg-fill-red transition-[width] duration-200 ease-out"
+                  className="h-full rounded-chip border-2 border-ink-line bg-fill-red transition-[width] duration-200 ease-out motion-reduce:transition-none"
                   style={{
                     width: `${Math.max(4, Math.round((u.outstanding_pkd / max) * 100))}%`,
                   }}

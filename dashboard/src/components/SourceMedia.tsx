@@ -113,7 +113,7 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
       <button
         type="button"
         onClick={() => setLightboxOpen(true)}
-        className="w-fit overflow-hidden rounded-chip border-[3px] border-ink-line shadow-hard-sm transition-shadow duration-200 ease-out hover:shadow-hard-md focus-visible:shadow-hard-md"
+        className="w-fit overflow-hidden rounded-chip border-[3px] border-ink-line shadow-hard-sm transition-shadow duration-200 ease-out hover:shadow-hard-md focus-visible:shadow-hard-md motion-reduce:transition-none"
         aria-label={pick('Show the original receipt photo larger', 'اصل رسید کی تصویر بڑی کریں')}
       >
         <img

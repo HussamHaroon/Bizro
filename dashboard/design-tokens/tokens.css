@@ -87,10 +87,12 @@
   --bizro-radius-chip:   0px;   /* chips: fully square (D4-1) */
 
   /* ---- Elevation — D4-1: ZERO-BLUR hard offset shadows, ink-line color.
-     The D1-1/D3-4 soft shadow ramp is retired. Ledger ROWS stay pure rules
-     (2px ink-line) — the book, bolder; cards/stickers carry the hard shadow. */
+     The D1-1/D3-4 soft shadow ramp is retired. D4r (owner review 2026-08-29,
+     "cards shout, rows whisper"): ledger ROWS ride THIN 1.5px ink rules and
+     NEVER carry shadows or 3px borders; cards/stickers keep the hard shadow +
+     3px border. Mirrored to tokens.json elevation.ruleH. */
   --bizro-border-card: 3px solid var(--bizro-ink-line);
-  --bizro-rule-h:      2px solid var(--bizro-ink-line);
+  --bizro-rule-h:      1.5px solid var(--bizro-ink-line);
   --bizro-shadow-none: none;
   --bizro-shadow-hard-sm: 3px 3px 0 var(--bizro-ink-line);
   --bizro-shadow-hard-md: 5px 5px 0 var(--bizro-ink-line);
