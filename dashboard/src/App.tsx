@@ -15,21 +15,51 @@
    tabs stay one tap away at every width. Desktop (≥md) keeps top tabs and never
    shows the bottom bar. */
 
+import { useEffect } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, Navigate } from 'react-router-dom';
+import { getSettings } from './api/client';
 import { MerchantPicker } from './components/MerchantPicker';
 import { MockBanner } from './components/MockBanner';
-import { IconLedger, IconReport } from './components/icons';
+import { IconLedger, IconReport, IconSettings } from './components/icons';
 import { LanguageControl } from './i18n/LanguageControl';
-import { T, useT } from './i18n';
+import { T, useLang, useT } from './i18n';
 import { MonthlyLedgerScreen } from './screens/MonthlyLedgerScreen';
 import { CreditReadinessScreen } from './screens/CreditReadinessScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 import { ComponentsGallery } from './dev/ComponentsGallery';
 import { useMerchant } from './merchant';
 
 const SCREEN_TABS = [
   { to: '/ledger', icon: IconLedger, en: 'Ledger', ur: 'کھاتہ' },
   { to: '/credit', icon: IconReport, en: 'Credit', ur: 'کریڈٹ' },
+  { to: '/settings', icon: IconSettings, en: 'Settings', ur: 'سیٹنگز' },
 ] as const;
+
+/** D5-2 (schema.md §8): the merchant's SAVED settings row is the source of
+    truth for the app's language + numeral style once loaded. A row that was
+    never saved (updated_at null → implied defaults) leaves the localStorage
+    first-paint preference alone. Silent and best-effort by design: an older
+    server without the route just keeps local state. Re-runs on merchant
+    switch. (Writes happen in SettingsScreen's explicit Save, not here.) */
+function useSettingsHydration() {
+  const { merchantId } = useMerchant();
+  const { setMode, setNumerals } = useLang();
+  useEffect(() => {
+    let alive = true;
+    getSettings(merchantId)
+      .then((row) => {
+        if (!alive || !row || row.updated_at === null) return;
+        setMode(row.language);
+        setNumerals(row.numeral_style);
+      })
+      .catch(() => {
+        /* hydration is best-effort, never fatal */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [merchantId, setMode, setNumerals]);
+}
 
 function TopBar() {
   const { pick } = useT();
@@ -130,6 +160,8 @@ export function App() {
   // The bottom sheet grows by one picker row on multi-merchant servers — the
   // reserved padding below grows with it (full class strings so Tailwind emits both).
   const { merchants } = useMerchant();
+  // Hydrate language + numerals from the merchant's saved settings row (D5-2).
+  useSettingsHydration();
   const reserveClass =
     merchants.length > 1
       ? 'pb-[calc(140px+env(safe-area-inset-bottom))] md:pb-0'
@@ -146,6 +178,7 @@ export function App() {
             <Route path="/" element={<Navigate to="/ledger" replace />} />
             <Route path="/ledger" element={<MonthlyLedgerScreen />} />
             <Route path="/credit" element={<CreditReadinessScreen />} />
+            <Route path="/settings" element={<SettingsScreen />} />
             <Route path="/dev/components" element={<ComponentsGallery />} />
           </Routes>
         </main>

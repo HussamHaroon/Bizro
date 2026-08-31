@@ -8,8 +8,8 @@
    (design.md §4.7) — visible in mixed + ur modes, hidden in en mode (D1-1a:
    English-only means digits-only amounts). */
 
-import { formatPkr, urduAmountWords } from '../lib/format';
-import { useT } from '../i18n';
+import { formatAmount, urduAmountWords } from '../lib/format';
+import { useNumerals, useT } from '../i18n';
 
 export type AmountTone = 'in' | 'out' | 'neutral';
 
@@ -42,11 +42,12 @@ export function AmountText({
   className = '',
 }: AmountTextProps) {
   const { showUrduWords } = useT();
+  const { numerals } = useNumerals(); // schema.md §8 digit style (D5-2)
   const wordsVisible = showWords && showUrduWords;
   return (
     <span className={`inline-flex flex-col ${className}`}>
       <span className={`font-numerals font-semibold tabular-nums ${TONE_CLASS[tone]} ${SIZE_CLASS[size]}`}>
-        {formatPkr(value)}
+        {formatAmount(value, numerals)}
       </span>
       {wordsVisible && value > 0 && (
         <span className="bizro-urdu text-xs text-ink-line opacity-80" lang="ur">
