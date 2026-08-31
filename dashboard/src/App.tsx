@@ -53,14 +53,15 @@ function TopBar() {
           className="flex items-center gap-2.5 py-1"
           aria-label={pick('Bizro home — ledger', 'بزرو — کھاتہ')}
         >
-          {/* Nastaliq display moment — line-height 2 (not leading-none) so the
-              tall script never clips inside the slimmer bar (D4r fix 4a). */}
-          <span className="bizro-display-ur text-2xl leading-[2] text-ink-green" lang="ur">
-            بزرو
-          </span>
-          <span className="font-numerals text-2xl font-bold tracking-wide text-ink-line">
-            Bizro
-          </span>
+          {/* Owner-provided wordmark lockup — same treatment as the site header
+              (40px desktop / 32px phone). The image already carries both the
+              Nastaliq بزرو and the Latin Bizro, so no text twin beside it. */}
+          <img
+            src="/brand/wordmark-96.png"
+            alt=""
+            className="block h-8 w-auto sm:h-10"
+            style={{ imageRendering: '-webkit-optimize-contrast' }}
+          />
         </Link>
         {/* Desktop tabs — on phones these move to the bottom tab bar below. */}
         <nav
