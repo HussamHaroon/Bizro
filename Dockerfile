@@ -9,6 +9,14 @@ COPY dashboard/package.json dashboard/package-lock.json* ./
 RUN npm install --no-audit --no-fund
 COPY dashboard/ .
 RUN npm run build
+# Site (marketing homepage) is built from the SAME commit — main.py serves
+# /brand/* site-first, so both dists must carry identical brand assets
+# (QA wave-7 P2-3).
+WORKDIR /site
+COPY site/package.json site/package-lock.json* ./
+RUN npm install --no-audit --no-fund
+COPY site/ .
+RUN npm run build
 
 FROM python:3.13-slim
 WORKDIR /app
@@ -19,6 +27,7 @@ COPY voice-agent/ voice-agent/
 COPY vision-agent/ vision-agent/
 COPY credit-agent/ credit-agent/
 COPY --from=ui /ui/dist dashboard/dist
+COPY --from=ui /site/dist site/dist
 ENV DATABASE_URL=sqlite:////app/data/bizro.db PYTHONUNBUFFERED=1
 VOLUME /app/data
 EXPOSE 8000

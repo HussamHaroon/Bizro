@@ -79,6 +79,10 @@ export function StatusPill({ status, flag = null, className = '' }: StatusPillPr
       >
         <span aria-hidden="true">▲</span>
         <T en={f.en} ur={f.ur} />
+        {/* QA wave-7 P2-1: edited-vs-confirmed is invisible once the flag takes
+            the chip (title tooltips don't exist for low-literacy/mobile users),
+            so the edited word must survive INSIDE the chip. */}
+        {status === 'edited' && <T en="· Edited" ur="· ترمیم شدہ" />}
       </span>
     );
   }
