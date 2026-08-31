@@ -108,7 +108,7 @@ export function CreditReadinessScreen() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex flex-col gap-7 sm:gap-9 md:gap-8">
         <ScreenHeader
           icon={<IconReport className="h-9 w-9 text-ink-green" />}
           title="Credit Readiness"
@@ -125,7 +125,7 @@ export function CreditReadinessScreen() {
 
   if (!report || !readiness) {
     return (
-      <div className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex flex-col gap-7 sm:gap-9 md:gap-8">
         <ScreenHeader
           icon={<IconReport className="h-9 w-9 text-ink-green" />}
           title="Credit Readiness"
@@ -143,7 +143,7 @@ export function CreditReadinessScreen() {
   const levelWord = READINESS_WORDS[readiness.level];
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-8">
+    <div className="flex flex-col gap-7 sm:gap-9 md:gap-8">
       <ScreenHeader
         icon={<IconReport className="h-9 w-9 text-ink-green" />}
         title="Credit Readiness"
@@ -289,8 +289,9 @@ export function CreditReadinessScreen() {
         </table>
       </section>
 
-      {/* Consistency + AI sourcing — the seal earns its place here. */}
-      <div className="grid gap-5 sm:grid-cols-2">
+      {/* Consistency + AI sourcing — the seal earns its place here. D4r fix 2:
+          stacked card-to-card margin 20→24px below sm (hard shadows clear). */}
+      <div className="grid gap-6 sm:grid-cols-2">
         <section className="bizro-card px-5 py-5" aria-labelledby="consistency-title">
           <h2 id="consistency-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
             <T
@@ -406,7 +407,7 @@ export function CreditReadinessScreen() {
             urClassName="text-base font-semibold text-ink-line"
           />
         </h2>
-        <ul className="border-t-2 border-ink-line">
+        <ul className="border-t-[1.5px] border-ink-line">
           {report.line_items.map((li) => {
             const t = byId.get(li.transaction_id);
             const ai = li.audit.source_type !== 'manual';
@@ -420,7 +421,7 @@ export function CreditReadinessScreen() {
                     setEditingId(null);
                   }}
                   aria-expanded={expanded}
-                  className="flex min-h-14 w-full flex-wrap items-center gap-x-3 gap-y-1 px-1 py-1.5 text-left transition-colors duration-200 ease-out hover:bg-paper"
+                  className="flex min-h-14 w-full flex-wrap items-center gap-x-3 gap-y-1 px-1 py-[7px] text-left transition-colors duration-200 ease-out hover:bg-paper"
                 >
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="flex flex-wrap items-baseline gap-x-2">

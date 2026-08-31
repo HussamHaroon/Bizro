@@ -191,15 +191,36 @@
     .bizro-card-hover:hover,
     .bizro-btn-press,
     .bizro-btn-press:hover:not(:disabled),
-    .bizro-btn-press:active:not(:disabled) {
+    .bizro-btn-press:active:not(:disabled),
+    .bizro-btn-quiet,
+    .bizro-btn-quiet:active:not(:disabled),
+    .bizro-lang-segment,
+    .bizro-lang-segment:active {
       transition: none;
       transform: none;
     }
   }
 
-  /* Ledger rows ride 2px ink-line rules — the book, bolder (D4-1). */
+  /* Ledger rows ride THIN 1.5px ink-line rules — the book, quieter (D4r fix 1:
+   "cards shout, rows whisper" — owner review 2026-08-29). Rows never carry
+   hard shadows; those live on cards only. */
   .bizro-rule-h {
     border-bottom: var(--bizro-rule-h);
+  }
+
+  /* Row-scoped control (D4r fix 1) — the same tactile press grammar as
+     .bizro-btn-press but WITHOUT any hard shadow: Edit / Confirm inside
+     ledger rows stay 48px targets yet stop adding neobrutalist weight.
+     Hover coloring comes from utilities at the usage site. */
+  .bizro-btn-quiet {
+    transition:
+      background-color var(--bizro-motion-fast),
+      border-color var(--bizro-motion-fast),
+      color var(--bizro-motion-fast),
+      transform var(--bizro-motion-fast);
+  }
+  .bizro-btn-quiet:active:not(:disabled) {
+    transform: translate(2px, 2px);
   }
 
   /* The rubber STAMP (D4-1 TrustSealBadge): 2px dashed ink border, uppercase
@@ -231,6 +252,21 @@
   .bizro-topbar-tab[aria-current='page'] .bizro-badge-glyph,
   .bizro-lang-segment[aria-pressed='true'] .bizro-badge-glyph {
     fill: var(--bizro-ink-line);
+  }
+
+  /* Language-segment press (D4r fix 3, moved here from Tailwind active:
+     utilities) — the segment nudges down-right 2px like .bizro-btn-press.
+     Living in the components layer lets the prefers-reduced-motion block
+     above override it deterministically (utility variants would win the
+     cascade and the press would survive reduced motion). */
+  .bizro-lang-segment {
+    transition:
+      background-color var(--bizro-motion-fast),
+      color var(--bizro-motion-fast),
+      transform var(--bizro-motion-fast);
+  }
+  .bizro-lang-segment:active {
+    transform: translate(2px, 2px);
   }
 
   /* Urdu inline isolation: keeps RTL runs from disturbing surrounding Latin text. */
@@ -305,7 +341,13 @@
   }
   .bizro-card,
   .bizro-card-hero,
-  [class*='shadow-hard'] {
+  [class*='shadow-hard'],
+  .bizro-btn-press,
+  .bizro-btn-quiet,
+  .bizro-lang-segment {
+    /* D4r fix 4d: EVERY hard shadow flattens in print — the attribute selector
+       alone missed CSS-owned shadows (.bizro-btn-press draws hard-sm from the
+       token, not a shadow-hard-* utility class). */
     box-shadow: none !important;
   }
   .bizro-card,
