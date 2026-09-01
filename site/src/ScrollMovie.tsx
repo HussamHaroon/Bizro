@@ -29,6 +29,7 @@
 */
 
 import { useEffect, useRef, useState } from "react";
+import { useSiteLang } from "./site-i18n";
 
 /* ---------- tiny easings ---------- */
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -176,7 +177,7 @@ const PIECES: PieceDef[] = [
   { id: "ring", cls: "movie__piece--ring", from: { x: 0.12, y: 0.2, r: -28, s: 0.7 }, to: { x: 0, y: 0, r: 0 }, order: 0 },
   { id: "half-l", cls: "movie__piece--half-l", from: { x: -0.38, y: 0.06, r: -120, s: 0.8 }, to: { x: -0.243, y: 0, r: 0 }, order: 1 },
   { id: "half-r", cls: "movie__piece--half-r", from: { x: 0.36, y: -0.12, r: 140, s: 0.8 }, to: { x: 0.243, y: 0, r: 0 }, order: 2 },
-  { id: "word", cls: "movie__piece--word", from: { x: -0.3, y: 0.22, r: 24, s: 0.5 }, to: { x: 0, y: 0, r: 0 }, order: 4 },
+  { id: "word", cls: "movie__piece--word", from: { x: -0.3, y: 0.22, r: 24, s: 0.5 }, to: { x: 0, y: -0.07, r: 0 }, order: 4 }, // -0.07: Nastaliq descenders hang low — lift so the word sits centered on the gold
   { id: "star", cls: "movie__piece--star", from: { x: 0.34, y: 0.3, r: -40, s: 0.6 }, to: { x: 0.335, y: -0.335, r: 12 }, order: 5 },
   { id: "rupee", cls: "movie__piece--rupee", from: { x: -0.3, y: -0.32, r: 90, s: 0.55 }, to: { x: -0.44, y: 0.38, r: -10 }, order: 3 },
   { id: "voice", cls: "movie__piece--voice", from: { x: 0.42, y: 0.2, r: 18, s: 0.7 }, to: { x: -0.78, y: 0.52, r: -6 }, order: 6, satellite: true },
@@ -184,27 +185,8 @@ const PIECES: PieceDef[] = [
   { id: "book", cls: "movie__piece--book", from: { x: 0.02, y: -0.4, r: 10, s: 0.7 }, to: { x: 0.08, y: -0.82, r: -4 }, order: 8, satellite: true },
 ];
 
-/* ---------- captions per scene (bilingual, site voice) ---------- */
-const SCENES = [
-  {
-    ur: "آواز بھیجیں، رسید بھیجیں — بس",
-    en: "He sends the voice note. He snaps the receipt. That's the whole job.",
-  },
-  {
-    ur: "بزرو خود جُڑتا ہے",
-    en: "No typing. The pieces assemble themselves into a ledger entry.",
-  },
-  {
-    ur: "مہر لگ گئی",
-    en: "Every entry is stamped — parsed, priced, and double-checked.",
-  },
-  {
-    ur: "کھاتے سے کریڈٹ ہسٹری تک",
-    en: "Months of this become a credit history a lender can actually read.",
-  },
-];
-
 export default function ScrollMovie() {
+  const { copy, lang } = useSiteLang();
   const sectionRef = useRef<HTMLElement | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const coinRef = useRef<HTMLDivElement | null>(null);
@@ -388,7 +370,7 @@ export default function ScrollMovie() {
       className="movie"
       id="movie"
       ref={sectionRef}
-      aria-label="Bizro in four scenes — an animated title sequence"
+      aria-label={copy.movie.label}
     >
       <div className="movie__stage">
         <div className="movie__world" ref={worldRef}>
@@ -457,11 +439,12 @@ export default function ScrollMovie() {
 
         {/* scene captions */}
         <div className="movie__caption" aria-live="off">
-          <span className="movie__caption-ur" key={`ur${scene}`} lang="ur">
-            {SCENES[scene].ur}
-          </span>
-          <span className="movie__caption-en" key={`en${scene}`}>
-            {SCENES[scene].en}
+          <span
+            className="movie__caption-text"
+            key={`${lang}${scene}`}
+            lang={lang === "ur" ? "ur" : "en"}
+          >
+            {copy.movie.captions[scene]}
           </span>
         </div>
 
@@ -471,12 +454,7 @@ export default function ScrollMovie() {
         </div>
 
         {/* summary for screen readers (the visuals are decorative) */}
-        <p className="sr-only">
-          Animated sequence: scattered pieces of a paper ledger — a voice note,
-          a receipt, a notebook — fly together and assemble into a golden Bizro
-          coin that stamps down like a trust seal, revealing Bizro's three
-          tools: Voice Khata, Vision Audit, and the Credit Readiness Report.
-        </p>
+        <p className="sr-only">{copy.movie.sr}</p>
       </div>
     </section>
   );
