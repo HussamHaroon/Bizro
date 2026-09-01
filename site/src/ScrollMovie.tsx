@@ -410,11 +410,15 @@ export default function ScrollMovie() {
                   {d.id === "ring" && <CoinRing />}
                   {d.id === "half-l" && <CoinLeftHalf />}
                   {d.id === "half-r" && <CoinRightHalf />}
-                  {d.id === "word" && (
-                    <span className="movie__word" lang="ur">
-                      بزرو
-                    </span>
-                  )}
+                  {d.id === "word" &&
+                    (lang === "en" ? (
+                      /* English mode: the Latin mark on the coin (owner request) */
+                      <span className="movie__word movie__word--latin">BIZRO</span>
+                    ) : (
+                      <span className="movie__word" lang="ur">
+                        بزرو
+                      </span>
+                    ))}
                   {d.id === "star" && <StarSeal />}
                   {d.id === "rupee" && <RupeeChip />}
                 </div>
