@@ -1577,3 +1577,13 @@ html[lang="ur"] .mini-stat dt {
   direction: ltr;
   unicode-bidi: embed;
 }
+
+/* Latin wordmark on the coin (English mode) — Latin caps have no Nastaliq
+   descenders, so undo the piece's -0.07 lift and sit on true center. */
+.movie__word--latin {
+  font-family: var(--font-slab);
+  font-weight: 700;
+  font-size: calc(var(--c) * 0.185);
+  letter-spacing: 0.08em;
+  transform: translateY(calc(var(--c) * 0.055));
+}
