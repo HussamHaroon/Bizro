@@ -98,17 +98,23 @@ def health():
     }
 
 
+def _html(path: Path) -> FileResponse:
+    """index.html must always revalidate — hashed asset names carry caching,
+    but a stale index.html references bundles that no longer exist."""
+    return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/{full_path:path}", include_in_schema=False)
 def spa(full_path: str):
     """Static router: site assets → site index at / → dashboard assets → SPA fallback."""
     if (asset := _file_in(_SITE, full_path)) is not None:
         return FileResponse(asset)
     if full_path in ("", "/") and (_SITE / "index.html").is_file():
-        return FileResponse(_SITE / "index.html")
+        return _html(_SITE / "index.html")
     if (asset := _file_in(_DIST, full_path)) is not None:
         return FileResponse(asset)
     if _INDEX.is_file():
-        return FileResponse(_INDEX)
+        return _html(_INDEX)
     # No built dashboard (source checkout without a build) — say so instead of 500.
     return {
         "detail": "dashboard not built — run `npm install && npm run build` in dashboard/, "

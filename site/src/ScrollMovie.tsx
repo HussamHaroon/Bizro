@@ -187,26 +187,18 @@ const PIECES: PieceDef[] = [
 /* ---------- captions per scene (bilingual, site voice) ---------- */
 const SCENES = [
   {
-    n: "01",
-    t: "SCATTER",
     ur: "آواز بھیجیں، رسید بھیجیں — بس",
     en: "He sends the voice note. He snaps the receipt. That's the whole job.",
   },
   {
-    n: "02",
-    t: "ASSEMBLE",
     ur: "بزرو خود جُڑتا ہے",
     en: "No typing. The pieces assemble themselves into a ledger entry.",
   },
   {
-    n: "03",
-    t: "STAMP",
     ur: "مہر لگ گئی",
     en: "Every entry is stamped — parsed, priced, and double-checked.",
   },
   {
-    n: "04",
-    t: "REVEAL",
     ur: "کھاتے سے کریڈٹ ہسٹری تک",
     en: "Months of this become a credit history a lender can actually read.",
   },
@@ -227,17 +219,22 @@ export default function ScrollMovie() {
     const soft = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let raf = 0;
-    let ticking = false;
     let active = true;
     let lastScene = -1;
+
+    /* Smooth playback: scrolling sets a TARGET progress; a rAF loop eases the
+       rendered progress toward it, so wheel/touch steps glide instead of
+       snapping scene to scene. The loop idles once converged and restarts on
+       the next scroll — no permanent CPU burn. */
+    let targetP = 0;
+    let renderP = 0;
+    let first = true;
+    let loopRunning = false;
 
     const io = new IntersectionObserver(
       (entries) => {
         active = entries[0]?.isIntersecting ?? true;
-        if (active && !ticking) {
-          ticking = true;
-          raf = requestAnimationFrame(update);
-        }
+        if (active) onScroll();
       },
       { rootMargin: "10% 0px" },
     );
@@ -336,25 +333,41 @@ export default function ScrollMovie() {
       });
     };
 
-    const update = () => {
-      ticking = false;
+    const frame = () => {
+      loopRunning = false;
       const sec = sectionRef.current;
-      if (!sec) return;
-      const rect = sec.getBoundingClientRect();
-      const total = rect.height - window.innerHeight;
-      const p = clamp(-rect.top / Math.max(total, 1));
-      apply(p, sec.clientWidth, window.innerHeight);
-      const idx = p < P.scatterEnd ? 0 : p < P.assembleEnd ? 1 : p < P.stampEnd ? 2 : 3;
+      if (!sec || !active) return;
+      const diff = targetP - renderP;
+      renderP = Math.abs(diff) < 0.0004 ? targetP : renderP + diff * 0.16;
+      apply(renderP, sec.clientWidth, window.innerHeight);
+      const idx = renderP < P.scatterEnd ? 0 : renderP < P.assembleEnd ? 1 : renderP < P.stampEnd ? 2 : 3;
       if (idx !== lastScene) {
         lastScene = idx;
         setScene(idx);
       }
+      if (renderP !== targetP) {
+        loopRunning = true;
+        raf = requestAnimationFrame(frame);
+      }
+    };
+
+    const readScroll = () => {
+      const sec = sectionRef.current;
+      if (!sec) return;
+      const rect = sec.getBoundingClientRect();
+      const total = rect.height - window.innerHeight;
+      targetP = clamp(-rect.top / Math.max(total, 1));
+      if (first) {
+        renderP = targetP; // no swoosh when the page loads mid-section
+        first = false;
+      }
     };
 
     const onScroll = () => {
-      if (!ticking && active) {
-        ticking = true;
-        raf = requestAnimationFrame(update);
+      readScroll();
+      if (active && !loopRunning) {
+        loopRunning = true;
+        raf = requestAnimationFrame(frame);
       }
     };
 
@@ -370,8 +383,6 @@ export default function ScrollMovie() {
     };
   }, []);
 
-  const sceneIdx = scene;
-
   return (
     <section
       className="movie"
@@ -380,15 +391,6 @@ export default function ScrollMovie() {
       aria-label="Bizro in four scenes — an animated title sequence"
     >
       <div className="movie__stage">
-        {/* film-perforation garnish (decorative) */}
-        <span className="movie__film movie__film--l" aria-hidden="true" />
-        <span className="movie__film movie__film--r" aria-hidden="true" />
-
-        <div className="movie__counter" role="presentation">
-          <span className="movie__rec" aria-hidden="true" />
-          SCENE {SCENES[sceneIdx].n} / 04 · {SCENES[sceneIdx].t}
-        </div>
-
         <div className="movie__world" ref={worldRef}>
           {/* rising ledger backing card (scene 4) */}
           <div className="movie__card" ref={cardRef} aria-hidden="true" />
@@ -455,11 +457,11 @@ export default function ScrollMovie() {
 
         {/* scene captions */}
         <div className="movie__caption" aria-live="off">
-          <span className="movie__caption-ur" key={`ur${sceneIdx}`} lang="ur">
-            {SCENES[sceneIdx].ur}
+          <span className="movie__caption-ur" key={`ur${scene}`} lang="ur">
+            {SCENES[scene].ur}
           </span>
-          <span className="movie__caption-en" key={`en${sceneIdx}`}>
-            {SCENES[sceneIdx].en}
+          <span className="movie__caption-en" key={`en${scene}`}>
+            {SCENES[scene].en}
           </span>
         </div>
 
