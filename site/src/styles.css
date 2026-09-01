@@ -1585,5 +1585,7 @@ html[lang="ur"] .mini-stat dt {
   font-weight: 700;
   font-size: calc(var(--c) * 0.185);
   letter-spacing: 0.08em;
-  transform: translateY(calc(var(--c) * 0.055));
+  /* measured: the Z must sit ON the coin's center seam — slab caps R/O are
+     wider than B/I, so flex centering lands the Z ~7.5% of --c left */
+  transform: translateY(calc(var(--c) * 0.055)) translateX(calc(var(--c) * 0.075));
 }
