@@ -146,14 +146,14 @@ const RupeeChip = () => (
     <rect x="5" y="5" width="60" height="60" rx="2" fill="var(--red)" stroke="var(--ink)" strokeWidth="3" />
     <text
       x="35"
-      y="49"
+      y="46"
       textAnchor="middle"
-      fontFamily="var(--font-slab)"
+      fontFamily='"Zilla Slab", "Segoe UI Symbol", "Noto Sans Symbols 2", "Noto Sans", sans-serif'
       fontWeight="700"
-      fontSize="38"
+      fontSize="28"
       fill="#FCF9F0"
     >
-      ₹
+      ₨
     </text>
   </svg>
 );
