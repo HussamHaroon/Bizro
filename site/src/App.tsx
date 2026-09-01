@@ -1,5 +1,6 @@
 import type { SVGProps } from "react";
 import ScrollMovie from "./ScrollMovie";
+import { LANGS, useSiteLang } from "./site-i18n";
 
 /* ------------------------------------------------------------------
    Icons — filled, single-weight, rounded (design.md §4.3).
@@ -20,17 +21,16 @@ const MicIcon = (p: IconProps) => (
 const CameraIcon = (p: IconProps) => (
   <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true" {...p}>
     <path
-      fillRule="evenodd"
-      d="M9.4 3.2 8.2 5.7H4.6A2.6 2.6 0 0 0 2 8.3v8.9a2.6 2.6 0 0 0 2.6 2.6h14.8a2.6 2.6 0 0 0 2.6-2.6V8.3a2.6 2.6 0 0 0-2.6-2.6h-3.6l-1.2-2.5H9.4zM12 9.1a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zm0 2.2a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6z"
+      d="M9 4.6c.4-.9 1.2-1.4 2.2-1.4h1.6c1 0 1.8.5 2.2 1.4l.5 1h2.7A2.6 2.6 0 0 1 20.8 8.2v9A2.6 2.6 0 0 1 18.2 19.8H5.8a2.6 2.6 0 0 1-2.6-2.6v-9a2.6 2.6 0 0 1 2.6-2.6h2.7l.5-1z"
     />
+    <circle cx="12" cy="12.4" r="3.6" fill="var(--green)" />
   </svg>
 );
 
 const ReportIcon = (p: IconProps) => (
   <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true" {...p}>
     <path
-      fillRule="evenodd"
-      d="M15 2.4H6.2A2.2 2.2 0 0 0 4 4.6v14.8a2.2 2.2 0 0 0 2.2 2.2h11.6a2.2 2.2 0 0 0 2.2-2.2V7.4L15 2.4zm.8 14.4a1.05 1.05 0 0 1-1.05 1.05H8.45a1.05 1.05 0 0 1 0-2.1h6.3a1.05 1.05 0 0 1 1.05 1.05zm0-3.7a1.05 1.05 0 0 1-1.05 1.05H8.45a1.05 1.05 0 0 1 0-2.1h6.3a1.05 1.05 0 0 1 1.05 1.05zm-5.55-3.6a1.05 1.05 0 0 1 1.05-1.05h2.4a1.05 1.05 0 0 1 0 2.1h-2.4a1.05 1.05 0 0 1-1.05-1.05z"
+      d="M6 2.4h9.2L19.6 6.8V20a1.6 1.6 0 0 1-1.6 1.6H6A1.6 1.6 0 0 1 4.4 20V4A1.6 1.6 0 0 1 6 2.4z"
     />
   </svg>
 );
@@ -38,8 +38,12 @@ const ReportIcon = (p: IconProps) => (
 const RadarIcon = (p: IconProps) => (
   <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true" {...p}>
     <path
-      fillRule="evenodd"
-      d="M12 21.4A9.4 9.4 0 1 0 12 2.6v2.3a7.1 7.1 0 1 1-7.1 7.1H2.6A9.4 9.4 0 0 0 12 21.4z"
+      d="M12 2.1a9.9 9.9 0 1 1-9.9 9.9A9.9 9.9 0 0 1 12 2.1zm0 4.4v5.5l4.8 2.8"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
     <path d="M12 12 20.7 7a9.9 9.9 0 0 0-8.7-5.1V12z" />
     <circle cx="12" cy="12" r="2.3" />
@@ -85,14 +89,38 @@ const PencilIcon = (p: IconProps) => (
 );
 
 /* ------------------------------------------------------------------
-   Page
+   Language switcher — اردو / Mixed / English. Self-labelled (each option
+   names itself the way its speakers write it), persisted, and it flips the
+   whole homepage — not a bilingual overlay (owner law: no repeated words).
 ------------------------------------------------------------------ */
 
+function LangSwitch() {
+  const { lang, setLang, copy } = useSiteLang();
+  return (
+    <div className="lang-switch" role="group" aria-label={copy.a11y.langLabel}>
+      {LANGS.map((l) => (
+        <button
+          key={l.id}
+          type="button"
+          className={`lang-switch__btn${lang === l.id ? " is-active" : ""}`}
+          aria-pressed={lang === l.id}
+          title={l.title}
+          onClick={() => setLang(l.id)}
+        >
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
+  const { copy } = useSiteLang();
+
   return (
     <>
       <a className="skip-link" href="#main">
-        Skip to content
+        {copy.a11y.skip}
       </a>
 
       <header className="site-header">
@@ -106,15 +134,18 @@ export default function App() {
               className="wordmark__logo"
             />
           </a>
-          <nav className="site-nav" aria-label="Sections">
-            <a href="#problem">Problem</a>
-            <a href="#how">How it works</a>
-            <a href="#why">Why Bizro</a>
-            <a href="#trust">Trust &amp; audit</a>
+          <nav className="site-nav" aria-label={copy.a11y.nav}>
+            <a href="#problem">{copy.nav.problem}</a>
+            <a href="#how">{copy.nav.how}</a>
+            <a href="#why">{copy.nav.why}</a>
+            <a href="#trust">{copy.nav.trust}</a>
           </nav>
-          <a className="btn btn--primary header-cta" href="/ledger">
-            Open dashboard
-          </a>
+          <div className="header-actions">
+            <LangSwitch />
+            <a className="btn btn--primary header-cta" href="/ledger">
+              {copy.nav.cta}
+            </a>
+          </div>
         </div>
       </header>
 
@@ -124,57 +155,49 @@ export default function App() {
           <div className="hero__grid">
             <div>
               <p style={{ margin: 0 }}>
-                <span className="sticker">
-                  Alkhidmat × Alibaba Cloud AI Hackathon 2026
-                </span>
+                <span className="sticker">{copy.hero.sticker}</span>
               </p>
               <h1 id="hero-heading">
-                The paper khata, given a <span className="hl">memory</span>.
+                {copy.hero.h1Pre}
+                <span className="hl">{copy.hero.h1Hl}</span>
+                {copy.hero.h1Post}
               </h1>
-              <p className="lede">
-                Bizro is a zero-typing Voice &amp; Vision copilot. It turns the
-                WhatsApp voice notes and receipt photos a Pakistani
-                micro-entrepreneur already sends into a lender-legible credit
-                history — no typing, no new app, no new habit.
-              </p>
+              <p className="lede">{copy.hero.lede}</p>
               <div className="cta-row">
                 <a className="btn btn--primary" href="/ledger">
-                  Open the live dashboard
+                  {copy.hero.ctaPrimary}
                 </a>
                 <a className="btn btn--ghost" href="#how">
-                  See how it works
+                  {copy.hero.ctaSecondary}
                 </a>
               </div>
             </div>
 
             {/* Placeholder frame — links to the live app, never fakes a screenshot */}
             <div className="demo-frame">
-              <span className="demo-frame__tag">Live demo · placeholder</span>
+              <span className="demo-frame__tag">{copy.hero.demoTag}</span>
               <div className="flow-note">
                 <span className="flow-note__pill">
                   <VoicePillIcon /> 0:14
                 </span>
-                <span className="flow-note__text">
-                  “Ahmad ko panch hazar ka udhar diya” — the voice note he was
-                  sending anyway.
-                </span>
+                <span className="flow-note__text">{copy.hero.voiceLine}</span>
               </div>
               <p className="flow-arrow" aria-hidden="true">
-                ↓ &nbsp;parsed, not typed
+                {copy.hero.flowArrow}
               </p>
               <div className="flow-invoice">
                 <div className="flow-invoice__head">
-                  <span className="flow-invoice__brand">BIZRO · INVOICE</span>
-                  <span className="chip chip--red">UDHAR · ادھار</span>
+                  <span className="flow-invoice__brand">{copy.hero.invoiceBrand}</span>
+                  <span className="chip chip--red">{copy.hero.udharChip}</span>
                 </div>
                 <div className="flow-invoice__row">
-                  <span>Ahmad — credit given</span>
-                  <span className="flow-invoice__amount">PKR 5,000</span>
+                  <span>{copy.hero.invoiceName}</span>
+                  <span className="flow-invoice__amount">{copy.hero.invoiceAmount}</span>
                 </div>
-                <span className="stamp">AI-Parsed · Confirmed</span>
+                <span className="stamp">{copy.hero.stamp}</span>
               </div>
               <a className="demo-frame__link" href="/ledger">
-                Open the live ledger <ArrowIcon />
+                {copy.hero.link} <ArrowIcon />
               </a>
             </div>
           </div>
@@ -187,78 +210,43 @@ export default function App() {
         <section className="section" id="problem" aria-labelledby="problem-heading">
           <div className="wrap">
             <div className="section-head">
-              <span className="chip chip--red">01 · The problem</span>
-              <h2 id="problem-heading">
-                Creditworthy, but invisible to the lender meant for them.
-              </h2>
+              <span className="chip chip--red">{copy.problem.chip}</span>
+              <h2 id="problem-heading">{copy.problem.h2}</h2>
               <p style={{ margin: "1.2rem 0 0" }}>
-                <span className="sticker">
-                  The gap isn’t creditworthiness — it’s legibility
-                </span>
+                <span className="sticker">{copy.problem.sticker}</span>
               </p>
             </div>
 
             <div className="stats">
-              <article className="card stat">
-                <span className="chip chip--red">Formal account</span>
-                <div className="stat__num stat__num--red">10.3%</div>
-                <p>
-                  of Pakistani adults hold a formal financial-institution
-                  account — at the last national baseline.
-                </p>
-              </article>
-
-              <article className="card stat">
-                <span className="chip chip--teal">South Asia, for contrast</span>
-                <div className="stat__num stat__num--teal">~33%</div>
-                <p>
-                  the South Asian average of adults with a formal
-                  financial-institution account.
-                </p>
-              </article>
-
-              <article className="card stat">
-                <span className="chip chip--gold">The blocker</span>
-                <div className="stat__word">Shariah-compliant demand</div>
-                <p>
-                  a meaningful share of small businesses avoiding formal finance
-                  cite one specific reason: they are waiting for a
-                  Shariah-compliant option, not an interest-bearing one.
-                </p>
-              </article>
+              {copy.problem.stats.map((s) => (
+                <article className="card stat" key={s.chip}>
+                  <span className={`chip chip--${s.tone}`}>{s.chip}</span>
+                  <div className={s.isWord ? "stat__word" : `stat__num stat__num--${s.tone}`}>
+                    {s.num}
+                  </div>
+                  <p>{s.text}</p>
+                </article>
+              ))}
             </div>
 
             <article className="card mawakmat-card">
               <div>
                 <span className="chip chip--green">
-                  <BankIcon width="16" height="16" /> Mawakhat · Alkhidmat
-                  Foundation
+                  <BankIcon width="16" height="16" /> {copy.problem.mawakhat.chip}
                 </span>
-                <h3>The interest-free rail already exists</h3>
-                <p>
-                  Alkhidmat’s Mawakhat program is Qarz-e-Hasna (interest-free)
-                  microfinance funded through zakat and sadaqat — the credit
-                  product these shopkeepers would actually accept. What it can’t
-                  see is a business history that lives in a handwritten
-                  notebook.
-                </p>
+                <h3>{copy.problem.mawakhat.h3}</h3>
+                <p>{copy.problem.mawakhat.p}</p>
               </div>
               <div>
                 <dl className="mini-stats">
-                  <div className="mini-stat">
-                    <dt>~800</dt>
-                    <dd>branches across 400+ cities</dd>
-                  </div>
-                  <div className="mini-stat">
-                    <dt>PKR 30–75k</dt>
-                    <dd>typical Qarz-e-Hasna loan</dd>
-                  </div>
-                  <div className="mini-stat">
-                    <dt>99.9%</dt>
-                    <dd>repayment rate*</dd>
-                  </div>
+                  {copy.problem.mawakhat.minis.map((m) => (
+                    <div className="mini-stat" key={m.dt}>
+                      <dt>{m.dt}</dt>
+                      <dd>{m.dd}</dd>
+                    </div>
+                  ))}
                 </dl>
-                <p className="fine">*as claimed by Mawakhat</p>
+                <p className="fine">{copy.problem.mawakhat.fine}</p>
               </div>
             </article>
           </div>
@@ -268,72 +256,34 @@ export default function App() {
         <section className="section" id="how" aria-labelledby="how-heading">
           <div className="wrap">
             <div className="section-head">
-              <span className="chip chip--green">02 · How it works</span>
-              <h2 id="how-heading">
-                Three taps’ worth of effort — months’ worth of credit history.
-              </h2>
+              <span className="chip chip--green">{copy.how.chip}</span>
+              <h2 id="how-heading">{copy.how.h2}</h2>
               <p style={{ margin: "1.2rem 0 0" }}>
-                <span className="sticker">Zero typing, all of it</span>
+                <span className="sticker">{copy.how.sticker}</span>
               </p>
             </div>
 
             <div className="steps">
-              <article className="card step">
-                <div className="step__top">
-                  <span className="chip chip--green">Step 1 · Voice</span>
-                  <span className="icon-tile icon-tile--green">
-                    <MicIcon />
-                  </span>
-                </div>
-                <h3>Send the voice note</h3>
-                <p>
-                  A casual Urdu voice note, the way he’d talk to an employee.
-                  It’s parsed into a structured sale or credit entry, and a
-                  stamped invoice comes straight back on WhatsApp.
-                </p>
-                <div className="step__badges">
-                  <span className="chip chip--gold">Qwen3.5-Omni-Plus</span>
-                  <span className="chip">WhatsApp in / out</span>
-                </div>
-              </article>
-
-              <article className="card step">
-                <div className="step__top">
-                  <span className="chip chip--gold">Step 2 · Vision</span>
-                  <span className="icon-tile icon-tile--gold">
-                    <CameraIcon />
-                  </span>
-                </div>
-                <h3>Photograph the receipt</h3>
-                <p>
-                  One photo of the messy, handwritten supplier receipt. The
-                  expense is logged — and obvious pricing errors are flagged
-                  before they can hide in a hand-tallied notebook.
-                </p>
-                <div className="step__badges">
-                  <span className="chip chip--gold">Qwen-VL-OCR</span>
-                  <span className="chip">Price-error flags</span>
-                </div>
-              </article>
-
-              <article className="card step">
-                <div className="step__top">
-                  <span className="chip chip--teal">Step 3 · Report</span>
-                  <span className="icon-tile icon-tile--teal">
-                    <ReportIcon />
-                  </span>
-                </div>
-                <h3>Tap, months later</h3>
-                <p>
-                  One tap turns months of accumulated, source-linked history
-                  into a Mawakhat-style Credit Readiness Report — with a full
-                  audit trail a loan officer can drill into.
-                </p>
-                <div className="step__badges">
-                  <span className="chip chip--gold">Qwen3.7-Plus</span>
-                  <span className="chip">Mawakhat-style format</span>
-                </div>
-              </article>
+              {copy.how.steps.map((st, i) => {
+                const tone = ["green", "gold", "teal"][i];
+                const Tile = [MicIcon, CameraIcon, ReportIcon][i];
+                return (
+                  <article className="card step" key={st.h3}>
+                    <div className="step__top">
+                      <span className={`chip chip--${tone}`}>{st.chip}</span>
+                      <span className={`icon-tile icon-tile--${tone}`}>
+                        <Tile />
+                      </span>
+                    </div>
+                    <h3>{st.h3}</h3>
+                    <p>{st.p}</p>
+                    <div className="step__badges">
+                      <span className="chip chip--gold">{st.badges[0]}</span>
+                      <span className="chip">{st.badges[1]}</span>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -342,63 +292,32 @@ export default function App() {
         <section className="section" id="why" aria-labelledby="why-heading">
           <div className="wrap">
             <div className="section-head">
-              <span className="chip chip--red">03 · Why Bizro</span>
-              <h2 id="why-heading">More than “OCR plus a chatbot.”</h2>
+              <span className="chip chip--red">{copy.why.chip}</span>
+              <h2 id="why-heading">{copy.why.h2}</h2>
               <p style={{ margin: "1.2rem 0 0" }}>
-                <span className="sticker">
-                  Built for how karyana shops actually run
-                </span>
+                <span className="sticker">{copy.why.sticker}</span>
               </p>
             </div>
 
             <div className="diff-grid">
-              <article className="card diff">
-                <span className="icon-tile icon-tile--red">
-                  <RadarIcon />
-                </span>
-                <h3>Udhar Radar</h3>
-                <p>
-                  Flips the expense-tracker lens: Bizro tracks the money
-                  customers owe <strong>to the shopkeeper</strong> — the
-                  dominant real use of a paper khata, and the piece most
-                  digitization tools miss entirely.
-                </p>
-                <span className="chip chip--red diff__tag">
-                  Money owed TO the shop
-                </span>
-              </article>
-
-              <article className="card diff">
-                <span className="icon-tile icon-tile--green">
-                  <TrailIcon />
-                </span>
-                <h3>Audit trail on every entry</h3>
-                <p>
-                  Every AI-parsed line keeps its source voice note or photo plus
-                  a confidence score — and a one-tap correct. A visible trail,
-                  not a black box, because a loan officer has to trust the
-                  report as much as the shopkeeper trusts the tool.
-                </p>
-                <span className="chip chip--green diff__tag">
-                  Source + confidence, always
-                </span>
-              </article>
-
-              <article className="card diff">
-                <span className="icon-tile icon-tile--gold">
-                  <BankIcon />
-                </span>
-                <h3>A direct line to Mawakhat</h3>
-                <p>
-                  Not a generic “credit score.” The report is shaped for a
-                  lending program that already exists, already has ~800
-                  branches, and already has an institutional reason to want
-                  exactly this evidence.
-                </p>
-                <span className="chip chip--gold diff__tag">
-                  A real credit rail, not a score
-                </span>
-              </article>
+              {copy.why.cards.map((card, i) => {
+                const tone = ["red", "green", "gold"][i];
+                const Tile = [RadarIcon, TrailIcon, BankIcon][i];
+                return (
+                  <article className="card diff" key={card.h3}>
+                    <span className={`icon-tile icon-tile--${tone}`}>
+                      <Tile />
+                    </span>
+                    <h3>{card.h3}</h3>
+                    <p>
+                      {card.pPre}
+                      {card.pStrong && <strong>{card.pStrong}</strong>}
+                      {card.pPost}
+                    </p>
+                    <span className={`chip chip--${tone} diff__tag`}>{card.tag}</span>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -408,16 +327,10 @@ export default function App() {
           <div className="wrap">
             <div className="band-grid">
               <div className="section-head" style={{ marginBottom: 0 }}>
-                <span className="chip chip--gold">04 · Trust &amp; audit</span>
-                <h2 id="trust-heading">
-                  Every number traces to a voice note or a photo.
-                </h2>
+                <span className="chip chip--gold">{copy.trust.chip}</span>
+                <h2 id="trust-heading">{copy.trust.h2}</h2>
                 <div className="rule" aria-hidden="true" />
-                <p className="lede">
-                  The audit trail is the product. In the live app, every field
-                  drills down to the original voice note or receipt photo behind
-                  it.
-                </p>
+                <p className="lede">{copy.trust.lede}</p>
               </div>
 
               <div>
@@ -425,53 +338,45 @@ export default function App() {
                 <div className="card ledger-mock" aria-label="Mock preview of one audited ledger entry">
                   <div className="ledger-mock__head">
                     <span className="ledger-mock__title">
-                      <MicIcon width="18" height="18" /> Ledger entry · 12 Aug
+                      <MicIcon width="18" height="18" /> {copy.trust.mock.title}
                     </span>
-                    <span className="chip chip--red">UDHAR · ادھار</span>
+                    <span className="chip chip--red">{copy.trust.mock.udharChip}</span>
                   </div>
 
                   <div className="ledger-mock__row">
                     <div>
-                      <div className="ledger-mock__name">Ahmad — credit given</div>
+                      <div className="ledger-mock__name">{copy.trust.mock.name}</div>
                       <span className="urdu" lang="ur" dir="rtl" style={{ fontSize: "0.95rem" }}>
-                        پانچ ہزار
+                        {copy.trust.mock.urduAmount}
                       </span>
                     </div>
-                    <span className="ledger-mock__amount">
-                      PKR 5,000
-                    </span>
+                    <span className="ledger-mock__amount">{copy.trust.mock.amount}</span>
                   </div>
 
                   <ul className="ledger-mock__meta">
                     <li>
                       <MicIcon width="18" height="18" />
-                      Source: WhatsApp voice note · 0:14
+                      {copy.trust.mock.source}
                     </li>
                     <li>
                       <TrailIcon width="18" height="18" />
-                      Parsed by Qwen3.5-Omni-Plus · confidence 96%
+                      {copy.trust.mock.parsed}
                     </li>
                   </ul>
 
                   <span className="ledger-mock__correct">
-                    <PencilIcon /> One-tap correct — the fix is itself a trust
-                    signal
+                    <PencilIcon /> {copy.trust.mock.correct}
                   </span>
-                  <span className="stamp ledger-mock__stamp">
-                    AI-Parsed · Confirmed
-                  </span>
+                  <span className="stamp ledger-mock__stamp">{copy.trust.mock.stamp}</span>
                 </div>
-                <p className="mock-caption">
-                  Mock preview. In the live app each field links to its
-                  original audio or photo.
-                </p>
+                <p className="mock-caption">{copy.trust.mock.caption}</p>
 
                 <div className="band-ctas">
                   <a className="btn btn--ghost" href="/ledger">
-                    Open the live ledger
+                    {copy.trust.ctaLedger}
                   </a>
                   <a className="btn btn--ghost" href="/credit">
-                    See the Credit Readiness Report
+                    {copy.trust.ctaReport}
                   </a>
                 </div>
               </div>
@@ -492,33 +397,26 @@ export default function App() {
                 height={48}
                 className="wordmark__logo"
               />
-              <p className="footer-tagline">The paper khata, given a memory.</p>
+              <p className="footer-tagline">{copy.footer.tagline}</p>
             </div>
 
             <p className="footer-credits">
-              Bizro · Bano Qabil × Alibaba Cloud AI Hackathon Pakistan 2026 ·
-              built on Alibaba Cloud Model Studio.
+              {copy.footer.credits1}
               <br />
-              Voice Khata by Qwen3.5-Omni-Plus · Vision Audit by Qwen-VL-OCR ·
-              Credit Readiness by Qwen3.7-Plus.
+              {copy.footer.credits2}
             </p>
 
             <nav className="footer-links" aria-label="Live demo">
               <a href="/ledger">
-                Live ledger <ArrowIcon />
+                {copy.footer.linkLedger} <ArrowIcon />
               </a>
               <a href="/credit">
-                Credit Readiness Report <ArrowIcon />
+                {copy.footer.linkReport} <ArrowIcon />
               </a>
             </nav>
           </div>
 
-          <p className="honesty">
-            <strong>Demo build</strong> — AI outputs are clearly labeled when
-            running without live keys. Verified figures are sourced in
-            design.md §1; the 99.9% Mawakhat repayment rate is as claimed by
-            Mawakhat.
-          </p>
+          <p className="honesty">{copy.footer.honesty}</p>
         </div>
       </footer>
     </>

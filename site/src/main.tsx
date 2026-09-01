@@ -11,10 +11,13 @@ import "@fontsource/noto-nastaliq-urdu/400.css";
 import "@fontsource/noto-nastaliq-urdu/700.css";
 
 import "./styles.css";
+import { SiteLangProvider } from "./site-i18n";
 import App from "./App";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <SiteLangProvider>
+      <App />
+    </SiteLangProvider>
   </StrictMode>,
 );
