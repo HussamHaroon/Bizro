@@ -1,4 +1,5 @@
 import type { SVGProps } from "react";
+import ScrollMovie from "./ScrollMovie";
 
 /* ------------------------------------------------------------------
    Icons — filled, single-weight, rounded (design.md §4.3).
@@ -178,6 +179,9 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {/* ---------------- SCROLL MOVIE ---------------- */}
+        <ScrollMovie />
 
         {/* ---------------- PROBLEM ---------------- */}
         <section className="section" id="problem" aria-labelledby="problem-heading">
