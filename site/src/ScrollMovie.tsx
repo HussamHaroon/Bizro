@@ -18,8 +18,11 @@
    - scroll is NEVER hijacked — we only read scrollY and map it to progress;
      transforms/opacity only, written straight to DOM in one rAF loop
      (no per-frame React renders; state changes only on scene boundaries).
-   - prefers-reduced-motion: the timeline renders its final frame statically
-     and every scroll listener stays off.
+   - prefers-reduced-motion: the timeline ALWAYS runs (it is scroll-scrubbed —
+     the user is the playback control), but the vestibular-risky garnish is
+     stripped: no slam shake, no REC blink, no caption slide. Owner ruling
+     2026-08-30: a frozen film on animation-disabled Windows machines reads
+     as broken; scrubbed motion reads as scrolling.
    - every asset is inline SVG (no network, crisp at any DPI) so the owner
      can swap any piece for their own image later without touching the
      timeline.
@@ -219,15 +222,9 @@ export default function ScrollMovie() {
   const chipRefs = useRef<(HTMLDivElement | null)[]>([]);
   const barRef = useRef<HTMLDivElement | null>(null);
   const [scene, setScene] = useState(0);
-  const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    /* QA escape hatch: /?motion=force previews the animated timeline even
-       in reduced-motion browsers (screenshot tooling, CI previews). */
-    const force = new URLSearchParams(window.location.search).get("motion") === "force";
-    setReduced(mq.matches && !force);
-    if (mq.matches && !force) return; // static final frame; no listeners at all
+    const soft = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let raf = 0;
     let ticking = false;
@@ -267,10 +264,11 @@ export default function ScrollMovie() {
       const coinY = cy - lift * H * 0.14;
       const coinScaleFinal = coinScale * (1 - lift * 0.34);
 
-      /* whole-world shake at the slam */
+      /* whole-world shake at the slam — suppressed for reduced-motion users
+         (the one vestibular-risky effect in the film) */
       let shakeX = 0;
       let shakeY = 0;
-      if (s3 > 0.45 && s3 < 0.85) {
+      if (!soft && s3 > 0.45 && s3 < 0.85) {
         const k = Math.sin((s3 - 0.45) * 26) * (1 - (s3 - 0.45) / 0.4);
         shakeX = 3 * k;
         shakeY = 2 * k;
@@ -372,51 +370,11 @@ export default function ScrollMovie() {
     };
   }, []);
 
-  /* ---------- static final frame for prefers-reduced-motion ---------- */
-  useEffect(() => {
-    if (!reduced) return;
-    const sec = sectionRef.current;
-    if (!sec) return;
-    const W = sec.clientWidth;
-    const C = Math.min(W * 0.56, 300);
-    const cy = Math.max(window.innerHeight, 480) / 2 - Math.max(window.innerHeight, 480) * 0.14;
-    if (coinRef.current) {
-      coinRef.current.style.left = `${W / 2}px`;
-      coinRef.current.style.top = `${cy}px`;
-      coinRef.current.style.width = `${C}px`;
-      coinRef.current.style.height = `${C}px`;
-      coinRef.current.style.transform = "translate(-50%, -50%) scale(0.66) rotate(-4deg)";
-      coinRef.current.style.filter = "drop-shadow(8px 8px 0 var(--ink))";
-    }
-    if (impactRef.current) impactRef.current.style.opacity = "0";
-    pieceRefs.current.forEach((el, i) => {
-      const d = PIECES[i];
-      if (!el) return;
-      if (d.satellite) {
-        el.style.opacity = "0";
-        return;
-      }
-      el.style.opacity = "1";
-      el.style.transform = `translate(${d.to.x * C}px, ${d.to.y * C}px) translate(-50%, -50%) rotate(${d.to.r}deg)`;
-    });
-    chipRefs.current.forEach((chip) => {
-      if (chip) {
-        chip.style.opacity = "1";
-        chip.style.transform = "none";
-      }
-    });
-    if (cardRef.current) {
-      cardRef.current.style.opacity = "1";
-      cardRef.current.style.transform = "translate(-50%, 0)";
-    }
-    if (barRef.current) barRef.current.style.transform = "scaleX(1)";
-  }, [reduced]);
-
-  const sceneIdx = reduced ? 3 : scene;
+  const sceneIdx = scene;
 
   return (
     <section
-      className={`movie${reduced ? " movie--reduced" : ""}`}
+      className="movie"
       id="movie"
       ref={sectionRef}
       aria-label="Bizro in four scenes — an animated title sequence"
