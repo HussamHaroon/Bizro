@@ -1228,10 +1228,6 @@ a:focus-visible,
   height: 420vh; /* scroll runway; the stage below is sticky */
 }
 
-.movie--reduced {
-  height: auto;
-}
-
 .movie__stage {
   position: sticky;
   top: 0;
@@ -1239,13 +1235,6 @@ a:focus-visible,
   height: 100svh;
   overflow: clip;
   background: var(--canvas);
-}
-
-.movie--reduced .movie__stage {
-  position: static;
-  height: auto;
-  min-height: 100svh;
-  padding-block: 7rem 6rem;
 }
 
 /* film-perforation garnish — reads as a 35mm edge */
