@@ -1440,3 +1440,140 @@ a:focus-visible,
   .movie__chip svg { width: 20px; height: 20px; }
   .movie__chips { gap: 8px; }
 }
+
+/* ============================================================
+   Site language switcher + Urdu mode (owner request 2026-08-30)
+   - .lang-switch: neobrutalist segmented control in the header
+   - html[lang="ur"]: full RTL + Nastaliq body/headings; line-heights
+     opened up for Nastaliq's tall vertical rhythm
+   ============================================================ */
+
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lang-switch {
+  display: inline-flex;
+  border: 3px solid var(--ink);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.lang-switch__btn {
+  appearance: none;
+  border: none;
+  border-inline-start: 3px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.lang-switch__btn:first-child {
+  border-inline-start: none;
+}
+
+.lang-switch__btn:hover {
+  background: var(--canvas);
+}
+
+.lang-switch__btn.is-active {
+  background: var(--gold);
+  font-weight: 700;
+}
+
+.lang-switch__btn[lang="ur"],
+.lang-switch__btn:first-child {
+  font-size: 1rem;
+}
+
+@media (max-width: 860px) {
+  .header-actions .header-cta {
+    display: none; /* nav keeps a CTA inside the page; header stays unbusy */
+  }
+  .lang-switch__btn {
+    padding: 8px 9px;
+    font-size: 0.8rem;
+  }
+  .lang-switch__btn:first-child {
+    font-size: 0.95rem;
+  }
+}
+
+/* ---------- Urdu mode: RTL + Nastaliq everywhere ---------- */
+
+html[lang="ur"] body {
+  font-family: var(--font-urdu);
+  font-size: 1.05rem;
+  line-height: 2.15;
+}
+
+html[lang="ur"] h1,
+html[lang="ur"] h2,
+html[lang="ur"] h3,
+html[lang="ur"] .btn,
+html[lang="ur"] .chip,
+html[lang="ur"] .sticker,
+html[lang="ur"] .stat__num,
+html[lang="ur"] .stat__word,
+html[lang="ur"] .mini-stat dt,
+html[lang="ur"] .lang-switch__btn {
+  font-family: var(--font-urdu);
+  line-height: 1.9;
+}
+
+html[lang="ur"] h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+html[lang="ur"] h2 {
+  font-size: clamp(1.7rem, 4.2vw, 2.4rem);
+  line-height: 1.9;
+}
+
+html[lang="ur"] .lede,
+html[lang="ur"] .stat p,
+html[lang="ur"] .step p,
+html[lang="ur"] .diff p,
+html[lang="ur"] .mawakmat-card p {
+  line-height: 2.2;
+}
+
+html[lang="ur"] .site-nav a,
+html[lang="ur"] .footer-links a,
+html[lang="ur"] .flow-note__text,
+html[lang="ur"] .mock-caption,
+html[lang="ur"] .honesty,
+html[lang="ur"] .footer-credits,
+html[lang="ur"] .fine,
+html[lang="ur"] .demo-frame__link,
+html[lang="ur"] .ledger-mock__title,
+html[lang="ur"] .ledger-mock__name,
+html[lang="ur"] .ledger-mock__correct {
+  font-family: var(--font-urdu);
+}
+
+html[lang="ur"] .movie__caption-text {
+  font-family: var(--font-urdu);
+  font-size: clamp(1.15rem, 3vw, 1.5rem);
+  line-height: 2.1;
+}
+
+html[lang="ur"] .stamp {
+  font-family: var(--font-urdu);
+}
+
+/* numerals/model names stay LTR inside RTL prose */
+html[lang="ur"] .stat__num,
+html[lang="ur"] .flow-invoice__amount,
+html[lang="ur"] .ledger-mock__amount,
+html[lang="ur"] .mini-stat dt {
+  direction: ltr;
+  unicode-bidi: embed;
+}
