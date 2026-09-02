@@ -195,6 +195,8 @@ export default function ScrollMovie() {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const chipRefs = useRef<(HTMLDivElement | null)[]>([]);
   const barRef = useRef<HTMLDivElement | null>(null);
+  const wordRef = useRef<HTMLSpanElement | null>(null);
+  const zRef = useRef<HTMLSpanElement | null>(null);
   const [scene, setScene] = useState(0);
 
   useEffect(() => {
@@ -315,19 +317,49 @@ export default function ScrollMovie() {
       });
     };
 
-    const frame = () => {
-      loopRunning = false;
+    /* One lerp step, shared by both drivers. rAF is throttled to zero in
+       backgrounded tabs, so scroll events advance the smoothing too — the
+       stage can never freeze at a stale pose, it just glides less buttery
+       when no frames are available. */
+    /* One-shot optical centering of the Latin coin word: measured the first
+       time the timeline passes the assembled pose (scale exactly 1, no
+       rotation — so screen px == local px), with fonts guaranteed settled
+       (user has scrolled deep by then). Stored in em: scales with the
+       stamp's later scale-down and rotation. */
+    let zxFixed = false;
+
+    const advance = () => {
       const sec = sectionRef.current;
       if (!sec || !active) return;
       const diff = targetP - renderP;
       renderP = Math.abs(diff) < 0.0004 ? targetP : renderP + diff * 0.16;
       apply(renderP, sec.clientWidth, window.innerHeight);
+      if (!zxFixed && renderP > 0.5 && document.fonts.status === "loaded") {
+        const el = wordRef.current;
+        const z = zRef.current;
+        if (el && z) {
+          const elr = el.getBoundingClientRect();
+          const zr = z.getBoundingClientRect();
+          if (elr.width > 0) {
+            const K = elr.width / el.scrollWidth; // == 1 at the assembled pose
+            const fs = 0.185 * Math.min(window.innerWidth * 0.56, 300);
+            const zxEm = ((elr.left + elr.width / 2) - (zr.left + zr.width / 2)) / K / fs;
+            el.style.setProperty("--zx", `${zxEm.toFixed(3)}em`);
+            zxFixed = true;
+          }
+        }
+      }
       const idx = renderP < P.scatterEnd ? 0 : renderP < P.assembleEnd ? 1 : renderP < P.stampEnd ? 2 : 3;
       if (idx !== lastScene) {
         lastScene = idx;
         setScene(idx);
       }
-      if (renderP !== targetP) {
+    };
+
+    const frame = () => {
+      loopRunning = false;
+      advance();
+      if (active && renderP !== targetP) {
         loopRunning = true;
         raf = requestAnimationFrame(frame);
       }
@@ -347,7 +379,8 @@ export default function ScrollMovie() {
 
     const onScroll = () => {
       readScroll();
-      if (active && !loopRunning) {
+      advance();
+      if (active && !loopRunning && renderP !== targetP) {
         loopRunning = true;
         raf = requestAnimationFrame(frame);
       }
@@ -413,7 +446,11 @@ export default function ScrollMovie() {
                   {d.id === "word" &&
                     (lang === "en" ? (
                       /* English mode: the Latin mark on the coin (owner request) */
-                      <span className="movie__word movie__word--latin">BIZRO</span>
+                      <span ref={wordRef} className="movie__word movie__word--latin">
+                        <span>BI</span>
+                        <span ref={zRef}>Z</span>
+                        <span>RO</span>
+                      </span>
                     ) : (
                       <span className="movie__word" lang="ur">
                         بزرو
