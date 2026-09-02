@@ -99,17 +99,43 @@ def process_voice_note(
         model_text = mock_response_text(scenario)
     else:
         client = DashScopeClient(settings)  # fail fast on missing key
-        try:
-            decoded = decode_audio(audio_bytes, strategy=settings.audio_decode)
-        except DecodeError as exc:
-            # Corrupt/undecodable audio → ask again; never crash the webhook path.
-            return _low_confidence_fallback(
-                transcript="", when=when, media_id=media_id, confidence=0.0,
-                settings=settings, mock=False, note=f"audio decode failed: {exc}",
-            )
-        model_text = client.omni_chat(
-            system=SYSTEM_PROMPT, user_text=_user_prompt(when)
-        ).text
+        decoded = None
+        if settings.stt_api_key:
+            # D6-3 free-tier path: STT transcribes, the text model structures.
+            # (The OpenRouter free tier has no audio-input models.) The omni
+            # single-call path stays for when a DashScope voucher lands.
+            try:
+                from voice_agent.stt_client import STTError, transcribe
+
+                decoded = decode_audio(audio_bytes, strategy=settings.audio_decode)
+                transcript = transcribe(
+                    decoded.data, filename=f"voice.{decoded.api_format}", settings=settings
+                )
+                model_text = client.omni_chat(
+                    system=SYSTEM_PROMPT,
+                    user_text=(
+                        f"السماعی نوٹ کا متن (transcript):\n{transcript}\n\n"
+                        + _user_prompt(when)
+                    ),
+                ).text
+            except Exception as exc:  # noqa: BLE001 — webhook path never crashes
+                # Corrupt audio or STT failure → ask again; never crash the webhook.
+                return _low_confidence_fallback(
+                    transcript="", when=when, media_id=media_id, confidence=0.0,
+                    settings=settings, mock=False, note=f"stt path failed: {exc}",
+                )
+        else:
+            try:
+                decoded = decode_audio(audio_bytes, strategy=settings.audio_decode)
+            except DecodeError as exc:
+                # Corrupt/undecodable audio → ask again; never crash the webhook path.
+                return _low_confidence_fallback(
+                    transcript="", when=when, media_id=media_id, confidence=0.0,
+                    settings=settings, mock=False, note=f"audio decode failed: {exc}",
+                )
+            model_text = client.omni_chat(
+                system=SYSTEM_PROMPT, user_text=_user_prompt(when)
+            ).text
 
     tx_dict, errors = _assemble(
         model_text, when, media_id, settings, mock=settings.use_mock,
