@@ -122,11 +122,16 @@ def step1_text(live: bool) -> None:
         },
         timeout=90,
     )
-    llm_guard.record(M_TEXT, usage=r.json().get("usage") if r.status_code == 200 else None)
+    if r.status_code == 200:
+        llm_guard.record(M_TEXT, usage=r.json().get("usage"))
     print(f"  HTTP {r.status_code}")
     if r.status_code == 200:
-        content = r.json()["choices"][0]["message"]["content"]
-        print(f"  reply: {content[:220]}")
+        msg = r.json()["choices"][0]["message"]
+        content = msg.get("content")
+        if not content:
+            print(f"  message object: {json.dumps(msg, ensure_ascii=False)[:400]}")
+        else:
+            print(f"  reply: {str(content)[:220]}")
     else:
         print(f"  !! {r.text[:300]}")
 
@@ -166,15 +171,20 @@ def step2_vision(live: bool) -> None:
                     ],
                 }
             ],
-            "max_tokens": 200,
+            "max_tokens": 1200,
         },
         timeout=120,
     )
-    llm_guard.record(M_VL, usage=r.json().get("usage") if r.status_code == 200 else None)
+    if r.status_code == 200:
+        llm_guard.record(M_VL, usage=r.json().get("usage"))
     print(f"  HTTP {r.status_code}")
     if r.status_code == 200:
-        content = r.json()["choices"][0]["message"]["content"]
-        print(f"  reply: {content[:220]}")
+        msg = r.json()["choices"][0]["message"]
+        content = msg.get("content")
+        if not content:
+            print(f"  message object: {json.dumps(msg, ensure_ascii=False)[:400]}")
+        else:
+            print(f"  reply: {str(content)[:220]}")
     else:
         print(f"  !! {r.text[:300]}")
 
