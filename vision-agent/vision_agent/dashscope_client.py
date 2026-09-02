@@ -121,6 +121,9 @@ class DashScopeOcrClient:
                 }
             ],
         }
+        import llm_guard  # free-tier budget guard (repo root; D6-2)
+
+        llm_guard.allow(model)
         last_error: Exception | None = None
         for attempt in range(3):  # 1 try + 2 retries
             try:
@@ -160,6 +163,7 @@ class DashScopeOcrClient:
             content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
         if not isinstance(content, str):
             raise DashScopeApiError(f"non-text content in response: {content!r}")
+        llm_guard.record(model, usage=payload.get("usage"))
         return content
 
     @staticmethod
