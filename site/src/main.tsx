@@ -12,7 +12,13 @@ import "@fontsource/noto-nastaliq-urdu/700.css";
 
 import "./styles.css";
 import { SiteLangProvider } from "./site-i18n";
+import { attachButtonSfx } from "./sfx";
 import App from "./App";
+
+// One delegated button-click sound layer (lazy AudioContext, muted-aware,
+// fail-silent). Attaching only adds a listener — no audio work happens
+// until a real user click, which is a valid gesture.
+attachButtonSfx();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -142,6 +142,8 @@ class DashScopeOcrClient:
         return requests.post(url, headers=headers, json=json_body, timeout=timeout)
 
     def _request(self, url: str, body: dict) -> str:
+        import llm_guard  # free-tier budget guard (repo root; D6-2)
+
         headers = {"Authorization": f"Bearer {self._settings.dashscope_api_key}"}
         response = self._transport(
             url=url, headers=headers, json_body=body, timeout=self._settings.ocr_timeout_seconds
@@ -163,7 +165,7 @@ class DashScopeOcrClient:
             content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
         if not isinstance(content, str):
             raise DashScopeApiError(f"non-text content in response: {content!r}")
-        llm_guard.record(model, usage=payload.get("usage"))
+        llm_guard.record(str(body.get("model", "?")), usage=payload.get("usage"))
         return content
 
     @staticmethod

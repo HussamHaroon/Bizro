@@ -13,9 +13,10 @@
      - Deliberately NOT gated behind prefers-reduced-motion — sound is not
        vestibular motion. Any *visual* motion is gated in styles.css.
 
-   Sound design: sine oscillators only.
+   Sound design: sine oscillators (triangle for the click tick).
      open  -> soft two-note chirp, total 190ms (<= 200ms), peak gain 0.12
-     close -> low short pop, 90ms, peak gain 0.10  */
+     close -> low short pop, 90ms, peak gain 0.10
+     click -> tiny quiet tick, 45ms, peak gain 0.06  */
 
 export const SFX_STORAGE_KEY = "bizro.sfx";
 
@@ -91,11 +92,12 @@ function tone(
   startIn: number,
   dur: number,
   peak: number,
+  type: OscillatorType = "sine",
 ): void {
   const t0 = c.currentTime + startIn;
   const osc = c.createOscillator();
   const gain = c.createGain();
-  osc.type = "sine";
+  osc.type = type;
   osc.frequency.setValueAtTime(freqFrom, t0);
   if (freqTo !== freqFrom) {
     osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqTo), t0 + dur);
@@ -132,4 +134,64 @@ export function playPop(): void {
   } catch {
     /* fail silently */
   }
+}
+
+/** Button CLICK — very short, very quiet tick (C5 -> G4 triangle, 45ms, peak 0.06). */
+export function playClick(): void {
+  if (!readSfxPref()) return;
+  try {
+    const c = getContext();
+    if (!c) return;
+    tone(c, 523.25, 392, 0, 0.045, 0.06, "triangle");
+  } catch {
+    /* fail silently */
+  }
+}
+
+const BUTTON_SFX_SELECTOR = "button, .btn, .chip, .lang-switch__btn";
+const BUTTON_SFX_DEDUPE_MS = 40;
+let lastButtonClickAt = 0;
+
+function isButtonDisabled(el: Element): boolean {
+  try {
+    if (el.hasAttribute("disabled")) return true;
+    if ((el as HTMLButtonElement).disabled === true) return true;
+    if (el.getAttribute("aria-disabled") === "true") return true;
+    return false;
+  } catch {
+    return true; // uncertain => stay silent
+  }
+}
+
+/**
+ * Attach ONE delegated document-level click listener that plays the tiny
+ * button tick whenever a click lands inside a button-like control
+ * (button, .btn, .chip, .lang-switch__btn). Disabled and aria-disabled
+ * controls stay silent, and duplicate events from the same physical click
+ * are suppressed. Never creates audio outside a gesture — playClick runs
+ * inside the click itself, which IS a gesture. Returns a detach function.
+ */
+export function attachButtonSfx(): () => void {
+  let detach = () => {};
+  try {
+    const onClick = (ev: MouseEvent) => {
+      try {
+        const now = Date.now();
+        if (now - lastButtonClickAt < BUTTON_SFX_DEDUPE_MS) return; // same click, re-dispatched
+        const target = ev.target;
+        if (!(target instanceof Element)) return;
+        const btn = target.closest(BUTTON_SFX_SELECTOR);
+        if (!btn || isButtonDisabled(btn)) return;
+        lastButtonClickAt = now;
+        playClick();
+      } catch {
+        /* a bad event target must never break the click */
+      }
+    };
+    document.addEventListener("click", onClick, { passive: true });
+    detach = () => document.removeEventListener("click", onClick);
+  } catch {
+    /* no usable document — stay silent */
+  }
+  return detach;
 }
