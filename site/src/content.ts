@@ -9,6 +9,8 @@
              provider). Latin tech names (Qwen…, PKR, 10.3%) stay Latin —
              that is how Urdu tech writing actually works. */
 
+import { MITHU_GUIDE_COPY } from "./mithu-content";
+
 export type Lang = "ur" | "en" | "mixed";
 
 export const LANGS: { id: Lang; label: string; title: string }[] = [
@@ -32,7 +34,7 @@ const en = {
   },
   hero: {
     sticker: "Alkhidmat × Alibaba Cloud AI Hackathon 2026",
-    h1Pre: "The paper khata, given a ",
+    h1Pre: "The paper ledger, given a ",
     h1Hl: "memory",
     h1Post: ".",
     lede:
@@ -41,10 +43,10 @@ const en = {
     ctaSecondary: "See how it works",
     demoTag: "Live demo · placeholder",
     voiceLine:
-      "“Ahmad ko panch hazar ka udhar diya” — the voice note he was sending anyway.",
+      "“I gave Ahmad five thousand on credit” — the voice note he was sending anyway.",
     flowArrow: "↓  parsed, not typed",
     invoiceBrand: "BIZRO · INVOICE",
-    udharChip: "UDHAR · ادھار",
+    udharChip: "CREDIT",
     invoiceName: "Ahmad — credit given",
     invoiceAmount: "PKR 5,000",
     stamp: "AI-Parsed · Confirmed",
@@ -132,14 +134,14 @@ const en = {
   why: {
     chip: "03 · Why Bizro",
     h2: "More than “OCR plus a chatbot.”",
-    sticker: "Built for how karyana shops actually run",
+    sticker: "Built for how corner stores actually run",
     cards: [
       {
-        h3: "Udhar Radar",
+        h3: "Credit Radar",
         pPre: "Flips the expense-tracker lens: Bizro tracks the money customers owe ",
         pStrong: "to the shopkeeper",
         pPost:
-          " — the dominant real use of a paper khata, and the piece most digitization tools miss entirely.",
+          " — the dominant real use of a paper ledger, and the piece most digitization tools miss entirely.",
         tag: "Money owed TO the shop",
       },
       {
@@ -167,9 +169,9 @@ const en = {
       "The audit trail is the product. In the live app, every field drills down to the original voice note or receipt photo behind it.",
     mock: {
       title: "Ledger entry · 12 Aug",
-      udharChip: "UDHAR · ادھار",
+      udharChip: "CREDIT",
       name: "Ahmad — credit given",
-      urduAmount: "پانچ ہزار",
+      urduAmount: "Five thousand",
       amount: "PKR 5,000",
       source: "Source: WhatsApp voice note · 0:14",
       parsed: "Parsed by Qwen3.5-Omni-Plus · confidence 96%",
@@ -182,7 +184,7 @@ const en = {
     ctaReport: "See the Credit Readiness Report",
   },
   footer: {
-    tagline: "The paper khata, given a memory.",
+    tagline: "The paper ledger, given a memory.",
     credits1:
       "Bizro · Bano Qabil × Alibaba Cloud AI Hackathon Pakistan 2026 · built on Alibaba Cloud Model Studio.",
     credits2:
@@ -191,6 +193,10 @@ const en = {
     linkReport: "Credit Readiness Report",
     honesty:
       "Demo build — AI outputs are clearly labeled when running without live keys. Verified figures are sourced in design.md §1; the 99.9% Mawakhat repayment rate is as claimed by Mawakhat.",
+  },
+  mithu: {
+    heroLabel: "Mithu the parrot presents the live demo preview",
+    ...MITHU_GUIDE_COPY.en,
   },
 };
 
@@ -202,6 +208,10 @@ const mixed: Copy = {
   a11y: { ...en.a11y, langLabel: "زبان · Language" },
   hero: {
     ...en.hero,
+    h1Pre: "The paper khata, given a ",
+    voiceLine:
+      "“Ahmad ko panch hazar ka udhar diya” — the voice note he was sending anyway.",
+    udharChip: "UDHAR · ادھار",
     ctaSecondary: "دیکھیں · See how it works",
     stamp: "AI-Parsed · Confirmed",
     link: "Open the live ledger · کھولیں",
@@ -215,12 +225,34 @@ const mixed: Copy = {
     },
   },
   how: { ...en.how, sticker: "Zero typing, all of it · ٹائپنگ صفر" },
-  why: { ...en.why, sticker: "Built for how karyana shops actually run · کریانہ" },
+  why: {
+    ...en.why,
+    sticker: "Built for how karyana shops actually run · کریانہ",
+    cards: [
+      {
+        ...en.why.cards[0],
+        h3: "Udhar Radar",
+        pPost:
+          " — the dominant real use of a paper khata, and the piece most digitization tools miss entirely.",
+      },
+      ...en.why.cards.slice(1),
+    ],
+  },
   trust: {
     ...en.trust,
-    mock: { ...en.trust.mock, stamp: "AI-Parsed · Confirmed · تصدیق شدہ" },
+    mock: {
+      ...en.trust.mock,
+      udharChip: "UDHAR · ادھار",
+      urduAmount: "پانچ ہزار",
+      stamp: "AI-Parsed · Confirmed · تصدیق شدہ",
+    },
   },
   footer: { ...en.footer, tagline: "The paper khata, given a memory · کھاتہ" },
+  mithu: {
+    ...en.mithu,
+    heroLabel: "Mithu · مٹھو presents the live demo preview",
+    ...MITHU_GUIDE_COPY.mixed,
+  },
 };
 
 /* ---- Full Urdu (RTL). Latin tech names stay Latin by design. ---- */
@@ -393,6 +425,10 @@ const ur: Copy = {
     linkReport: "کریڈٹ ریڈینیس رپورٹ",
     honesty:
       "ڈیمو بلڈ — لائیو کیز کے بغیر چلتے ہوئے اے آئی آؤٹ پٹ واضح طور پر لیبل ہوتے ہیں۔ تصدیق شدہ اعداد design.md §1 میں ماخذ ہیں؛ مواکھات کی 99.9% واپسی کی شرح مواکھات کے دعوے کے مطابق ہے۔",
+  },
+  mithu: {
+    heroLabel: "مٹھو طوطا لائیو ڈیمو کی پیش کش کرتا ہوا",
+    ...MITHU_GUIDE_COPY.ur,
   },
 };
 

@@ -1,6 +1,8 @@
 import type { SVGProps } from "react";
 import ScrollMovie from "./ScrollMovie";
+import { GuideMithu, Mithu, SfxToggle } from "./Mascot";
 import { LANGS, useSiteLang } from "./site-i18n";
+import { useReveal } from "./useReveal";
 
 /* ------------------------------------------------------------------
    Icons — filled, single-weight, rounded (design.md §4.3).
@@ -115,7 +117,8 @@ function LangSwitch() {
 }
 
 export default function App() {
-  const { copy } = useSiteLang();
+  const { copy, lang } = useSiteLang();
+  const revealRef = useReveal(lang);
 
   return (
     <>
@@ -141,6 +144,7 @@ export default function App() {
             <a href="#trust">{copy.nav.trust}</a>
           </nav>
           <div className="header-actions">
+            <SfxToggle labelOn={copy.mithu.sfxOn} labelOff={copy.mithu.sfxOff} />
             <LangSwitch />
             <a className="btn btn--primary header-cta" href="/ledger">
               {copy.nav.cta}
@@ -149,11 +153,11 @@ export default function App() {
         </div>
       </header>
 
-      <main id="main">
+      <main id="main" ref={revealRef}>
         {/* ---------------- HERO ---------------- */}
         <section className="hero wrap" id="top" aria-labelledby="hero-heading">
           <div className="hero__grid">
-            <div>
+            <div className="reveal">
               <p style={{ margin: 0 }}>
                 <span className="sticker">{copy.hero.sticker}</span>
               </p>
@@ -173,32 +177,44 @@ export default function App() {
               </div>
             </div>
 
-            {/* Placeholder frame — links to the live app, never fakes a screenshot */}
-            <div className="demo-frame">
-              <span className="demo-frame__tag">{copy.hero.demoTag}</span>
-              <div className="flow-note">
-                <span className="flow-note__pill">
-                  <VoicePillIcon /> 0:14
-                </span>
-                <span className="flow-note__text">{copy.hero.voiceLine}</span>
+            {/* Mithu presents the frame — feet planted on its top edge */}
+            <div className="hero__demo reveal">
+              <div className="hero__mithu mithu--bob">
+                <GuideMithu
+                  tips={copy.mithu.tips}
+                  size={150}
+                  label={copy.mithu.heroLabel}
+                  bubbleLabel={copy.mithu.bubbleLabel}
+                />
               </div>
-              <p className="flow-arrow" aria-hidden="true">
-                {copy.hero.flowArrow}
-              </p>
-              <div className="flow-invoice">
-                <div className="flow-invoice__head">
-                  <span className="flow-invoice__brand">{copy.hero.invoiceBrand}</span>
-                  <span className="chip chip--red">{copy.hero.udharChip}</span>
+
+              {/* Placeholder frame — links to the live app, never fakes a screenshot */}
+              <div className="demo-frame">
+                <span className="demo-frame__tag">{copy.hero.demoTag}</span>
+                <div className="flow-note">
+                  <span className="flow-note__pill">
+                    <VoicePillIcon /> 0:14
+                  </span>
+                  <span className="flow-note__text">{copy.hero.voiceLine}</span>
                 </div>
-                <div className="flow-invoice__row">
-                  <span>{copy.hero.invoiceName}</span>
-                  <span className="flow-invoice__amount">{copy.hero.invoiceAmount}</span>
+                <p className="flow-arrow" aria-hidden="true">
+                  {copy.hero.flowArrow}
+                </p>
+                <div className="flow-invoice">
+                  <div className="flow-invoice__head">
+                    <span className="flow-invoice__brand">{copy.hero.invoiceBrand}</span>
+                    <span className="chip chip--red">{copy.hero.udharChip}</span>
+                  </div>
+                  <div className="flow-invoice__row">
+                    <span>{copy.hero.invoiceName}</span>
+                    <span className="flow-invoice__amount">{copy.hero.invoiceAmount}</span>
+                  </div>
+                  <span className="stamp">{copy.hero.stamp}</span>
                 </div>
-                <span className="stamp">{copy.hero.stamp}</span>
+                <a className="demo-frame__link" href="/ledger">
+                  {copy.hero.link} <ArrowIcon />
+                </a>
               </div>
-              <a className="demo-frame__link" href="/ledger">
-                {copy.hero.link} <ArrowIcon />
-              </a>
             </div>
           </div>
         </section>
@@ -209,17 +225,20 @@ export default function App() {
         {/* ---------------- PROBLEM ---------------- */}
         <section className="section" id="problem" aria-labelledby="problem-heading">
           <div className="wrap">
-            <div className="section-head">
+            <div className="section-head reveal">
               <span className="chip chip--red">{copy.problem.chip}</span>
               <h2 id="problem-heading">{copy.problem.h2}</h2>
-              <p style={{ margin: "1.2rem 0 0" }}>
+              <p className="sticker-row">
                 <span className="sticker">{copy.problem.sticker}</span>
+                <span className="mithu-guide mithu--bob">
+                  <Mithu mood="clarify" size={80} />
+                </span>
               </p>
             </div>
 
             <div className="stats">
               {copy.problem.stats.map((s) => (
-                <article className="card stat" key={s.chip}>
+                <article className="card stat reveal" key={s.chip}>
                   <span className={`chip chip--${s.tone}`}>{s.chip}</span>
                   <div className={s.isWord ? "stat__word" : `stat__num stat__num--${s.tone}`}>
                     {s.num}
@@ -229,7 +248,7 @@ export default function App() {
               ))}
             </div>
 
-            <article className="card mawakmat-card">
+            <article className="card mawakmat-card reveal">
               <div>
                 <span className="chip chip--green">
                   <BankIcon width="16" height="16" /> {copy.problem.mawakhat.chip}
@@ -255,10 +274,10 @@ export default function App() {
         {/* ---------------- HOW IT WORKS ---------------- */}
         <section className="section" id="how" aria-labelledby="how-heading">
           <div className="wrap">
-            <div className="section-head">
+            <div className="section-head reveal">
               <span className="chip chip--green">{copy.how.chip}</span>
               <h2 id="how-heading">{copy.how.h2}</h2>
-              <p style={{ margin: "1.2rem 0 0" }}>
+              <p className="sticker-note">
                 <span className="sticker">{copy.how.sticker}</span>
               </p>
             </div>
@@ -268,7 +287,7 @@ export default function App() {
                 const tone = ["green", "gold", "teal"][i];
                 const Tile = [MicIcon, CameraIcon, ReportIcon][i];
                 return (
-                  <article className="card step" key={st.h3}>
+                  <article className="card step reveal" key={st.h3}>
                     <div className="step__top">
                       <span className={`chip chip--${tone}`}>{st.chip}</span>
                       <span className={`icon-tile icon-tile--${tone}`}>
@@ -291,10 +310,10 @@ export default function App() {
         {/* ---------------- DIFFERENTIATORS ---------------- */}
         <section className="section" id="why" aria-labelledby="why-heading">
           <div className="wrap">
-            <div className="section-head">
+            <div className="section-head reveal">
               <span className="chip chip--red">{copy.why.chip}</span>
               <h2 id="why-heading">{copy.why.h2}</h2>
-              <p style={{ margin: "1.2rem 0 0" }}>
+              <p className="sticker-note">
                 <span className="sticker">{copy.why.sticker}</span>
               </p>
             </div>
@@ -304,7 +323,7 @@ export default function App() {
                 const tone = ["red", "green", "gold"][i];
                 const Tile = [RadarIcon, TrailIcon, BankIcon][i];
                 return (
-                  <article className="card diff" key={card.h3}>
+                  <article className="card diff reveal" key={card.h3}>
                     <span className={`icon-tile icon-tile--${tone}`}>
                       <Tile />
                     </span>
@@ -326,48 +345,61 @@ export default function App() {
         <section className="section band" id="trust" aria-labelledby="trust-heading">
           <div className="wrap">
             <div className="band-grid">
-              <div className="section-head" style={{ marginBottom: 0 }}>
+              <div className="section-head reveal">
                 <span className="chip chip--gold">{copy.trust.chip}</span>
                 <h2 id="trust-heading">{copy.trust.h2}</h2>
                 <div className="rule" aria-hidden="true" />
                 <p className="lede">{copy.trust.lede}</p>
               </div>
 
-              <div>
-                {/* Mock preview of the dashboard's stamp language */}
-                <div className="card ledger-mock" aria-label="Mock preview of one audited ledger entry">
-                  <div className="ledger-mock__head">
-                    <span className="ledger-mock__title">
-                      <MicIcon width="18" height="18" /> {copy.trust.mock.title}
-                    </span>
-                    <span className="chip chip--red">{copy.trust.mock.udharChip}</span>
-                  </div>
-
-                  <div className="ledger-mock__row">
-                    <div>
-                      <div className="ledger-mock__name">{copy.trust.mock.name}</div>
-                      <span className="urdu" lang="ur" dir="rtl" style={{ fontSize: "0.95rem" }}>
-                        {copy.trust.mock.urduAmount}
+              <div className="reveal">
+                <div className="ledger-mock-row">
+                  {/* Mock preview of the dashboard's stamp language */}
+                  <div className="card ledger-mock" aria-label="Mock preview of one audited ledger entry">
+                    <div className="ledger-mock__head">
+                      <span className="ledger-mock__title">
+                        <MicIcon width="18" height="18" /> {copy.trust.mock.title}
                       </span>
+                      <span className="chip chip--red">{copy.trust.mock.udharChip}</span>
                     </div>
-                    <span className="ledger-mock__amount">{copy.trust.mock.amount}</span>
+
+                    <div className="ledger-mock__row">
+                      <div>
+                        <div className="ledger-mock__name">{copy.trust.mock.name}</div>
+                        {/* Urdu accent line — suppressed in pure-English mode */}
+                        {lang !== "en" && (
+                          <span
+                            className="urdu"
+                            lang="ur"
+                            dir="rtl"
+                            style={{ fontSize: "0.95rem" }}
+                          >
+                            {copy.trust.mock.urduAmount}
+                          </span>
+                        )}
+                      </div>
+                      <span className="ledger-mock__amount">{copy.trust.mock.amount}</span>
+                    </div>
+
+                    <ul className="ledger-mock__meta">
+                      <li>
+                        <MicIcon width="18" height="18" />
+                        {copy.trust.mock.source}
+                      </li>
+                      <li>
+                        <TrailIcon width="18" height="18" />
+                        {copy.trust.mock.parsed}
+                      </li>
+                    </ul>
+
+                    <span className="ledger-mock__correct">
+                      <PencilIcon /> {copy.trust.mock.correct}
+                    </span>
+                    <span className="stamp ledger-mock__stamp">{copy.trust.mock.stamp}</span>
                   </div>
-
-                  <ul className="ledger-mock__meta">
-                    <li>
-                      <MicIcon width="18" height="18" />
-                      {copy.trust.mock.source}
-                    </li>
-                    <li>
-                      <TrailIcon width="18" height="18" />
-                      {copy.trust.mock.parsed}
-                    </li>
-                  </ul>
-
-                  <span className="ledger-mock__correct">
-                    <PencilIcon /> {copy.trust.mock.correct}
+                  <span className="mithu-guide mithu--bob">
+                    <Mithu mood="success" size={96} />
                   </span>
-                  <span className="stamp ledger-mock__stamp">{copy.trust.mock.stamp}</span>
                 </div>
                 <p className="mock-caption">{copy.trust.mock.caption}</p>
 

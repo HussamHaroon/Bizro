@@ -238,6 +238,10 @@ button:focus-visible {
 
 .site-nav {
   display: none;
+  /* 0 0 auto: the nav is the one header item that must never be crushed.
+     Its natural width (468px in mixed) is the real budget — the header
+     shrinks everything else around it instead. */
+  flex: 0 0 auto;
   align-items: center;
   gap: 0.35rem;
 }
@@ -247,6 +251,8 @@ button:focus-visible {
   align-items: center;
   min-height: 48px;
   padding: 0.4rem 0.85rem;
+  /* "How it works" breaking across two lines doubled the header height. */
+  white-space: nowrap;
   color: var(--ink);
   font-weight: 600;
   text-decoration: none;
@@ -265,7 +271,9 @@ button:focus-visible {
   white-space: nowrap;
 }
 
-@media (min-width: 880px) {
+/* nowrap means the nav spills instead of wrapping, so it only shows once the
+   header has the width to hold it on one line (see the 1199/1023 steps below). */
+@media (min-width: 960px) {
   .site-nav {
     display: inline-flex;
   }
@@ -700,7 +708,7 @@ h3 {
 }
 
 .diff {
-  padding: 1.6rem 1.5rem 1.7rem;
+  padding: 1.5rem 1.5rem 1.6rem;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
@@ -730,6 +738,7 @@ h3 {
 
 .band .section-head {
   max-width: 30rem;
+  margin-bottom: 0;
 }
 
 .band h2 {
@@ -987,6 +996,10 @@ h3 {
     transform: none;
   }
 
+  .lang-switch__btn:active {
+    transform: none;
+  }
+
   .sticker,
   .stamp,
   .hl,
@@ -1117,7 +1130,20 @@ a:focus-visible,
   }
 
   .hero {
-    padding-block: 5rem 6.5rem; /* bottom joins the section pulse */
+    /* bottom trimmed 2.25rem -> 1.5rem: reclaims exactly the 12px the hero
+       gained when Mithu's perch went -16px -> -4px, so hero height stays
+       594.7. At 1280x720 that leaves 46px of the movie showing below the
+       fold — a hint, not a scene (measured; it was 37px back when the
+       crowded header still cost 88.6px). */
+    padding-block: 2.5rem 1.5rem;
+  }
+
+  .hero .sticker {
+    margin-bottom: 1.15rem;
+  }
+
+  .hero .lede {
+    margin-bottom: 1.5rem;
   }
 
   .section-head {
@@ -1172,6 +1198,23 @@ a:focus-visible,
 
   .demo-frame {
     max-width: 30rem;
+    padding: 1.25rem 1.4rem 1.4rem;
+  }
+
+  .demo-frame .flow-arrow {
+    margin-block: 0.4rem;
+  }
+
+  .demo-frame .flow-invoice {
+    padding: 0.85rem 1rem 1rem;
+  }
+
+  .demo-frame .flow-invoice .stamp {
+    margin-top: 0.7rem;
+  }
+
+  .demo-frame__link {
+    margin-top: 0.85rem;
   }
 
   .band-grid {
@@ -1454,6 +1497,18 @@ a:focus-visible,
   gap: 10px;
 }
 
+/* Retired from the header at EVERY width. It was the most expensive item
+   (153px in mixed) and the most duplicated: /ledger is linked five times
+   inside the page and the hero carries a 237x56 primary CTA directly under
+   the headline. With both it and a labeled sound chip present the header
+   items sum to exactly 1120px at --wrap 1120 — zero slack — so the nav was
+   what collapsed ("How it works" wrapped to two lines). The two together
+   need 1200.7px, which the wrap never provides. Markup and copy.nav.cta
+   stay untouched; this one rule is the whole revert. */
+.header-actions .header-cta {
+  display: none;
+}
+
 .lang-switch {
   display: inline-flex;
   border: 3px solid var(--ink);
@@ -1483,6 +1538,10 @@ a:focus-visible,
   background: var(--canvas);
 }
 
+.lang-switch__btn:active {
+  transform: translateY(1px);
+}
+
 .lang-switch__btn.is-active {
   background: var(--gold);
   font-weight: 700;
@@ -1494,15 +1553,29 @@ a:focus-visible,
 }
 
 @media (max-width: 860px) {
-  .header-actions .header-cta {
-    display: none; /* nav keeps a CTA inside the page; header stays unbusy */
-  }
   .lang-switch__btn {
     padding: 8px 9px;
     font-size: 0.8rem;
   }
   .lang-switch__btn:first-child {
     font-size: 0.95rem;
+  }
+}
+
+/* the sound chip joins the header here, so the wordmark and the language
+   switch give up the ~25px it needs. Both keep their 44px touch targets. */
+@media (max-width: 480px) {
+  .site-header__inner {
+    gap: 0.5rem;
+  }
+  .header-actions {
+    gap: 6px;
+  }
+  .wordmark__logo {
+    height: 26px;
+  }
+  .lang-switch__btn {
+    padding: 8px 6px;
   }
 }
 
@@ -1593,4 +1666,434 @@ html[lang="ur"] .mini-stat dt {
   font-size: calc(var(--c) * 0.185);
   transform: translateY(calc(var(--c) * 0.07)) translateX(var(--zx, 0em));
   user-select: none;
+}
+
+/* ============================================================
+   Mithu integration layer (2026-09-03) — hero presenter, movie
+   cameo, section guides. Layout + one idle bob only; no new
+   colours, fonts, or shadow styles (D4-1 law untouched).
+   ============================================================ */
+
+.mithu-guide {
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.mithu-guide svg,
+.hero__mithu svg,
+.movie__mithu svg {
+  display: block;
+}
+
+/* the one idle bob — static when the user prefers reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  .mithu--bob {
+    animation: mithu-bob 3s ease-in-out infinite;
+  }
+
+  @keyframes mithu-bob {
+    0%,
+    100% {
+      transform: translateY(-3px);
+    }
+    50% {
+      transform: translateY(3px);
+    }
+  }
+}
+
+/* hero: feet planted on the demo-frame's top edge, clear of its
+   tag (which lives at the frame's left); physical-right so he
+   never lands on the tag in RTL either */
+.hero__mithu {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  /* feet land ON the frame's 3px dashed top border, not inside it. The old
+     -16px sank them 12.2px past the border into the frame's padding (measured),
+     which read as Mithu overlapping the card. z-index 2 keeps him painted in
+     front of the border he stands on. */
+  margin-bottom: -4px;
+}
+
+.hero__mithu svg {
+  /* 20px inset from the column's outer edge. Logical, not physical: the
+     row-reverse .guide-mithu packs Mithu to the inline-END in both writing
+     directions, so margin-inline-end always faces away from the bubble —
+     a physical margin-right would land on the bubble's side in RTL and
+     push the tail's point 24px clear of his beak. */
+  margin-inline-end: 1.25rem;
+}
+
+/* problem: floats beside the section sticker */
+.sticker-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  margin: 1.2rem 0 0;
+}
+
+/* trust: beside the ledger-mock card */
+.ledger-mock-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.25rem;
+}
+
+.ledger-mock-row .card.ledger-mock {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* movie cameo — scene 1 only; ScrollMovie writes the opacity */
+.movie__mithu {
+  position: absolute;
+  top: clamp(0.9rem, 3vh, 1.6rem);
+  inset-inline-end: clamp(0.9rem, 4vw, 2rem);
+  width: 90px;
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* phones: guides crowd the text — drop them; hero Mithu steps
+   above the frame, smaller */
+@media (max-width: 640px) {
+  .mithu-guide {
+    display: none;
+  }
+
+  .hero__mithu {
+    margin-bottom: 1.75rem; /* clears the frame tag protruding above the frame */
+  }
+
+  .hero__mithu svg {
+    width: 120px;
+    height: 120px;
+    margin: 0; /* centered by .guide-mithu's align-items, not by auto margins */
+  }
+
+  .movie__mithu {
+    width: 68px;
+  }
+}
+
+/* reduced motion: no cameo at all */
+@media (prefers-reduced-motion: reduce) {
+  .movie__mithu {
+    display: none;
+  }
+}
+
+/* ============================================================
+   Entrance reveal + polish pass (2026-09-03) — appended layer.
+   One shared fade + rise for section heads and cards, driven by
+   useReveal() (a single IntersectionObserver on <main>). The
+   hidden start-state and the transition live ONLY inside
+   prefers-reduced-motion: no-preference, so a reduced-motion
+   visitor gets the exact same markup fully visible and static —
+   the hook only ever ADDS .is-in, it never hides anything, so
+   content can never be stranded if JS/IO is unavailable.
+   Stagger (<= 80ms between siblings) is set as an inline
+   transition-delay by the hook; it is inert under reduce.
+   ============================================================ */
+
+/* section-head sticker line — one rhythm shared with .sticker-row */
+.sticker-note {
+  margin: 1.2rem 0 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================================
+   Mithu guide bubble + SFX toggle (mascot UX pass) — appended
+   layer. Styles GuideMithu / SfxToggle from Mascot.tsx.
+     - token vars only · 3px ink borders · radius <= 2px (0 on
+       chips) · hard offset shadows, zero blur · flat fills
+     - the bubble is IN FLOW, never an overlay. .guide-mithu is
+       a full-width flex row-reverse: Mithu packs physical-right
+       (as before) and the bubble takes the empty band to his
+       left, above the demo frame. Because it reserves its own
+       box it cannot cover the sticky header, the hero copy or
+       the frame's protruding tag at ANY width, language or tip
+       length — a long Urdu tip just makes the row taller.
+     - phones flip the row to column-reverse: the bubble sits
+       above a centered Mithu, again in flow.
+     - show/hide is pure visibility (works with zero JS motion):
+       every fade/slide lives ONLY inside prefers-reduced-motion:
+       no-preference; reduced-motion visitors get instant,
+       fully functional open/close. The motion uses the standalone
+       `translate` property so it can never collide with the
+       centering `transform` used on small screens.
+   ============================================================ */
+
+.guide-mithu {
+  position: relative;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-end;
+  width: 100%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.guide-mithu:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* Mithu himself never compresses — the bubble absorbs the shrink */
+.guide-mithu > svg {
+  flex: 0 0 auto;
+}
+
+.mithu-bubble {
+  position: relative;
+  z-index: 6;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 260px;
+  /* 14px off Mithu's beak (inline-end faces him in BOTH directions, since
+     row-reverse mirrors with the writing direction) · 2.4rem clears the
+     demo-frame tag that protrudes 15px into this row */
+  margin-block-end: 2.4rem;
+  margin-inline-end: 14px;
+  padding: 0.55rem 0.75rem 0.65rem;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+  text-align: start;
+}
+
+/* closed = invisible but present; visibility flips instantly when
+   the user prefers reduced motion (no transition defined here) */
+.guide-mithu:not(.is-open) .mithu-bubble {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mithu-bubble__tip {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* full-Urdu mode: Nastaliq, generous line-height, never clipped */
+html[lang="ur"] .mithu-bubble__tip {
+  font-family: var(--font-urdu);
+  font-size: 1rem;
+  line-height: 2.1;
+}
+
+/* tip progress dots — stamped little squares, decorative */
+.mithu-bubble__dots {
+  display: flex;
+  gap: 5px;
+  margin-top: 0.5rem;
+}
+
+.mithu-bubble__dot {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--ink);
+  background: var(--card);
+}
+
+.mithu-bubble__dot.is-active {
+  background: var(--ink);
+}
+
+/* square tail — an ink-bordered square rotated onto its corner,
+   two visible borders forming the point aimed at Mithu */
+.mithu-bubble__tail {
+  position: absolute;
+  top: 16px;
+  right: -10px;
+  width: 14px;
+  height: 14px;
+  background: var(--card);
+  border-top: 3px solid var(--ink);
+  border-right: 3px solid var(--ink);
+  transform: rotate(45deg);
+}
+
+/* RTL (Urdu): the row mirrors, so Mithu is on the bubble's LEFT — mirror
+   the point with him. Scoped above the phone breakpoint so it can never
+   out-specify the downward tail used on the stacked layout. */
+@media (min-width: 641px) {
+  html[dir="rtl"] .mithu-bubble__tail {
+    right: auto;
+    left: -10px;
+    border-right: none;
+    border-left: 3px solid var(--ink);
+    transform: rotate(-45deg);
+  }
+}
+
+/* ---------- SFX toggle — a chip in the .chip / .lang-switch language ---------- */
+
+.sfx-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.4rem 0.7rem;
+  appearance: none;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.sfx-toggle.is-on {
+  background: var(--gold); /* same "active = gold" as .lang-switch__btn.is-active */
+}
+
+.sfx-toggle__icon {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.sfx-toggle__label {
+  white-space: nowrap;
+}
+
+html[lang="ur"] .sfx-toggle {
+  font-family: var(--font-urdu);
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.9;
+}
+
+/* ---------- header width budget: keep the nav on ONE line ----------
+   Two steps buy the room back, cheapest first:
+     <= 1199  chip loses its word label (icon-only)   frees 57-131px
+     <= 1023  nav gutter tightens                     frees ~48px
+   With those plus the retired header CTA above, mixed mode needs 1037.5px
+   inside the 1120px wrap (en 983.5, ur 922.5) and the nav shows from 960px
+   up with 46px to spare. */
+@media (max-width: 1199px) {
+  /* icon-only chip — below this width the header has no room for the word
+     label next to the wordmark, the nav and the three-button language
+     switch. Clipped, not removed, so the accessible name and aria-pressed
+     survive; the 44px touch target does too. */
+  .sfx-toggle {
+    gap: 0;
+    padding: 0.4rem;
+  }
+
+  .sfx-toggle__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .site-nav {
+    gap: 0.2rem;
+  }
+
+  /* inline gutter only — the 48px min-height keeps the touch target legal */
+  .site-nav a {
+    padding-inline: 0.55rem;
+  }
+}
+
+/* phones: the row flips — the bubble reserves its box ABOVE a centered
+   Mithu, still in flow, so a long Urdu tip can only push the hero taller */
+@media (max-width: 640px) {
+  .guide-mithu {
+    flex-direction: column-reverse;
+    align-items: center;
+  }
+
+  .mithu-bubble {
+    margin: 0 0 0.9rem;
+    max-width: min(260px, 100%);
+  }
+
+  .mithu-bubble__tail {
+    top: auto;
+    bottom: -10px;
+    left: calc(50% - 7px);
+    right: auto;
+    border-top: none;
+    border-bottom: 3px solid var(--ink);
+  }
+}
+
+/* motion — ONLY with user consent; under reduce the bubble and chip
+   are fully functional but completely static */
+@media (prefers-reduced-motion: no-preference) {
+  .mithu-bubble {
+    transition:
+      opacity 160ms ease-out,
+      translate 160ms ease-out,
+      visibility 0s linear 160ms; /* hiding waits for the fade-out */
+  }
+
+  .guide-mithu:not(.is-open) .mithu-bubble {
+    opacity: 0;
+    translate: 0 8px;
+  }
+
+  .guide-mithu.is-open .mithu-bubble {
+    opacity: 1;
+    translate: 0 0;
+    transition-delay: 0s; /* showing is immediate */
+  }
+
+  /* chip: the shared .btn hover-lift / active-press, chip-sized */
+  .sfx-toggle {
+    transition:
+      transform 120ms ease-out,
+      box-shadow 120ms ease-out,
+      background-color 120ms ease-out;
+  }
+
+  .sfx-toggle:hover,
+  .sfx-toggle:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .sfx-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
 }

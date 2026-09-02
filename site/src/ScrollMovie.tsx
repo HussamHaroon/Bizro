@@ -29,6 +29,7 @@
 */
 
 import { useEffect, useRef, useState } from "react";
+import { Mithu } from "./Mascot";
 import { useSiteLang } from "./site-i18n";
 
 /* ---------- tiny easings ---------- */
@@ -197,6 +198,7 @@ export default function ScrollMovie() {
   const barRef = useRef<HTMLDivElement | null>(null);
   const wordRef = useRef<HTMLSpanElement | null>(null);
   const zRef = useRef<HTMLSpanElement | null>(null);
+  const mithuRef = useRef<HTMLDivElement | null>(null);
   const [scene, setScene] = useState(0);
 
   useEffect(() => {
@@ -286,6 +288,14 @@ export default function ScrollMovie() {
         chip.style.transform = `translateY(${(1 - c) * 26}px)`;
       });
       if (barRef.current) barRef.current.style.transform = `scaleX(${p})`;
+
+      /* Mithu cameo: listens in during the scatter, fully gone before the
+         assemble scene begins (opacity only — the bob is CSS) */
+      if (mithuRef.current) {
+        mithuRef.current.style.opacity = String(
+          clamp(p / 0.06) * (1 - clamp((p - 0.12) / 0.08)),
+        );
+      }
 
       /* --- pieces: scatter drift → assembly flight --- */
       pieceRefs.current.forEach((el, i) => {
@@ -496,6 +506,11 @@ export default function ScrollMovie() {
 
         {/* summary for screen readers (the visuals are decorative) */}
         <p className="sr-only">{copy.movie.sr}</p>
+
+        {/* Mithu cameo — perches in the corner for the scatter only */}
+        <div className="movie__mithu mithu--bob" ref={mithuRef} aria-hidden="true">
+          <Mithu mood="listening" size={90} />
+        </div>
       </div>
     </section>
   );
