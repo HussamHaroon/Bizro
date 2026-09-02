@@ -76,6 +76,8 @@ def budget() -> int:
 def allow(model: str) -> None:
     """Raise FreeTierBudgetExceeded when today's budget is spent. Call BEFORE
     every live chat/completions POST."""
+    if os.environ.get("LLM_GUARD_OFF") == "1":
+        return  # test run — fake transports must not pollute the ledger
     data = _rolled(_load())
     if int(data.get("count", 0)) >= BUDGET:
         raise FreeTierBudgetExceeded(
@@ -86,6 +88,8 @@ def allow(model: str) -> None:
 
 def record(model: str, usage: dict[str, Any] | None = None) -> None:
     """Record one live inference call. Call right after a successful POST."""
+    if os.environ.get("LLM_GUARD_OFF") == "1":
+        return  # test run — fake transports must not pollute the ledger
     data = _rolled(_load())
     data["count"] = int(data.get("count", 0)) + 1
     calls = data.setdefault("calls", [])
