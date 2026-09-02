@@ -48,6 +48,11 @@ class Settings:
     numeral_style: str = "western"  # western | urdu (design.md §4.2 — settled by user test)
     audio_decode: str = "ffmpeg"  # ffmpeg | pyav | raw  (swappable decode step)
     probe_voice: str = "Tina"  # voice for the speech-out probe (notes.md §1)
+    # --- Free-tier STT (D6-3): Groq whisper transcribes, text model parses ---
+    stt_api_key: str = ""
+    stt_base_url: str = "https://api.groq.com/openai/v1"
+    stt_model: str = "whisper-large-v3-turbo"
+    stt_language: str = "ur"  # empty = auto-detect
     repo_root: Path = field(default_factory=_find_repo_root)
 
     @property
@@ -77,4 +82,8 @@ def load_settings(env: dict[str, str] | None = None) -> Settings:
         numeral_style=get("NUMERAL_STYLE", "western").lower(),
         audio_decode=get("AUDIO_DECODE", "ffmpeg").lower(),
         probe_voice=get("PROBE_VOICE", "Tina"),
+        stt_api_key=get("STT_API_KEY"),
+        stt_base_url=get("STT_BASE_URL", Settings.stt_base_url),
+        stt_model=get("STT_MODEL", Settings.stt_model),
+        stt_language=get("STT_LANGUAGE", "ur"),
     )
