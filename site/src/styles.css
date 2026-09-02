@@ -1578,14 +1578,19 @@ html[lang="ur"] .mini-stat dt {
   unicode-bidi: embed;
 }
 
-/* Latin wordmark on the coin (English mode) — Latin caps have no Nastaliq
-   descenders, so undo the piece's -0.07 lift and sit on true center. */
+/* Latin wordmark on the coin (English mode) — tight word, Z on the seam:
+   BI/Z/RO sit flush (0.04em gaps); the whole word is then shifted by
+   --zx (measured at runtime in em, see ScrollMovie) so the Z — not the
+   box — lands exactly on the coin's center seam. em scales with the
+   stamp's scale-down and rotation. Latin caps have no Nastaliq
+   descenders, so undo the piece's -0.07 lift. */
 .movie__word--latin {
+  display: flex;
+  align-items: center;
+  gap: 0.04em;
   font-family: var(--font-slab);
   font-weight: 700;
   font-size: calc(var(--c) * 0.185);
-  letter-spacing: 0.08em;
-  /* measured: the Z must sit ON the coin's center seam — slab caps R/O are
-     wider than B/I, so flex centering lands the Z ~7.5% of --c left */
-  transform: translateY(calc(var(--c) * 0.055)) translateX(calc(var(--c) * 0.075));
+  transform: translateY(calc(var(--c) * 0.07)) translateX(var(--zx, 0em));
+  user-select: none;
 }
