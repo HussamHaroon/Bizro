@@ -89,6 +89,10 @@ class DashScopeClient:
         url = self.settings.dashscope_base_url.rstrip("/") + "/chat/completions"
         headers = {"Authorization": f"Bearer {self.settings.dashscope_api_key}"}
 
+        import llm_guard  # free-tier budget guard (repo root; D6-2)
+
+        llm_guard.allow(self.settings.model_voice)
+
         resp = OmniResponse(audio_format=audio_format if "audio" in payload["modalities"] else None)
         timeout = httpx.Timeout(connect=10.0, read=180.0, write=120.0, pool=30.0)
         try:
@@ -118,6 +122,7 @@ class DashScopeClient:
             raise
         except httpx.HTTPError as exc:
             raise DashScopeError(f"DashScope transport error: {exc}") from exc
+        llm_guard.record(self.settings.model_voice, usage=resp.usage)
         return resp
 
 

@@ -66,6 +66,9 @@ def chat_completion(
     if response_format_json:
         body["response_format"] = {"type": "json_object"}
 
+    import llm_guard  # free-tier budget guard (repo root; D6-2)
+
+    llm_guard.allow(model)
     resp = httpx.post(
         f"{s.dashscope_base_url.rstrip('/')}/chat/completions",
         headers=_headers(s.dashscope_api_key),
@@ -76,7 +79,9 @@ def chat_completion(
         raise DashScopeError(
             f"DashScope chat/completions HTTP {resp.status_code}: {resp.text[:500]}"
         )
-    return resp.json()
+    data = resp.json()
+    llm_guard.record(model, usage=data.get("usage"))
+    return data
 
 
 def list_models(timeout: float = 30.0) -> dict[str, Any]:

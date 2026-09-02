@@ -47,6 +47,9 @@ class Settings(BaseSettings):
 
     # --- Storage / behavior ---
     database_url: str = "sqlite:///./bizro.db"
+    # Serverless hosts (Vercel) have a read-only FS except /tmp — override with
+    # MEDIA_DIR=/tmp/media there (D6-2 provider/deploy switch).
+    media_dir_override: str = ""
     mock_mode: str = "auto"  # auto | always | never
     confidence_confirm_threshold: float = 0.75
     numeral_style: str = "western"  # western | urdu
@@ -54,6 +57,8 @@ class Settings(BaseSettings):
 
     @property
     def media_dir(self) -> Path:
+        if self.media_dir_override:
+            return Path(self.media_dir_override)
         return REPO_ROOT / "media"
 
     def dashscope_is_live(self) -> bool:
