@@ -45,6 +45,9 @@ def _call_reasoning_model(payload: dict) -> str | None:
     ).rstrip("/")
     model = os.environ.get("MODEL_REASONING", "qwen3.7-plus")
     try:
+        import llm_guard  # free-tier budget guard (repo root; D6-2)
+
+        llm_guard.allow(model)
         resp = httpx.post(
             f"{base}/chat/completions",
             headers={"Authorization": f"Bearer {key}"},
@@ -65,7 +68,9 @@ def _call_reasoning_model(payload: dict) -> str | None:
             timeout=30,
         )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        data = resp.json()
+        llm_guard.record(model, usage=data.get("usage"))
+        return data["choices"][0]["message"]["content"]
     except Exception:
         return None
 
