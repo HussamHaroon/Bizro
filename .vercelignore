@@ -1,0 +1,11 @@
+.venv
+node_modules
+media
+data
+*.db
+.worktrees
+.git
+qa
+docs
+server_run.log
+__pycache__
