@@ -1,0 +1,58 @@
+[
+  {
+    "file": "vn-01-udhar-ahmad.mp3",
+    "voice": "AsadNeural",
+    "transcript": "احمد کو پانچ ہزار کا ادھار دیا چینی کے لیے",
+    "expected_kind": "udhar_given",
+    "expected_amount": 5000
+  },
+  {
+    "file": "vn-02-sale-cash.mp3",
+    "voice": "UzmaNeural",
+    "transcript": "آج رحمت کو تین ہزار کا گھی بیچا نقد لیا",
+    "expected_kind": "sale",
+    "expected_amount": 3000
+  },
+  {
+    "file": "vn-03-expense.mp3",
+    "voice": "AsadNeural",
+    "transcript": "ملک بھائی سے دو ہزار کا چاول منگوائے ادھار",
+    "expected_kind": "expense",
+    "expected_amount": 2000
+  },
+  {
+    "file": "vn-04-settlement.mp3",
+    "voice": "UzmaNeural",
+    "transcript": "کامران نے آٹھ ہزار روپے واپس کیے آج",
+    "expected_kind": "udhar_settlement",
+    "expected_amount": 8000
+  },
+  {
+    "file": "vn-05-mixed-english.mp3",
+    "voice": "AsadNeural",
+    "transcript": "بلال کو seven thousand کا udhar دیا biscuits کے لیے",
+    "expected_kind": "udhar_given",
+    "expected_amount": 7000
+  },
+  {
+    "file": "vn-06-sale-items.mp3",
+    "voice": "UzmaNeural",
+    "transcript": "صالح کو دو پیکٹ دودھ پتی ساڑھے تین سو کے بیچے نقد",
+    "expected_kind": "sale",
+    "expected_amount": 350
+  },
+  {
+    "file": "vn-07-unclear.mp3",
+    "voice": "AsadNeural",
+    "transcript": "نصرین کو کچھ سامان ادھار پر دیا",
+    "expected_kind": "udhar_given",
+    "expected_amount": null
+  },
+  {
+    "file": "vn-08-expense-bill.mp3",
+    "voice": "UzmaNeural",
+    "transcript": "بجلی کا بل پندرہ سو جما اڈا کھاتے میں",
+    "expected_kind": "expense",
+    "expected_amount": 1500
+  }
+]
