@@ -26,6 +26,22 @@ for p in (
     if s not in sys.path:
         sys.path.insert(0, s)
 
+import sys
+from pathlib import Path
+
+# api/index.py → parents[1] is the repo root; expose the pipeline packages
+# exactly like server.app.config.ensure_repo_root_on_path does locally.
+_REPO = Path(__file__).resolve().parents[1]
+for p in (
+    _REPO,
+    _REPO / "voice-agent",
+    _REPO / "vision-agent",
+    _REPO / "credit-agent",
+):
+    s = str(p)
+    if s not in sys.path:
+        sys.path.insert(0, s)
+
 from server.app.main import app  # noqa: E402
 
 handler = app  # Vercel's ASGI adapter looks for `app` in the module

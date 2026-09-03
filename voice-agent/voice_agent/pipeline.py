@@ -111,7 +111,8 @@ def process_voice_note(
                 transcript = transcribe(
                     decoded.data, filename=f"voice.{decoded.api_format}", settings=settings
                 )
-                model_text = client.omni_chat(
+                # plain text call — generic hosts reject the omni field set
+                model_text = client.chat_text(
                     system=SYSTEM_PROMPT,
                     user_text=(
                         f"السماعی نوٹ کا متن (transcript):\n{transcript}\n\n"

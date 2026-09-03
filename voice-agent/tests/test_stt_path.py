@@ -102,6 +102,10 @@ class _FakeClient:
     def __init__(self, settings):
         self.settings = settings
 
+    def chat_text(self, *, system, user_text, **kwargs):
+        _FakeClient.last_user_text = user_text
+        return type("R", (), {"text": _PARSE_REPLY, "usage": None})()
+
     def omni_chat(self, *, system, user_text, **kwargs):
         _FakeClient.last_user_text = user_text
         return type("R", (), {"text": _PARSE_REPLY, "usage": None})()

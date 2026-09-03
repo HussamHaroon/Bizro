@@ -16,6 +16,7 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -49,7 +50,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./bizro.db"
     # Serverless hosts (Vercel) have a read-only FS except /tmp — override with
     # MEDIA_DIR=/tmp/media there (D6-2 provider/deploy switch).
-    media_dir_override: str = ""
+    media_dir_override: str = Field(default="", validation_alias=AliasChoices("MEDIA_DIR", "media_dir_override"))
     mock_mode: str = "auto"  # auto | always | never
     confidence_confirm_threshold: float = 0.75
     numeral_style: str = "western"  # western | urdu
