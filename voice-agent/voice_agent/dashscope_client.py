@@ -50,6 +50,53 @@ class DashScopeClient:
             raise DashScopeError("DASHSCOPE_API_KEY not set (MOCK_MODE=auto would mock)")
         self.settings = settings
 
+    def chat_text(
+        self,
+        *,
+        system: str,
+        user_text: str,
+        model: str | None = None,
+        temperature: float = 0.1,
+        max_tokens: int = 600,
+    ) -> OmniResponse:
+        """Plain non-streaming text completion — for the STT path, where the
+        transcript is already plain text and provider-specific omni fields
+        (modalities / stream_options) would be rejected by generic hosts
+        (OpenRouter free models reject them)."""
+        payload: dict = {
+            "model": model or self.settings.model_voice,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_text},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        url = self.settings.dashscope_base_url.rstrip("/") + "/chat/completions"
+        headers = {"Authorization": f"Bearer {self.settings.dashscope_api_key}"}
+
+        import llm_guard
+
+        llm_guard.allow(payload["model"])
+        timeout = httpx.Timeout(connect=10.0, read=120.0, write=60.0, pool=30.0)
+        with httpx.Client(timeout=timeout) as http:
+            resp = http.post(url, headers=headers, json=payload)
+        if resp.status_code != 200:
+            raise DashScopeError(
+                f"chat_text HTTP {resp.status_code}: {resp.text[:1000]}",
+                status=resp.status_code,
+                body=resp.text[:1000],
+            )
+        data = resp.json()
+        llm_guard.record(payload["model"], usage=data.get("usage"))
+        out = OmniResponse()
+        choice = (data.get("choices") or [{}])[0]
+        msg = choice.get("message") or {}
+        out.text = msg.get("content") or ""
+        out.finish_reason = choice.get("finish_reason")
+        out.usage = data.get("usage")
+        return out
+
     def omni_chat(
         self,
         *,

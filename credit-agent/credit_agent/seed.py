@@ -114,12 +114,17 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
                      wa_id="923009999888" if profile == "healthy" else "923009111222",
                      display_name=merchant_name, created_at=now)
         s.add(m)
+        # Postgres enforces FKs (SQLite didn't) — flush the merchant before
+        # any child row (customers, media blobs, transactions) references it.
+        s.flush()
         names = CUSTOMERS if profile == "healthy" else CONTRAST_CUSTOMERS
         cust_ids = {}
         for name in names:
             c = Customer(id=uuid.uuid4(), merchant_id=m.id, name=name, created_at=now)
             s.add(c)
             cust_ids[name] = c.id
+
+        s.flush()  # customers must exist before transactions reference them
 
         def add_tx(day_offset, kind, amount, source, conf, flag="none", status="confirmed",
                    desc="", customer=None):
