@@ -69,8 +69,11 @@ export interface ApiClient {
 
 const env = import.meta.env;
 
-/** '' = same-origin (dev proxy → :8000); or an explicit origin. */
-const BASE_URL = env.VITE_API_BASE_URL ? String(env.VITE_API_BASE_URL).replace(/\/$/, '') : '';
+/** '' = same-origin (dev proxy → :8000); or an explicit origin. Shared with
+    the webhook POST path (api/simulator.ts) so both surfaces target the same
+    server — the dev proxy already forwards /webhook alongside /api. */
+export const API_BASE_URL = env.VITE_API_BASE_URL ? String(env.VITE_API_BASE_URL).replace(/\/$/, '') : '';
+const BASE_URL = API_BASE_URL;
 const MERCHANT_ID = String(env.VITE_MERCHANT_ID ?? 'me');
 
 // -- live client ----------------------------------------------------------------
