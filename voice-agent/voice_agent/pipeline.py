@@ -57,6 +57,9 @@ HARD RULES:
 - If the amount is ambiguous ("پانچ یا چھ ہزار"), set amount_pkd=null and list "amount" in unclear.
   NEVER pick one of several possible amounts. NEVER invent digits.
 - Convert spoken number words to digits: "panch hazar"=5000, "پندرہ سو"=1500, "aath bori"=8 bags.
+- English number words are often written in Urdu script PHONETICALLY by the transcriber:
+  "سون تھاؤزن" = 7000, "ٹو ان ہزار" = 2000, "پوائنٹ فائیو" = 0.5, "فورٹی فائیو" = 45.
+  Always convert these phonetic English numbers to digits like any other spoken number.
 - item_lines only when the note clearly lists items; else [].
 - If item_lines exist and their line_totals do not sum to amount_pkd, still report what was said —
   do NOT silently fix; the pipeline flags the mismatch."""
