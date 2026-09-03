@@ -6,6 +6,7 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
 sqlalchemy>=2.0
+psycopg2-binary>=2.9      # Postgres driver (Neon / Vercel)
 pydantic>=2.13,<3
 pydantic-settings>=2.4
 httpx>=0.28
