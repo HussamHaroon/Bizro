@@ -254,6 +254,23 @@ export function IconSettings({ className, ...rest }: IconProps) {
   );
 }
 
+/** WhatsApp chat screen (screen identity, /simulator). Pair with "WhatsApp · واٹس ایپ".
+    House grammar: a speech bubble + tail knocked out of the badge with three
+    currentColor dots — reads as "chat" at tab size without cloning WhatsApp's
+    own logo (this is Bizro's stamped version of it). */
+export function IconWhatsApp({ className, ...rest }: IconProps) {
+  return (
+    <Badge className={className} {...rest}>
+      <path d="M6.6 5.4h10.8a2 2 0 0 1 2 2v6.9a2 2 0 0 1-2 2h-5.3l-3.7 3.1a.6.6 0 0 1-1-.46v-2.64a2 2 0 0 1-.8-1.6V7.4a2 2 0 0 1 2-2z" />
+      <g fill="currentColor">
+        <circle cx="8.8" cy="10.85" r="1.05" />
+        <circle cx="12" cy="10.85" r="1.05" />
+        <circle cx="15.2" cy="10.85" r="1.05" />
+      </g>
+    </Badge>
+  );
+}
+
 /** Previous / next chevrons (month navigation, paired with month names). */
 export function IconChevronLeft({ className, ...rest }: IconProps) {
   return (
@@ -285,6 +302,67 @@ export function IconChevronDown({ className, ...rest }: IconProps) {
     <Badge className={className} {...rest}>
       <path d="M6.4 9.9 7.5 8.8l4.5 4.5 4.5-4.5 1.1 1.1-5.6 5.6z" />
     </Badge>
+  );
+}
+
+/** Send / paper-plane (chat input bar). Solid currentColor — sits on filled or
+    bordered chips where the badge treatment would vanish. Pair with "Send · بھیجیں". */
+export function IconSend({ className, ...rest }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      role="img"
+      aria-hidden="true"
+      focusable="false"
+      className={`inline-block shrink-0 ${className}`}
+      {...rest}
+    >
+      <path d="M3.4 20.4l17.45-8.4L3.4 3.6v6.53L14.2 12 3.4 13.87z" />
+    </svg>
+  );
+}
+
+/** Paperclip (chat input bar, photo attach). The one stroked glyph in the set:
+    a filled paperclip is unreadable knots at 20px, and a 2.4-weight stroke
+    keeps the single-weight, solid-at-a-glance law. Pair with "Photo · تصویر". */
+export function IconPaperclip({ className, ...rest }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      role="img"
+      aria-hidden="true"
+      focusable="false"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`inline-block shrink-0 ${className}`}
+      {...rest}
+    >
+      <path d="m21.2 11.3-8.9 8.9a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.85 1.85 0 0 1-2.6-2.6l8.6-8.6" />
+    </svg>
+  );
+}
+
+/** Microphone (chat input bar, voice note). Same treatment as the badge-set
+    mic (IconVoice) drawn as a standalone currentColor glyph. Pair with
+    "Mic · مائیک" / "Stop · روکیں". */
+export function IconMic({ className, ...rest }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      role="img"
+      aria-hidden="true"
+      focusable="false"
+      className={`inline-block shrink-0 ${className}`}
+      {...rest}
+    >
+      <rect x="9.8" y="3.2" width="4.4" height="8.6" rx="2.2" />
+      <path d="M7.4 10.8a4.6 4.6 0 0 0 9.2 0h-1.8a2.8 2.8 0 0 1-5.6 0z" />
+      <rect x="11.1" y="14.9" width="1.8" height="3.2" rx="0.9" />
+      <rect x="8.4" y="17.7" width="7.2" height="1.8" rx="0.9" />
+    </svg>
   );
 }
 
