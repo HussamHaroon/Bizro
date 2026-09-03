@@ -1245,6 +1245,7 @@ a:focus-visible,
   display: block;
   height: 40px;
   width: auto;
+  aspect-ratio: 214 / 48;
   image-rendering: -webkit-optimize-contrast;
 }
 @media (max-width: 640px) {
