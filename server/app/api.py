@@ -1,6 +1,7 @@
 """REST API surface — server/schema.md §4.
 
 - GET   /api/merchants/{id}/transactions?from=&to=&kind=
+- GET   /api/merchants/{id}/outbound?limit=      (outbound_messages, newest-first — simulator chat + audit)
 - GET   /api/merchants/{id}/transactions/export.csv   (loan-officer ledger export)
 - GET   /api/merchants/{id}/udhar                     (derived view, schema.md §3)
 - POST  /api/transactions/{id}/confirm
@@ -262,6 +263,41 @@ def export_transactions_csv(
         media_type="text/csv; charset=utf-8",
         headers={"content-disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/merchants/{merchant_id}/outbound")
+def list_outbound(merchant_id: str, limit: int = Query(20, ge=1, le=100)):
+    """Recent outbound WhatsApp messages for this merchant, NEWEST-FIRST — the
+    read side of the outbound_messages audit log (schema.md §2). Backs the
+    /simulator chat (Bizro's reply bubbles + the §7.1 quick-reply buttons) and
+    doubles as an audit view: every confirmation/clarification/rejection reply
+    the merchant ever received is here. `buttons` carries the Graph API
+    reply-button wire shape stored in outbound_messages.payload (§7.1), null
+    when the send had none."""
+    with db_session() as session:
+        merchant = _get_merchant(session, merchant_id)
+        rows = session.scalars(
+            select(OutboundMessage)
+            .where(OutboundMessage.merchant_id == merchant.id)
+            .order_by(OutboundMessage.created_at.desc())
+            .limit(limit)
+        ).all()
+        return {
+            "count": len(rows),
+            "outbound": [
+                {
+                    "id": str(row.id),
+                    "transaction_id": str(row.transaction_id) if row.transaction_id else None,
+                    "kind": row.kind,
+                    "body": row.body or "",
+                    "buttons": (row.payload or {}).get("buttons")
+                    if isinstance(row.payload, dict)
+                    else None,
+                    "created_at": row.created_at.isoformat(),
+                }
+                for row in rows
+            ],
+        }
 
 
 @router.get("/merchants/{merchant_id}/udhar")

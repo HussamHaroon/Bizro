@@ -20,18 +20,20 @@ import { BrowserRouter, Link, NavLink, Route, Routes, Navigate } from 'react-rou
 import { getSettings } from './api/client';
 import { MerchantPicker } from './components/MerchantPicker';
 import { MockBanner } from './components/MockBanner';
-import { IconLedger, IconReport, IconSettings } from './components/icons';
+import { IconLedger, IconReport, IconSettings, IconWhatsApp } from './components/icons';
 import { LanguageControl } from './i18n/LanguageControl';
 import { T, useLang, useT } from './i18n';
 import { MonthlyLedgerScreen } from './screens/MonthlyLedgerScreen';
 import { CreditReadinessScreen } from './screens/CreditReadinessScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { SimulatorScreen } from './screens/SimulatorScreen';
 import { ComponentsGallery } from './dev/ComponentsGallery';
 import { useMerchant } from './merchant';
 
 const SCREEN_TABS = [
   { to: '/ledger', icon: IconLedger, en: 'Ledger', ur: 'کھاتہ' },
   { to: '/credit', icon: IconReport, en: 'Credit', ur: 'کریڈٹ' },
+  { to: '/simulator', icon: IconWhatsApp, en: 'WhatsApp', ur: 'واٹس ایپ' },
   { to: '/settings', icon: IconSettings, en: 'Settings', ur: 'سیٹنگز' },
 ] as const;
 
@@ -178,6 +180,7 @@ export function App() {
             <Route path="/" element={<Navigate to="/ledger" replace />} />
             <Route path="/ledger" element={<MonthlyLedgerScreen />} />
             <Route path="/credit" element={<CreditReadinessScreen />} />
+            <Route path="/simulator" element={<SimulatorScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />
             <Route path="/dev/components" element={<ComponentsGallery />} />
           </Routes>

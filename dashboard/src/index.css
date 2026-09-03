@@ -320,6 +320,29 @@
       animation: none;
     }
   }
+
+  /* Simulator chat (/simulator): the "recording / Bizro is writing" pulse.
+     A STATUS signal, not decoration — always paired with a word + color change
+     (§4.7: motion is never the only signal), and frozen under reduced motion. */
+  .bizro-rec-pulse {
+    animation: bizro-rec-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes bizro-rec-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bizro-rec-pulse {
+      animation: none;
+    }
+  }
 }
 
 /* ---- Print — the credit report becomes the PDF artifact (design.md §6
