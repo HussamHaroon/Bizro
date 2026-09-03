@@ -79,13 +79,24 @@ class DashScopeClient:
 
         llm_guard.allow(payload["model"])
         timeout = httpx.Timeout(connect=10.0, read=120.0, write=60.0, pool=30.0)
+        last_status, last_text = None, ""
         with httpx.Client(timeout=timeout) as http:
-            resp = http.post(url, headers=headers, json=payload)
-        if resp.status_code != 200:
+            # :free models are congested — a 429/5xx is transient, retry gently
+            for attempt in range(3):
+                resp = http.post(url, headers=headers, json=payload)
+                last_status, last_text = resp.status_code, resp.text[:500]
+                if resp.status_code == 200:
+                    break
+                if resp.status_code not in (429, 500, 502, 503):
+                    break
+                import time as _time
+
+                _time.sleep(2.0 * (attempt + 1))
+        if last_status != 200:
             raise DashScopeError(
-                f"chat_text HTTP {resp.status_code}: {resp.text[:1000]}",
-                status=resp.status_code,
-                body=resp.text[:1000],
+                f"chat_text HTTP {last_status}: {last_text}",
+                status=last_status,
+                body=last_text,
             )
         data = resp.json()
         llm_guard.record(payload["model"], usage=data.get("usage"))
