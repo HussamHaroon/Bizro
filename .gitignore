@@ -30,3 +30,9 @@ server_run.log
 .vercel
 .env*
 .neon
+.agents/
+.env
+.env.local
+.env.vercel-check
+server_run.log
+*.md
