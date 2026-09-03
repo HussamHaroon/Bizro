@@ -1,5 +1,5 @@
 import type { SVGProps } from "react";
-import ScrollMovie from "./ScrollMovie";
+import LazyScrollMovie from "./LazyScrollMovie";
 import { GuideMithu, Mithu, SfxToggle } from "./Mascot";
 import { LANGS, useSiteLang } from "./site-i18n";
 import { useReveal } from "./useReveal";
@@ -220,7 +220,7 @@ export default function App() {
         </section>
 
         {/* ---------------- SCROLL MOVIE ---------------- */}
-        <ScrollMovie />
+        <LazyScrollMovie />
 
         {/* ---------------- PROBLEM ---------------- */}
         <section className="section" id="problem" aria-labelledby="problem-heading">

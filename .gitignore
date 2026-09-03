@@ -11,9 +11,6 @@ __pycache__/
 
 # node
 node_modules/
-dist/
-!site/dist/
-!dashboard/dist/
 
 # local data & runtime artifacts
 *.db
