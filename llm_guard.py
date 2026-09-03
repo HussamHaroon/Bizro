@@ -53,9 +53,16 @@ def _load() -> dict[str, Any]:
 
 
 def _save(data: dict[str, Any]) -> None:
-    LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
-    data["calls"] = data.get("calls", [])[-KEEP_CALLS:]
-    LEDGER_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    try:
+        LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
+        data["calls"] = data.get("calls", [])[-KEEP_CALLS:]
+        LEDGER_PATH.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+    except OSError:
+        # serverless FS is read-only (/var/task) — the ledger is best-effort;
+        # never let bookkeeping break a live model call
+        pass
 
 
 def _rolled(data: dict[str, Any]) -> dict[str, Any]:
