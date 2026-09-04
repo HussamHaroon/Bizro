@@ -38,7 +38,7 @@ export const COPY = {
     h1Hl: "memory",
     h1Post: ".",
     lede:
-      "Bizro turns the WhatsApp voice notes and receipt photos a shopkeeper already sends into a written ledger and a credit history a lender can read. No typing. No new app.",
+      "Send your sales as a voice note or photo on WhatsApp. Bizro keeps your daily books and gets you loan-ready without downloading a single new app.",
     ctaPrimary: "Open the live dashboard",
     ctaSecondary: "See how it works",
     demoTag: "Live demo · try it",

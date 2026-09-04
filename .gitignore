@@ -28,6 +28,7 @@ server_run.log
 .env*
 .neon
 .agents/
+.zcode/
 .env
 .env.local
 .env.vercel-check
