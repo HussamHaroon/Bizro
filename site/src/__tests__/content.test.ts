@@ -130,9 +130,8 @@ describe("content — brand facts survive the plain-wording pass", () => {
   });
 
   it("names Qwen / Model Studio as the RUNNING stack (no invented models)", () => {
-    expect(blob).toContain(
-      "Running on Qwen (Alibaba Cloud Model Studio)",
-    );
+    expect(blob).toContain("Running end-to-end on Qwen");
+    expect(blob).toContain("Groq Whisper backup");
     expect(blob).not.toContain("Qwen3.5-Omni-Plus");
     expect(blob).not.toContain("Qwen3.7-Plus");
   });
