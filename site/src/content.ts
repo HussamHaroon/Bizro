@@ -213,7 +213,7 @@ export const COPY = {
     linkLedger: "Live ledger",
     linkReport: "Credit Readiness Report",
     honesty:
-      "Demo build — AI answers are clearly labeled when no live key is connected. Figures as stated in the pitch, sources available on request. 99.9% repayment rate as claimed by Mawakhat.",
+      "Demo build — AI answers are clearly labeled when no live key is connected. 99.9% repayment rate as claimed by Mawakhat. Banking figures: World Bank Global Findex (Pakistan 10.3% of adults with a formal-account; South Asia ~33%). Branch and loan-range figures: Alkhidmat Mawakhat public materials.",
   },
   mithu: {
     heroLabel: "Mithu the parrot presents the live demo",
