@@ -261,7 +261,7 @@ def step_button_confirm(http, ctx: dict) -> None:
     print(f"     Merchant taps: [It's correct] → Bizro replies: {out.get('reply')}")
     print(f"     Wire row now: id={tx['id'][:8]}… status={tx['status']} "
           f"confirmation_ur={bool(tx['confirmation_ur'])}")
-    print("     JUDGE SEES (phone): "Thanks! The entry has been corrected."")
+    print('     JUDGE SEES (phone): "Thanks! The entry has been corrected."')
     print("     JUDGE SEES (dashboard): ledger row pending → confirmed, zero typing")
 
 
