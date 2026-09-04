@@ -149,3 +149,59 @@ def test_stt_failure_asks_again_instead_of_crashing(monkeypatch):
     assert out["flag"] == "low_confidence"
     assert out["status"] == "pending"
     assert "stt path failed" in out["description"]
+
+
+def _qwen_settings(**over) -> Settings:
+    base = dict(
+        dashscope_api_key="sk-dash-test",
+        dashscope_base_url="https://dashscope.test/compatible-mode/v1",
+        model_voice="qwen-flash",
+        mock_mode="never",
+        stt_provider="qwen",
+        stt_qwen_model="qwen3-asr-flash",
+        stt_api_key="gsk_test",
+        stt_base_url="https://api.groq.test/openai/v1",
+        stt_model="whisper-large-v3-turbo",
+        stt_language="ur",
+    )
+    base.update(over)
+    return Settings(**base)
+
+
+def test_qwen_asr_primary_used_when_healthy(monkeypatch, stt_settings):
+    """qwen path answers → whisper is never called."""
+    monkeypatch.setattr("voice_agent.pipeline.DashScopeClient", _FakeClient)
+    seen = []
+
+    def _post(url, **kwargs):
+        seen.append(url)
+        if "chat/completions" in url:  # qwen asr
+            assert kwargs["json"]["model"] == "qwen3-asr-flash"
+            content = kwargs["json"]["messages"][0]["content"][0]
+            assert content["input_audio"]["data"].startswith("data:audio/")
+            return _FakeResp({"choices": [{"message": {"content": "احمد کو پانچ ہزار کا ادھار دیا"}}]})
+        return _FakeResp({"text": "WHISPER-SHOULD-NOT-RUN"})
+
+    monkeypatch.setattr("voice_agent.stt_client.httpx.post", _post)
+    out = process_voice_note(WAV_PATH, settings=_qwen_settings())
+    assert seen == ["https://dashscope.test/compatible-mode/v1/chat/completions"]
+    assert "احمد کو پانچ ہزار کا ادھار دیا" in _FakeClient.last_user_text
+    assert out["amount_pkr"] == 5000
+
+
+def test_qwen_asr_failure_falls_back_to_whisper(monkeypatch):
+    """qwen 500s → the whisper provider catches the note; nothing is lost."""
+    monkeypatch.setattr("voice_agent.pipeline.DashScopeClient", _FakeClient)
+    seen = []
+
+    def _post(url, **kwargs):
+        seen.append(url.split("/")[-1])
+        if "chat/completions" in url:
+            return _FakeResp({"error": "boom"}, status=500)
+        return _FakeResp({"text": "احمد کو پانچ ہزار کا ادھار دیا"})
+
+    monkeypatch.setattr("voice_agent.stt_client.httpx.post", _post)
+    out = process_voice_note(WAV_PATH, settings=_qwen_settings())
+    assert seen == ["completions", "transcriptions"]  # qwen tried, whisper saved it
+    assert "احمد کو پانچ ہزار کا ادھار دیا" in _FakeClient.last_user_text
+    assert out["amount_pkr"] == 5000
