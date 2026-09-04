@@ -245,12 +245,13 @@ demo_flow = _load_demo_flow()
 def test_demo_flow_local_full_run_ok(capsys):
     """The rehearsal happy path: 6/6 steps, judge-facing lines, per-step mock
     timings, exit code 0 — under 30s."""
-    mid = _new_merchant(_wa("92510"), name="Demo Flow Store")
+    wa = _wa("92510")
+    mid = _new_merchant(wa, name="Demo Flow Store")
     _seed_tx(mid, "sale", 2500, "2026-08-28T10:00:00+00:00", desc="cash sale")
     _seed_tx(mid, "expense", 600, "2026-08-27T10:00:00+00:00", desc="restock",
              source="photo", confirmation_ur="خرچ 600 روپے۔")
 
-    rc = demo_flow.main(["--local", "--merchant", str(mid)])
+    rc = demo_flow.main(["--local", "--merchant", str(mid), "--wa-id", wa])
     out = capsys.readouterr().out
     assert rc == 0, out
     for n in range(1, 7):
@@ -269,7 +270,7 @@ def test_demo_flow_default_target_is_first_merchant(capsys):
         first = s.query(Merchant).order_by(Merchant.created_at).first()
     assert first is not None, "merchants exist from the rest of the suite"
 
-    rc = demo_flow.main(["--local"])
+    rc = demo_flow.main(["--local", "--wa-id", str(first.wa_id)])
     out = capsys.readouterr().out
     assert rc == 0, out
     assert str(first.id) in out
