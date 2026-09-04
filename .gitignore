@@ -34,3 +34,9 @@ server_run.log
 .env.vercel-check
 server_run.log
 *.md
+# the two canonical docs ARE tracked (everything else .md stays local)
+!README.md
+!docs/GUIDE.md
+
+# transient deck renders (pymupdf slide dumps)
+presentation/render/
