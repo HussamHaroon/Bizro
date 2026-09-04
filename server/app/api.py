@@ -159,7 +159,22 @@ def list_merchants():
     """Merchant picker source (D1-2); also proves server liveness for the dashboard."""
     with db_session() as session:
         rows = session.scalars(select(Merchant).order_by(Merchant.created_at)).all()
-        return [{"id": str(m.id), "display_name": m.display_name, "wa_id": m.wa_id} for m in rows]
+        # Privacy (D6-6): wa_id IS the merchant's phone number — never expose
+        # a real user's number on a public endpoint. The two SEEDED demo
+        # stores are the exception: their wa_ids are public constants in the
+        # seed script and the demo-flow script needs them to simulate inbound
+        # messages. Real webhook-created merchants get a neutral name and a
+        # last-4 hint only.
+        demo_wa_ids = {"923009999888", "923009111222"}
+        return [
+            {
+                "id": str(m.id),
+                "display_name": m.display_name or "Merchant",
+                **({"wa_id": m.wa_id} if m.wa_id in demo_wa_ids else {}),
+                "wa_hint": ("···" + m.wa_id[-4:]) if m.wa_id else "",
+            }
+            for m in rows
+        ]
 
 
 def _get_merchant(session, merchant_id: str) -> Merchant:

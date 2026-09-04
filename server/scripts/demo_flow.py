@@ -399,6 +399,7 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--merchant", default=None, help="target merchant uuid (default: first)")
+    parser.add_argument("--wa-id", default=None, help="target merchant wa_id (required for non-demo merchants — the public merchants endpoint hides real numbers)")
     parser.add_argument("--url", default=DEFAULT_URL, help=f"server base URL (default {DEFAULT_URL})")
     parser.add_argument("--local", action="store_true",
                         help="force the in-process TestClient (ignore a running :8000)")
@@ -445,9 +446,16 @@ def main(argv: list[str] | None = None) -> int:
     started = time.perf_counter()
     try:
         target = _ensure_demo_data(http, args.merchant)
+        # The public merchants endpoint no longer exposes wa_id (privacy,
+        # D6-6) — the seeded demo stores have fixed known wa_ids; anything
+        # else falls back to the store's display name as the sender id.
+        KNOWN_WA = {
+            "Al-Madina Kiryana Store": "923009999888",
+            "Bilal Ki Dukan": "923009111222",
+        }
         ctx = {
             "merchant_id": target["id"],
-            "wa_id": target["wa_id"],
+            "wa_id": args.wa_id or target.get("wa_id") or KNOWN_WA.get(target.get("display_name") or "", target["id"]),
             "display_name": target.get("display_name") or target["wa_id"],
             "sim": sim,
         }
