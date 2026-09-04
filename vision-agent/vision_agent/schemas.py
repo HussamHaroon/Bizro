@@ -136,7 +136,7 @@ class TransactionResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: str = "expense"
-    amount_pkd: float | int = Field(gt=0)
+    amount_pkr: float | int = Field(gt=0)
     currency: str = "PKR"
     counterparty: Counterparty = Field(default_factory=Counterparty)
     description: str = ""

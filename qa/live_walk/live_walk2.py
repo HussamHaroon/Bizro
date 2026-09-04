@@ -46,7 +46,7 @@ st, cp = req(f"{BASE}/api/transactions/{tx_id}", "PATCH",
              {"counterparty": {"name": "Zubair", "phone": None}})
 print(f"[patch-counterparty] HTTP {st} -> {cp if isinstance(cp, (dict, list)) else cp!r}")
 
-st, g = req(f"{BASE}/api/transactions/{tx_id}", "PATCH", {"amount_pkd": -5})
+st, g = req(f"{BASE}/api/transactions/{tx_id}", "PATCH", {"amount_pkr": -5})
 print(f"[patch-garbage amount=-5] HTTP {st} -> {str(g)[:120]}")
 
 st, g2 = req(f"{BASE}/api/transactions/{tx_id}", "PATCH", {"kind": "nonsense"})

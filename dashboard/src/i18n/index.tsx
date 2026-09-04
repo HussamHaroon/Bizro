@@ -63,8 +63,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // <html lang> follows the mode (D1-1). Mixed leads with English, so its
     // document language is en; screen readers switch to Urdu voices inside the
-    // lang="ur" runs regardless.
+    // lang="ur" runs regardless. dir mirrors the mode: full RTL in Urdu, LTR
+    // otherwise (D6-3 — the dashboard previously never mirrored).
     document.documentElement.lang = mode === 'ur' ? 'ur' : 'en';
+    document.documentElement.dir = mode === 'ur' ? 'rtl' : 'ltr';
     try {
       localStorage.setItem(LANG_STORAGE_KEY, mode);
     } catch {

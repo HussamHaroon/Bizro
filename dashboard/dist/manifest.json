@@ -1,0 +1,29 @@
+{
+  "name": "Bizro",
+  "short_name": "Bizro",
+  "description": "Bizro control room — Khata Modern ledger & credit readiness",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F1E6",
+  "theme_color": "#0B5D3B",
+  "icons": [
+    {
+      "src": "/brand/wordmark-96.png",
+      "sizes": "373x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/wordmark-48.png",
+      "sizes": "186x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/wordmark-32.png",
+      "sizes": "124x32",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

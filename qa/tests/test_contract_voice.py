@@ -38,7 +38,7 @@ def test_happy_scenario_conforms_to_schema_mirror(tmp_path, scenario):
         _audio(tmp_path), mock_scenario=scenario, settings=VOICE_SETTINGS
     )
     mirror = MirrorTransaction.model_validate(tx)  # raises on any drift
-    assert mirror.amount_pkd and mirror.amount_pkd > 0
+    assert mirror.amount_pkr and mirror.amount_pkr > 0
     assert mirror.source.confidence >= 0.0
     assert (mirror.confirmation_ur or "").strip()
 
@@ -56,12 +56,12 @@ def test_unclear_scenario_never_guesses(tmp_path, scenario):
     assert tx["flag"] == "low_confidence"
     assert tx["confirmation_ur"].strip()
     if scenario == "ambiguous_amount":
-        assert tx["amount_pkd"] is None  # §6.9 (D2-1): null, never 0.0
+        assert tx["amount_pkr"] is None  # §6.9 (D2-1): null, never 0.0
         assert "رقم" in tx["confirmation_ur"]  # asks about the amount
 
 
 @pytest.mark.xfail(
-    reason="F-1 [P1]: voice returns amount_pkd=0.0 for unknown amounts; schema.md "
+    reason="F-1 [P1]: voice returns amount_pkr=0.0 for unknown amounts; schema.md "
     "§6.2 ruling requires null. Server TransactionIn(gt=0) rejects both, so the "
     "merchant gets silence instead of the clarification question.",
     strict=False,
@@ -71,7 +71,7 @@ def test_unclear_scenario_null_amount_per_ruling_6_2(tmp_path, scenario):
     tx = process_voice_note(
         _audio(tmp_path), mock_scenario=scenario, settings=VOICE_SETTINGS
     )
-    # §6.2: amount_pkd null + low_confidence. Mirror accepts null ONLY then.
+    # §6.2: amount_pkr null + low_confidence. Mirror accepts null ONLY then.
     MirrorTransaction.model_validate(tx)
 
 
@@ -126,7 +126,7 @@ def test_threshold_boundary_exact_0_75_is_not_low_confidence(tmp_path):
     def build(conf: float) -> Transaction:
         return Transaction(
             kind="udhar_given",
-            amount_pkd=5000.0,
+            amount_pkr=5000.0,
             occurred_at=dt.datetime.now(dt.timezone.utc),
             source={"type": "voice", "model": None, "confidence": conf},
             mock=True,

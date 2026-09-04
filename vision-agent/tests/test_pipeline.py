@@ -15,7 +15,7 @@ from vision_agent.schemas import TransactionResult
 HISTORY = [
     {
         "kind": "expense",
-        "amount_pkd": 2560,
+        "amount_pkr": 2560,
         "counterparty": {"name": "Al-Madina Kiryana Store", "phone": None},
         "item_lines": [
             {"item": "chai patti", "qty": 2, "unit": "packet", "unit_price": 350, "line_total": 700},
@@ -51,7 +51,7 @@ class TestCleanReceipt:
         TransactionResult.model_validate(tx)
 
         assert tx["kind"] == "expense"
-        assert tx["amount_pkd"] == 2560
+        assert tx["amount_pkr"] == 2560
         assert tx["currency"] == "PKR"
         assert tx["counterparty"] == {"name": "Al-Madina Kiryana Store", "phone": None}
         assert len(tx["item_lines"]) == 3
@@ -93,7 +93,7 @@ class TestBlurryPhoto:
             {"item": "chai patti", "qty": 2, "unit": "packet",
              "unit_price": 350, "line_total": 700}
         ]
-        assert tx["amount_pkd"] == 700  # computed from the one readable line
+        assert tx["amount_pkr"] == 700  # computed from the one readable line
 
 
 class TestWrongPriceReceipt:
@@ -105,7 +105,7 @@ class TestWrongPriceReceipt:
         assert tx["flag"] == "price_anomaly"
         chai = next(l for l in tx["item_lines"] if l["item"] == "chai patti")
         assert chai["unit_price"] == 3500
-        assert tx["amount_pkd"] == 8860
+        assert tx["amount_pkr"] == 8860
         assert "تنبیہ" in tx["confirmation_ur"]               # a warning exists
         assert "3,500" in tx["confirmation_ur"] and "350" in tx["confirmation_ur"]
 

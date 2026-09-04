@@ -7,6 +7,7 @@
      GET  /api/media/{id}                  (audit drill-down: original voice note / photo)
      GET  /api/merchants/{id}/settings     (schema.md §8 — getSettings/putSettings below)
      PUT  /api/merchants/{id}/settings
+     POST /api/merchants/{id}/transactions/{tx}/reminder-draft   (draftReminder — polite udhar nudge)
 
    LIVE BY DEFAULT (D1-1 wiring): with VITE_API_BASE_URL unset the client targets
    same-origin /api — the Vite dev proxy already forwards /api to :8000, and a
@@ -54,7 +55,7 @@ export interface TransactionQuery {
 
 /** PATCH /api/transactions/{id} — merchant correction (audit preserved server-side). */
 export type TransactionPatch = Partial<
-  Pick<Transaction, 'amount_pkd' | 'description' | 'kind' | 'counterparty' | 'status' | 'flag'>
+  Pick<Transaction, 'amount_pkr' | 'description' | 'kind' | 'counterparty' | 'status' | 'flag'>
 >;
 
 export interface ApiClient {
@@ -372,6 +373,62 @@ export async function putSettings(
   const row = normalizeSettings(await res.json());
   if (!row) throw new Error('Unexpected settings response from server');
   return row;
+}
+
+/** POST /api/merchants/{id}/transactions/{tx}/reminder-draft — one-tap POLITE
+    udhar reminder (merchant-delight): the server drafts — never sends — a short
+    Urdu WhatsApp nudge via the free-tier text model; the merchant reviews,
+    copies, and sends it themselves. Standalone like getSettings/putSettings
+    (explicit current merchant, OUTSIDE the attempt() machinery): a 502 (AI
+    down, free-tier budget) must surface as an inline retry in the reminder
+    modal — it must never flip the whole app to mock mode. Live drafts are
+    never faked; in mock mode a clearly-labeled deterministic template
+    (`mock: true`, the D0-3 honesty rule) keeps the offline demo whole. */
+
+export interface ReminderDraft {
+  reminder: string;
+  customer: string;
+  amount_pkr: number;
+  /** true → deterministic template (mock mode), NOT a real model draft. */
+  mock?: boolean;
+}
+
+function normalizeReminderDraft(payload: unknown): ReminderDraft | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const d = payload as Record<string, unknown>;
+  if (typeof d.reminder !== 'string' || !d.reminder.trim()) return null;
+  if (typeof d.customer !== 'string') return null;
+  const amount = Number(d.amount_pkr);
+  if (!Number.isFinite(amount)) return null;
+  return { reminder: d.reminder, customer: d.customer, amount_pkr: amount };
+}
+
+/** Mock-mode stand-in: same polite shape, computed over the fixture — honest
+    about being a template, never about being AI. */
+function mockReminderDraft(txId: string): ReminderDraft {
+  const t = MOCK_TRANSACTIONS.find((x) => x.id === txId);
+  if (!t) throw new Error(`mock: no transaction ${txId}`);
+  const name = t.counterparty?.name ?? 'گاہک';
+  const what = t.description || 'سودا';
+  const amount = Math.round(t.amount_pkr).toLocaleString('en-PK');
+  return {
+    reminder: `${name} بھائی، اداب! ${what} کے ${amount} روپے ادھار باقی ہیں، جب آسان ہو بھجوا دیں۔ ہمیشہ کی طرح شکریہ! — ${MOCK_MERCHANT.display_name}`,
+    customer: name,
+    amount_pkr: t.amount_pkr,
+    mock: true,
+  };
+}
+
+export async function draftReminder(txId: string): Promise<ReminderDraft> {
+  if (fellBack) return mockReminderDraft(txId);
+  const res = await fetch(
+    `${BASE_URL}/api/merchants/${encodeURIComponent(currentMerchantId())}/transactions/${encodeURIComponent(txId)}/reminder-draft`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+  );
+  if (!res.ok) throw new Error(`API ${res.status} ${res.statusText} — could not draft the reminder`);
+  const draft = normalizeReminderDraft(await res.json());
+  if (!draft) throw new Error('Unexpected reminder draft response from server');
+  return draft;
 }
 
 /** Flips to true only when a live call fails BEFORE any live success — after

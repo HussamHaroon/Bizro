@@ -17,7 +17,7 @@ export interface EditTransactionFormProps {
 
 export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditTransactionFormProps) {
   const { pick } = useT();
-  const [amount, setAmount] = useState(String(t.amount_pkd));
+  const [amount, setAmount] = useState(String(t.amount_pkr));
   const [description, setDescription] = useState(t.description ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
     setError(null);
     try {
       const { data } = await api.patchTransaction(t.id, {
-        amount_pkd: Math.round(parsed),
+        amount_pkr: Math.round(parsed),
         description: description.trim() || null,
         // 'edited' per schema.md §1 statuses; server retains the original.
         status: 'edited',

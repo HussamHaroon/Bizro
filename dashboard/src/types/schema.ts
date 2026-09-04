@@ -47,7 +47,7 @@ export interface Transaction {
   id: string;
   kind: TransactionKind;
   /** Always positive; direction is implied by kind (schema.md §1 rule). */
-  amount_pkd: number;
+  amount_pkr: number;
   currency: 'PKR';
   counterparty: { name: string; phone: string | null } | null;
   description: string | null;
@@ -144,7 +144,7 @@ export interface CreditReportLineItem {
   label: string;
   label_ur: string;
   month: string; // YYYY-MM the entry falls in
-  amount_pkd: number;
+  amount_pkr: number;
   /** Audit-trail fields (design.md §7.2) — snapshot from the referenced transaction. */
   audit: {
     source_type: SourceType;

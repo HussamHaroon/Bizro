@@ -5,7 +5,7 @@ webhook) calls. Contract notes:
 - Returns the canonical transaction dict (schema.md §1): kind=expense,
   item_lines populated, source.model/confidence/raw_output per §7.2 audit trail.
 - Non-receipt / unreadable images raise ``ReceiptRejected`` carrying a polite
-  Urdu reply (notes.md D-V5) — schema has no reject kind and amount_pkd>0 must
+  Urdu reply (notes.md D-V5) — schema has no reject kind and amount_pkr>0 must
   hold, so no fake transaction is ever returned.
 - Every output is status="pending" (notes.md D-V3): the merchant confirms via
   WhatsApp reply or dashboard; confidence < CONFIDENCE_CONFIRM_THRESHOLD
@@ -105,9 +105,9 @@ def process_receipt_image(
 
     # --- amount (D-V4): stated total wins; else Σ line totals ----------------
     computed_total = round(sum(line["line_total"] for line in item_lines), 2)
-    amount_pkd = float(extraction.stated_total if extraction.stated_total else computed_total)
-    amount_pkd = _num(round(amount_pkd, 2))
-    if amount_pkd <= 0:  # e.g. no items but a stated total of null-ish junk
+    amount_pkr = float(extraction.stated_total if extraction.stated_total else computed_total)
+    amount_pkr = _num(round(amount_pkr, 2))
+    if amount_pkr <= 0:  # e.g. no items but a stated total of null-ish junk
         raise ReceiptRejected("unreadable", reject_reply_ur("unreadable"))
 
     # --- confidence + flags ---------------------------------------------------
@@ -118,7 +118,7 @@ def process_receipt_image(
         extraction,
         history,
         extraction.supplier_name,
-        amount_pkd,
+        amount_pkr,
         occurred_at,
         ratio_threshold=settings.price_anomaly_ratio,
         min_samples=settings.price_anomaly_min_samples,
@@ -130,7 +130,7 @@ def process_receipt_image(
     # --- Urdu confirmation (flag-aware) --------------------------------------
     confirmation = confirmation_ur(
         extraction.supplier_name,
-        amount_pkd,
+        amount_pkr,
         item_lines,
         flag,
         details,
@@ -155,7 +155,7 @@ def process_receipt_image(
 
     transaction = {
         "kind": "expense",
-        "amount_pkd": round(amount_pkd, 2),
+        "amount_pkr": round(amount_pkr, 2),
         "currency": "PKR",
         "counterparty": {"name": extraction.supplier_name, "phone": None},
         "description": description,

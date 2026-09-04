@@ -140,7 +140,7 @@ def read_back(base_url: str, merchant_id: str) -> None:
     for tx in body["transactions"][:5]:
         conf = tx["source"]["confidence"]
         print(
-            f"  [{tx['status']:>9}] {tx['kind']:<16} PKR {tx['amount_pkd']:>8} "
+            f"  [{tx['status']:>9}] {tx['kind']:<16} PKR {tx['amount_pkr']:>8} "
             f"conf={conf} flag={tx['flag']} id={tx['id'][:8]}..."
         )
 

@@ -62,7 +62,7 @@ class TestConfirmation:
         detail = FlagDetail(
             kind="duplicate_suspect",
             message="dup",
-            data={"supplier": "X", "amount_pkd": 700, "minutes_apart": 20},
+            data={"supplier": "X", "amount_pkr": 700, "minutes_apart": 20},
         )
         text = confirmation_ur(None, 700, ITEMS[:1], "duplicate_suspect", [detail], "western")
         assert "منٹ پہلے" in text and "۲۰" not in text  # western numerals by default

@@ -435,7 +435,7 @@ export function CreditReadinessScreen() {
                     </span>
                   </span>
                   <AmountText
-                    value={li.amount_pkd}
+                    value={li.amount_pkr}
                     tone={toneForTransaction(li.transaction_id, byId)}
                   />
                 </button>

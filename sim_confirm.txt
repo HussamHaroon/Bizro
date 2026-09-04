@@ -1,0 +1,51 @@
+--- GET /health -> HTTP 200
+{
+  "status": "ok",
+  "mock_mode": "auto",
+  "integrations": {
+    "dashscope": {
+      "mode": "live",
+      "base_url": "https://openrouter.ai/api/v1"
+    },
+    "whatsapp": {
+      "mode": "mock",
+      "signature_validation": "disabled"
+    }
+  },
+  "pipelines": {
+    "voice_agent": "imported",
+    "vision_agent": "imported",
+    "credit_agent": "imported"
+  },
+  "confidence_confirm_threshold": 0.75
+}
+--- GET /webhook/whatsapp (Meta verify handshake) -> HTTP 200 challenge='ping123' OK
+
+--- TEXT REPLY '1': POST /webhook/whatsapp -> HTTP 200
+{
+  "processed": 1,
+  "results": [
+    {
+      "message_id": "wamid.SIM842b5a7909a0",
+      "ok": true,
+      "type": "text",
+      "merchant_id": "8c2d2046-0224-41c0-8324-87f789683e3c",
+      "reply": "شکریہ! اندراج درست کر دیا گیا۔",
+      "sent": {
+        "mock": true,
+        "note": "MOCK send — message logged, not delivered. Configure WHATSAPP_TOKEN (HANDOFF.md ②).",
+        "to": "923001234567",
+        "body": "شکریہ! اندراج درست کر دیا گیا۔"
+      }
+    }
+  ]
+}
+
+--- read-back: GET /api/merchants/8c2d2046-0224-41c0-8324-87f789683e3c/transactions -> 1 row(s)
+  [confirmed] udhar_given      PKR   5000.0 conf=0.97 flag=none id=78095b08...
+
+--- GET /api/merchants/8c2d2046-0224-41c0-8324-87f789683e3c/udhar -> total PKR 5000.0
+  احمد: PKR 5000.0
+--- GET /api/merchants/8c2d2046-0224-41c0-8324-87f789683e3c/streak -> {"streak_weeks": 0, "best_streak_weeks": 0, "current_week_positive": false}
+
+SIMULATION OK

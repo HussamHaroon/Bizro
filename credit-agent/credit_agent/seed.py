@@ -138,7 +138,7 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
             s.add(Transaction(
                 id=uuid.uuid4(), merchant_id=m.id,
                 customer_id=cust_ids.get(customer),
-                kind=kind, amount_pkd=round(amount, 2), description=desc,
+                kind=kind, amount_pkr=round(amount, 2), description=desc,
                 occurred_at=when,
                 source_type=source,
                 source_media_id=media_id,

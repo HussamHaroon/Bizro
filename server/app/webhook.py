@@ -45,6 +45,34 @@ MEDIA_INVALID_REPLY_UR = (
     "فائل موصول نہیں ہو سکی یا بہت بڑی ہے۔ براہِ کرم دوبارہ چھوٹی فائل بھیجیں۔"
 )
 
+# --- onboarding (first contact) ----------------------------------------------
+# A merchant whose TEXT message is exactly one of these (case-insensitive;
+# English or Urdu) gets a short two-message onboarding sequence instead of the
+# generic help line. "help" shares the same sequence by design.
+ONBOARDING_TRIGGER_WORDS = frozenset(
+    {"hello", "hi", "start", "help", "ہیلو", "شروع"}
+)
+
+ONBOARDING_WELCOME_UR = (
+    "السلام علیکم! Bizro میں خوش آمدید۔ Bizro آپ کا آواز والا کھاتا ہے: آپ وائس نوٹ "
+    "یا رسید کی تصویر بھیجیں، ہم آپ کا لین دین لکھ دیتے ہیں — اور اسی ریکارڈ سے آپ کی "
+    "کریڈٹ ہسٹری بھی بنتی ہے۔"
+)
+
+ONBOARDING_HOWTO_UR = (
+    "استعمال کا طریقہ: ۱) سیل یا ادھار کے بارے میں وائس نوٹ بھیجیں۔ "
+    "۲) خریداری کی رسید کی تصویر بھیجیں۔ "
+    "۳) جب اندراج آئے تو درست ہونے پر '1' لکھ کر تصدیق کریں۔"
+)
+
+# Sent (and stored) in this order.
+ONBOARDING_SEQUENCE_UR = (ONBOARDING_WELCOME_UR, ONBOARDING_HOWTO_UR)
+
+
+def _is_onboarding_trigger(body: str) -> bool:
+    normalized = body.strip().casefold()
+    return normalized in ONBOARDING_TRIGGER_WORDS
+
 
 @router.get("/webhook/whatsapp")
 def webhook_verify(
@@ -146,6 +174,10 @@ def _handle_message(
             return outcome
         if msg_type == "text":
             body = ((msg.get("text") or {}).get("body") or "").strip()
+            if _is_onboarding_trigger(body):
+                outcome = _onboarding_outcome(msg, session, merchant)
+                outcome["merchant_id"] = str(merchant.id)
+                return outcome
             reply = dispatch.handle_text_reply(session, merchant, body)
             if reply is None:
                 reply = HELP_REPLY_UR
@@ -184,6 +216,31 @@ def _handle_message(
 
         logger.info("Unsupported message type %r ignored (wamid=%s)", msg_type, msg.get("id"))
         return {"message_id": msg.get("id"), "ok": True, "type": msg_type, "ignored": True}
+
+
+def _onboarding_outcome(
+    msg: dict[str, Any], session, merchant: Merchant
+) -> dict[str, Any]:
+    """First-contact onboarding: send + store each message of the sequence
+    through dispatch.send_reply — the same path every other reply uses
+    (whatsapp_client delivery + an outbound_messages audit row). The bodies
+    themselves are plain onboarding text: the only mock marker anywhere is the
+    one whatsapp_client already adds to its send result in mock mode."""
+    sent = [
+        dispatch.send_reply(session, merchant, body, kind="onboarding")
+        for body in ONBOARDING_SEQUENCE_UR
+    ]
+    return {
+        "message_id": msg.get("id"),
+        "ok": True,
+        "type": "text",
+        "onboarding": True,
+        "replies": list(ONBOARDING_SEQUENCE_UR),
+        # last body kept in `reply` so existing consumers of the text outcome
+        # shape keep working
+        "reply": ONBOARDING_SEQUENCE_UR[-1],
+        "sent": sent,
+    }
 
 
 def _upsert_merchant(session, wa_id: str, contact: dict[str, Any] | None) -> Merchant:

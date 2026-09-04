@@ -40,7 +40,7 @@ def _tx(session, mid, day, kind="sale", amount=1000.0, source="voice", conf=0.9,
         flag="none", status="confirmed", customer=None):
     session.add(Transaction(
         id=uuid.uuid4(), merchant_id=mid, customer_id=customer, kind=kind,
-        amount_pkd=amount, description=f"{kind} {day}",
+        amount_pkr=amount, description=f"{kind} {day}",
         occurred_at=datetime.now(timezone.utc) - timedelta(days=day),
         source_type=source, source_media_id=uuid.uuid4() if source != "manual" else None,
         source_model="qwen3.5-omni-plus" if source == "voice" else "qwen-vl-ocr",

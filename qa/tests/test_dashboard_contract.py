@@ -76,7 +76,7 @@ def test_confirm_response_is_full_wire_transaction(client):
     body = r.json()
     # The client-side contract (types/schema.ts Transaction): these fields must
     # be on the response body itself for setTxs(map x.id===data.id -> data) to work.
-    for field in ("id", "kind", "amount_pkd", "status", "source", "occurred_at"):
+    for field in ("id", "kind", "amount_pkr", "status", "source", "occurred_at"):
         assert field in body, f"confirm response missing Transaction.{field}"
 
 
@@ -93,13 +93,13 @@ def test_confirm_response_is_full_wire_transaction(client):
 )
 def test_patch_response_is_full_wire_transaction(client):
     tx_id = _seed_pending_tx(client, "923602222222")
-    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 4242})
+    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkr": 4242})
     assert r.status_code == 200
     body = r.json()
     assert "transaction" not in body or body.get("id"), (
         "PATCH must return the wire Transaction at the TOP level (client.ts contract)"
     )
-    for field in ("id", "kind", "amount_pkd", "status"):
+    for field in ("id", "kind", "amount_pkr", "status"):
         assert field in body, f"patch response missing Transaction.{field}"
 
 

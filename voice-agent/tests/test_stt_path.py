@@ -83,7 +83,7 @@ _PARSE_REPLY = json.dumps(
         "confidence": 0.9,
         "transaction": {
             "kind": "udhar_given",
-            "amount_pkd": 5000,
+            "amount_pkr": 5000,
             "counterparty": {"name": "احمد", "phone": None},
             "description": "Udhar 5000 to Ahmad",
             "item_lines": [],
@@ -122,7 +122,7 @@ def test_stt_branch_transcribes_then_parses(stt_settings):
     # the transcript went INTO the parse prompt...
     assert "احمد کو پانچ ہزار کا ادھار دیا" in _FakeClient.last_user_text
     # ...and the parsed transaction came out the other end
-    assert out["amount_pkd"] == 5000
+    assert out["amount_pkr"] == 5000
     assert out["kind"] == "udhar_given"
     assert out["counterparty"]["name"] == "احمد"
     assert not out.get("mock")
@@ -145,7 +145,7 @@ def test_stt_failure_asks_again_instead_of_crashing(monkeypatch):
 
     monkeypatch.setattr("voice_agent.stt_client.httpx.post", _boom)
     out = process_voice_note(WAV_PATH, settings=s)
-    assert out["amount_pkd"] is None  # nothing fabricated
+    assert out["amount_pkr"] is None  # nothing fabricated
     assert out["flag"] == "low_confidence"
     assert out["status"] == "pending"
     assert "stt path failed" in out["description"]
