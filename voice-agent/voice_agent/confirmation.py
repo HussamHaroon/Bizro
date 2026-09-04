@@ -162,7 +162,7 @@ def build_confirmation_ur(tx: Transaction, numeral_style: str = "western") -> st
     if tx.flag == "low_confidence":
         return _build_clarification_ur(tx, numeral_style)
 
-    amount = _amount_phrase(tx.amount_pkd, numeral_style)
+    amount = _amount_phrase(tx.amount_pkr, numeral_style)
     tpl = _KIND_TEMPLATES[tx.kind]
     if tx.kind == "expense":
         supplier = (tx.counterparty.name or "").strip() if tx.counterparty else ""
@@ -182,7 +182,7 @@ _CLARIFY_NAME = "گاہک کا نام کیا ہے؟"
 def _build_clarification_ur(tx: Transaction, numeral_style: str) -> str:
     # §6.2/§6.9: unknown amount travels as None (never 0.0); <= 0 kept as a
     # defensive legacy guard.
-    unknown_amount = tx.amount_pkd is None or tx.amount_pkd <= 0
+    unknown_amount = tx.amount_pkr is None or tx.amount_pkr <= 0
     unknown_kind = tx.description.startswith(UNCLEAR_KIND_MARKER)
     known_name = (tx.counterparty.name or "").strip() if tx.counterparty else ""
 

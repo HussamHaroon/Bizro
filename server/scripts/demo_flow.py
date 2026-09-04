@@ -239,7 +239,7 @@ def step_voice_note(http, ctx: dict) -> None:
     if buttons:
         titles = " ".join(f"[{b['reply']['title']}]" for b in buttons)
         print(f"     One-tap buttons: {titles}  (payloads: confirm / correct)")
-    print(f"     Ledger wire row: {row['kind']} PKR {row['amount_pkd']:,.0f} "
+    print(f"     Ledger wire row: {row['kind']} PKR {row['amount_pkr']:,.0f} "
           f"status={row['status']} conf={row['source']['confidence']} "
           f"model={row['source']['model']} flag={row['flag']}")
     print("     JUDGE SEES (phone): the Urdu confirmation bubble + درست ہے / بدلیں buttons")
@@ -282,7 +282,7 @@ def step_receipt_photo(http, ctx: dict) -> None:
     ) or "no item lines"
     print(f"     Merchant sends: supplier receipt photo")
     print(f"     Bizro replies (WhatsApp): {out.get('confirmation_ur')}")
-    print(f"     OCR expense row: PKR {row['amount_pkd']:,.0f} ({lines})")
+    print(f"     OCR expense row: PKR {row['amount_pkr']:,.0f} ({lines})")
     print(f"     FLAG: {row['flag']}  conf={row['source']['confidence']} "
           f"model={row['source']['model']}")
     print("     JUDGE SEES (phone): receipt summary in Urdu, asking for confirmation")
@@ -311,7 +311,7 @@ def _nudge_from_wire_rows(merchant_id: str, rows: list[dict]) -> dict:
             if when.tzinfo is None:  # SQLite round-trips drop tz; stored times are UTC
                 when = when.replace(tzinfo=timezone.utc)
             s.add(TxModel(id=uuid.UUID(r["id"]), merchant_id=mid, kind=r["kind"],
-                          amount_pkd=r["amount_pkd"], occurred_at=when,
+                          amount_pkr=r["amount_pkr"], occurred_at=when,
                           source_type=r["source"]["type"], status=r["status"]))
         s.commit()
         return compute_weekly_nudge(s, mid)

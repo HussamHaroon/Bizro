@@ -15,7 +15,7 @@ from voice_agent.models import Counterparty, SourceBlock, Transaction
 def _tx(**over) -> Transaction:
     base = dict(
         kind="udhar_given",
-        amount_pkd=5000,
+        amount_pkr=5000,
         counterparty=Counterparty(name="احمد"),
         description="Udhar given to Ahmad",
         item_lines=[],
@@ -106,7 +106,7 @@ def test_expense_mentions_supplier():
 
 def test_low_confidence_returns_question_not_statement():
     # §6.2/§6.9: unknown amount travels as None (0.0 no longer validates)
-    tx = _tx(flag="low_confidence", amount_pkd=None)
+    tx = _tx(flag="low_confidence", amount_pkr=None)
     text = build_confirmation_ur(tx, "western")
     assert "کیا یہ درست ہے؟" not in text  # never a confirm statement
     assert "رقم" in text  # asks for the amount
@@ -114,7 +114,7 @@ def test_low_confidence_returns_question_not_statement():
 
 
 def test_unclear_kind_asks_kind_question():
-    tx = _tx(flag="low_confidence", amount_pkd=None, description="UNCLEAR_KIND — needs clarification")
+    tx = _tx(flag="low_confidence", amount_pkr=None, description="UNCLEAR_KIND — needs clarification")
     text = build_confirmation_ur(tx, "western")
     assert "سمجھ" in text  # "I did not understand" lead
     assert "ادھار" in text  # kind clarification ask

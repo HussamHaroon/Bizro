@@ -159,7 +159,7 @@ def _parse_dt(value: Any) -> datetime | None:
 
 def check_duplicate_suspect(
     supplier: str | None,
-    amount_pkd: float,
+    amount_pkr: float,
     occurred_at: Any,
     history: Iterable[dict[str, Any]],
     window_minutes: int,
@@ -176,8 +176,8 @@ def check_duplicate_suspect(
         other_party = (tx.get("counterparty") or {}).get("name") or ""
         if supplier_norm and normalize_name(other_party) != supplier_norm:
             continue
-        other_amount = tx.get("amount_pkd")
-        if not isinstance(other_amount, (int, float)) or abs(other_amount - amount_pkd) > 1e-9:
+        other_amount = tx.get("amount_pkr")
+        if not isinstance(other_amount, (int, float)) or abs(other_amount - amount_pkr) > 1e-9:
             continue
         other_when = _parse_dt(tx.get("occurred_at"))
         if other_when is None:
@@ -188,11 +188,11 @@ def check_duplicate_suspect(
                 kind="duplicate_suspect",
                 message=(
                     f"same supplier ({supplier or 'unknown'}) + amount "
-                    f"{amount_pkd:g} PKR recorded {delta_minutes:.0f} min apart"
+                    f"{amount_pkr:g} PKR recorded {delta_minutes:.0f} min apart"
                 ),
                 data={
                     "supplier": supplier,
-                    "amount_pkd": amount_pkd,
+                    "amount_pkr": amount_pkr,
                     "minutes_apart": round(delta_minutes, 1),
                 },
             )
@@ -210,7 +210,7 @@ def evaluate_flags(
     extraction: ReceiptExtraction,
     history: list[dict[str, Any]],
     supplier: str | None,
-    amount_pkd: float,
+    amount_pkr: float,
     occurred_at: Any,
     *,
     ratio_threshold: float,
@@ -222,7 +222,7 @@ def evaluate_flags(
     """Run all checks; return the winning flag + every detail for the audit trail."""
     details: list[FlagDetail] = []
     if dup := check_duplicate_suspect(
-        supplier, amount_pkd, occurred_at, history, duplicate_window_minutes
+        supplier, amount_pkr, occurred_at, history, duplicate_window_minutes
     ):
         details.append(dup)
     if anomaly := check_price_anomaly(

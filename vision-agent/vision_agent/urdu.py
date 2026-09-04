@@ -72,7 +72,7 @@ def _items_phrase(item_lines: list[dict[str, Any]], style: str, limit: int = 3) 
 
 def confirmation_ur(
     supplier: str | None,
-    amount_pkd: float,
+    amount_pkr: float,
     item_lines: list[dict[str, Any]],
     flag: str,
     flag_details: list[FlagDetail],
@@ -99,7 +99,7 @@ def confirmation_ur(
     opener = (SUPPLIER_FROM.format(supplier=supplier) + " ") if supplier else ""
     body = f"{opener}{_items_phrase(item_lines, numeral_style)}۔ " if item_lines else ""
     lines.append(EXPENSE_SAVED)
-    lines.append(f"{body}{TOTAL_IS.format(total=fmt_number(amount_pkd, numeral_style))}")
+    lines.append(f"{body}{TOTAL_IS.format(total=fmt_number(amount_pkr, numeral_style))}")
 
     if flag == "total_mismatch" and "total_mismatch" in by_kind:
         data = by_kind["total_mismatch"].data

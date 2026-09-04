@@ -102,7 +102,7 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
                 {
                     "ref": str(t.id),
                     "label": (t.description or t.kind),
-                    "amount_pkd": float(t.amount_pkd),
+                    "amount_pkr": float(t.amount_pkr),
                     "source_type": t.source_type,
                     "source_media_id": str(t.source_media_id) if t.source_media_id else None,
                     "source_model": t.source_model,

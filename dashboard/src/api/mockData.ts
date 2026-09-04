@@ -29,7 +29,7 @@ const OCR_NEW = 'qwen3.5-ocr';
 let seq = 0;
 function tx(
   kind: TransactionKind,
-  amount_pkd: number,
+  amount_pkr: number,
   occurred_at: string,
   source: TransactionSource,
   p: {
@@ -46,7 +46,7 @@ function tx(
   return {
     id: `mock-tx-${String(seq).padStart(3, '0')}`,
     kind,
-    amount_pkd,
+    amount_pkr,
     currency: 'PKR',
     counterparty: p.counterparty
       ? { name: p.counterparty.name, phone: p.counterparty.phone ?? null }
@@ -58,7 +58,7 @@ function tx(
     flag: p.flag ?? 'none',
     status: p.status ?? 'confirmed',
     confirmation_ur:
-      p.confirmation_ur !== undefined ? p.confirmation_ur : defaultConfirmationUr(kind, amount_pkd, p.counterparty?.name),
+      p.confirmation_ur !== undefined ? p.confirmation_ur : defaultConfirmationUr(kind, amount_pkr, p.counterparty?.name),
   };
 }
 
@@ -235,7 +235,7 @@ export function deriveUdhar(items: Transaction[]): UdharOutstanding[] {
     const id = CUSTOMER_IDS[name] ?? `mock-cust-${name.toLowerCase().replace(/\s+/g, '-')}`;
     const cur =
       byCust.get(id) ?? { customer_id: id, name, phone: t.counterparty?.phone ?? null, outstanding_pkd: 0 };
-    cur.outstanding_pkd += t.kind === 'udhar_given' ? t.amount_pkd : -t.amount_pkd;
+    cur.outstanding_pkd += t.kind === 'udhar_given' ? t.amount_pkr : -t.amount_pkr;
     byCust.set(id, cur);
   }
   return [...byCust.values()]
@@ -264,7 +264,7 @@ export function deriveStreak(items: Transaction[]): SavingsStreak {
     if (t.status === 'rejected') continue;
     const k = weekKey(t.occurred_at);
     const w = weeks.get(k) ?? { net: 0, entries: 0 };
-    w.net += (t.kind === 'sale' || t.kind === 'udhar_settlement' ? 1 : -1) * t.amount_pkd;
+    w.net += (t.kind === 'sale' || t.kind === 'udhar_settlement' ? 1 : -1) * t.amount_pkr;
     w.entries += 1;
     weeks.set(k, w);
   }
@@ -335,10 +335,10 @@ export function deriveReportPreview(items: Transaction[]): CreditReportPreview {
     const rows = sorted.filter((t) => monthKey(t.occurred_at) === month && t.status !== 'rejected');
     const inflow = rows
       .filter((t) => t.kind === 'sale' || t.kind === 'udhar_settlement')
-      .reduce((s, t) => s + t.amount_pkd, 0);
+      .reduce((s, t) => s + t.amount_pkr, 0);
     const outflow = rows
       .filter((t) => t.kind === 'expense' || t.kind === 'udhar_given')
-      .reduce((s, t) => s + t.amount_pkd, 0);
+      .reduce((s, t) => s + t.amount_pkr, 0);
     return { month, inflow_pkd: inflow, outflow_pkd: outflow, net_pkd: inflow - outflow, entries: rows.length };
   });
 
@@ -389,7 +389,7 @@ export function deriveReportPreview(items: Transaction[]): CreditReportPreview {
     .filter(
       (t) =>
         t.flag !== 'none' ||
-        t.amount_pkd >= 5000 ||
+        t.amount_pkr >= 5000 ||
         t.kind === 'udhar_settlement',
     )
     .slice(-14)
@@ -398,7 +398,7 @@ export function deriveReportPreview(items: Transaction[]): CreditReportPreview {
       label: lineLabel(t),
       label_ur: lineLabelUr(t),
       month: monthKey(t.occurred_at),
-      amount_pkd: t.amount_pkd,
+      amount_pkr: t.amount_pkr,
       audit: {
         source_type: t.source.type,
         media_id: t.source.media_id,

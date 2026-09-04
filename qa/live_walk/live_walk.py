@@ -106,7 +106,7 @@ def main() -> None:
     media_id = tx["source"]["media_id"]
 
     # ---- 2) wire Transaction shape vs dashboard/src/types/schema.ts ----
-    expected_ts = {"id", "kind", "amount_pkd", "currency", "counterparty", "description",
+    expected_ts = {"id", "kind", "amount_pkr", "currency", "counterparty", "description",
                    "item_lines", "occurred_at", "source", "flag", "status"}
     missing = expected_ts - set(tx.keys())
     print(f"[wire-tx] keys: {sorted(tx.keys())}")
@@ -126,7 +126,7 @@ def main() -> None:
     print(f"[confirm-again] HTTP {st} -> {json.dumps(conf2)[:140]}")
 
     # ---- 4) PATCH response shape (client expects full Transaction) ----
-    st, patch = req(f"{BASE}/api/transactions/{tx_id}", "PATCH", {"amount_pkd": 4242, "status": "edited"})
+    st, patch = req(f"{BASE}/api/transactions/{tx_id}", "PATCH", {"amount_pkr": 4242, "status": "edited"})
     print(f"[patch] HTTP {st} -> top-level keys {sorted(patch.keys()) if isinstance(patch, dict) else patch}")
     if isinstance(patch, dict) and "transaction" in patch and "kind" not in patch:
         findings.append("[P0] PATCH response nests the row as {ok, transaction} — client.ts:110-113 "
@@ -142,8 +142,8 @@ def main() -> None:
                         "sqlalchemy.func but only `select` is imported (api.py:25)")
 
     # ---- 6) PATCH garbage (pydantic boundary) ----
-    st, g = req(f"{BASE}/api/transactions/{tx_id}", "PATCH", {"amount_pkd": -5})
-    print(f"[patch-garbage] amount_pkd=-5 -> HTTP {st}")
+    st, g = req(f"{BASE}/api/transactions/{tx_id}", "PATCH", {"amount_pkr": -5})
+    print(f"[patch-garbage] amount_pkr=-5 -> HTTP {st}")
     if st != 422:
         findings.append(f"[P1] PATCH with invalid amount accepted: HTTP {st}")
     st, g2 = req(f"{BASE}/api/transactions/{tx_id}", "PATCH", {})

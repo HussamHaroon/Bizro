@@ -343,6 +343,57 @@
       animation: none;
     }
   }
+
+  /* Simulator chat (/simulator): bubble pop-in — scale 0.94→1 over ~140ms when
+     a message mounts. Pure decoration (bubbles are fully readable static), so
+     it rides no-preference rather than the reduce-override pattern used above.
+     The 140ms one-off duration is not in tokens.css — flagged to the
+     Orchestrator for tokenization (same treatment as the font-face alias). */
+  @media (prefers-reduced-motion: no-preference) {
+    .bizro-msg-in {
+      animation: bizro-bubble-pop 140ms ease-out;
+      transform-origin: center;
+    }
+  }
+
+  @keyframes bizro-bubble-pop {
+    from {
+      transform: scale(0.94);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Simulator chat (/simulator): the three "Bizro is typing" dots — staggered
+     bounce, animation inside no-preference only. The WORD is always rendered
+     beside the dots (§4.7: never motion-only); reduced motion sees static dots
+     + word. */
+  @media (prefers-reduced-motion: no-preference) {
+    .bizro-typing-dot {
+      animation: bizro-typing-bounce 1.1s ease-in-out infinite;
+    }
+    .bizro-typing-dot:nth-child(2) {
+      animation-delay: 150ms;
+    }
+    .bizro-typing-dot:nth-child(3) {
+      animation-delay: 300ms;
+    }
+  }
+
+  @keyframes bizro-typing-bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.4;
+    }
+    50% {
+      transform: translateY(-3px);
+      opacity: 1;
+    }
+  }
 }
 
 /* ---- Print — the credit report becomes the PDF artifact (design.md §6

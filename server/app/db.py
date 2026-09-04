@@ -147,7 +147,9 @@ class Transaction(Base):
     )
     customer_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("customers.id"))
     kind: Mapped[str] = mapped_column(Text, nullable=False)
-    amount_pkd: Mapped[float] = mapped_column(nullable=False)  # NUMERIC(12,2)
+    # Wire-key fix: the API/wire field is amount_pkr ("PKD" is not a currency);
+    # the PHYSICAL column keeps its legacy name — the Neon DB already holds data.
+    amount_pkr: Mapped[float] = mapped_column("amount_pkd", nullable=False)  # NUMERIC(12,2)
     currency: Mapped[str] = mapped_column(Text, nullable=False, default="PKR")
     description: Mapped[str | None] = mapped_column(Text)
     item_lines: Mapped[list | None] = mapped_column(JSONVariant)

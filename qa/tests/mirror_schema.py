@@ -51,13 +51,13 @@ class MirrorSource(BaseModel):
 class MirrorTransaction(BaseModel):
     """schema.md §1 canonical transaction + §6.2/§6.6 rulings.
 
-    §6.2: unknown amount => ``amount_pkd: null`` (never 0, never a guess).
+    §6.2: unknown amount => ``amount_pkr: null`` (never 0, never a guess).
     §6.6: wire form of occurred_at is ALWAYS an ISO-8601 string (tz-aware).
     """
 
     model_config = ConfigDict(extra="allow")
     kind: Kind
-    amount_pkd: float | None = None
+    amount_pkr: float | None = None
     currency: str = "PKR"
     counterparty: MirrorCounterparty | None = None
     description: str | None = None
@@ -71,13 +71,13 @@ class MirrorTransaction(BaseModel):
     @model_validator(mode="after")
     def _check_rulings(self):
         # §6.2 — amount is null (unknown, flagged) or strictly positive.
-        if self.amount_pkd is not None and not self.amount_pkd > 0:
+        if self.amount_pkr is not None and not self.amount_pkr > 0:
             raise ValueError(
-                f"amount_pkd must be null (unknown) or > 0, got {self.amount_pkd} "
+                f"amount_pkr must be null (unknown) or > 0, got {self.amount_pkr} "
                 "(§6.2: persisting 0 or a guess is a contract violation)"
             )
-        if self.amount_pkd is None and self.flag != "low_confidence":
-            raise ValueError("amount_pkd null must travel with flag=low_confidence (§6.2)")
+        if self.amount_pkr is None and self.flag != "low_confidence":
+            raise ValueError("amount_pkr null must travel with flag=low_confidence (§6.2)")
         # §6.6 — wire occurred_at is an ISO-8601 string.
         try:
             dt = datetime.fromisoformat(self.occurred_at.replace("Z", "+00:00"))

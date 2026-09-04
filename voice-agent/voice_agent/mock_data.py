@@ -16,7 +16,7 @@ SCENARIOS: dict[str, dict] = {
         "transcript": "احمد کو پانچ ہزار روپے ادھار دیے ہیں، کل شام کو کا حساب ہے۔",
         "transaction": {
             "kind": "udhar_given",
-            "amount_pkd": 5000,
+            "amount_pkr": 5000,
             "counterparty": {"name": "احمد", "phone": None},
             "description": "Udhar given to Ahmad",
             "item_lines": [],
@@ -31,7 +31,7 @@ SCENARIOS: dict[str, dict] = {
         ),
         "transaction": {
             "kind": "sale",
-            "amount_pkd": 1500,
+            "amount_pkr": 1500,
             "counterparty": {"name": "بلال", "phone": None},
             "description": "Cash sale to Bilal: 2 packets tea leaves, 1 tin ghee",
             "item_lines": [
@@ -46,7 +46,7 @@ SCENARIOS: dict[str, dict] = {
         "transcript": "احمد کو کچھ روپے ادھار دیے تھے… پانچ ہزار یا چھ ہزار، پکا نہیں پتا۔",
         "transaction": {
             "kind": "udhar_given",
-            "amount_pkd": None,  # NEVER guess (schema.md §1)
+            "amount_pkr": None,  # NEVER guess (schema.md §1)
             "counterparty": {"name": "احمد", "phone": None},
             "description": "Udhar to Ahmad, amount uncertain",
             "item_lines": [],
@@ -58,7 +58,7 @@ SCENARIOS: dict[str, dict] = {
         "transcript": "پچھلے مہینے کا پورا حساب دکھاؤ، کتنا ادھار باقی ہے؟",
         "transaction": {
             "kind": None,  # not a transaction at all — a query
-            "amount_pkd": None,
+            "amount_pkr": None,
             "counterparty": {"name": None, "phone": None},
             "description": "Not a transaction: ledger query",
             "item_lines": [],
@@ -70,7 +70,7 @@ SCENARIOS: dict[str, dict] = {
         "transcript": "Usman ne panch hazar ka saman liya, cash diye, bill bhi le gaya.",
         "transaction": {
             "kind": "sale",
-            "amount_pkd": 5000,
+            "amount_pkr": 5000,
             "counterparty": {"name": "Usman", "phone": None},
             "description": "Cash sale to Usman (mixed Urdu/English note)",
             "item_lines": [],
@@ -84,7 +84,7 @@ SCENARIOS: dict[str, dict] = {
         ),
         "transaction": {
             "kind": "expense",
-            "amount_pkd": 20000,
+            "amount_pkr": 20000,
             "counterparty": {"name": "المدینا ڈسٹریبیوٹرز", "phone": None},
             "description": "Supplier purchase: 8 bags rice on credit",
             "item_lines": [

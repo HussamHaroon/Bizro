@@ -24,7 +24,7 @@ export function adaptCanonicalReport(
     if (!c) return li;
     return {
       ...li,
-      amount_pkd: c.amount_pkd ?? li.amount_pkd,
+      amount_pkr: c.amount_pkr ?? li.amount_pkr,
       audit: {
         ...li.audit,
         source_type: c.source_type ?? li.audit.source_type,

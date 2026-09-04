@@ -180,7 +180,7 @@ def render_report_html(report: dict) -> str:
     )
 
     def _line_row(li: dict) -> str:
-        amount = f"PKR {li.get('amount_pkd', 0):,.0f}"
+        amount = f"PKR {li.get('amount_pkr', 0):,.0f}"
         conf = li.get("confidence")
         conf_disp = "—" if conf is None else str(conf)
         return (

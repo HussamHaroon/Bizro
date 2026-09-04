@@ -13,6 +13,7 @@ import { EditTransactionForm } from '../components/EditTransactionForm';
 import { EmptyState } from '../components/EmptyState';
 import { HeroStat } from '../components/HeroStat';
 import { LedgerDayHeader, LedgerRow } from '../components/LedgerRow';
+import { ProgressCardButton } from '../components/ProgressCardButton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SealMark } from '../components/TrustSealBadge';
 import { StreakChip } from '../components/StreakChip';
@@ -48,7 +49,7 @@ function monthBounds(ym: string): { from: string; to: string } {
 function sumKind(items: Transaction[], kinds: TransactionKind[]): number {
   return items
     .filter((t) => kinds.includes(t.kind) && t.status !== 'rejected')
-    .reduce((s, t) => s + t.amount_pkd, 0);
+    .reduce((s, t) => s + t.amount_pkr, 0);
 }
 
 export function MonthlyLedgerScreen() {
@@ -206,6 +207,10 @@ export function MonthlyLedgerScreen() {
           </div>
         }
       />
+
+      {/* Growth: shareable "this week" card (canvas PNG) — stats from the data
+          already on screen; the chip itself hides off the current month. */}
+      <ProgressCardButton txs={txs} month={month} streakWeeks={streak?.streak_weeks ?? 0} />
 
       {error && (
         <p role="alert" className="bizro-card px-4 py-3 text-sm font-semibold text-ledger-red">

@@ -51,7 +51,9 @@ class Transaction(Base):
     merchant_id: Mapped[str] = mapped_column(Uuid, ForeignKey("merchants.id"))
     customer_id: Mapped[str | None] = mapped_column(Uuid, ForeignKey("customers.id"))
     kind: Mapped[str] = mapped_column(String)
-    amount_pkd: Mapped[float] = mapped_column(Numeric(12, 2))
+    # Wire-key fix: the attribute follows the renamed wire field amount_pkr
+    # ("PKD" is not a currency), but the PHYSICAL column name is unchanged.
+    amount_pkr: Mapped[float] = mapped_column("amount_pkd", Numeric(12, 2))
     currency: Mapped[str] = mapped_column(String, default="PKR")
     description: Mapped[str | None] = mapped_column(Text)
     item_lines: Mapped[dict | None] = mapped_column(__import__("sqlalchemy").JSON)

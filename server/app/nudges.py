@@ -69,7 +69,7 @@ def compute_streak(
 
     net: dict[int, float] = {}
     for t in txs:
-        amount = float(t.amount_pkd)
+        amount = float(t.amount_pkr)
         sign = 1 if t.kind in _CASH_IN_KINDS else -1
         key = week_key(t.occurred_at)
         net[key] = net.get(key, 0.0) + sign * amount
@@ -99,7 +99,7 @@ def compute_streak(
 
 
 def _sum_kind(txs: list[Transaction], kind: str) -> float:
-    return sum(float(t.amount_pkd) for t in txs if t.kind == kind and t.status != "rejected")
+    return sum(float(t.amount_pkr) for t in txs if t.kind == kind and t.status != "rejected")
 
 
 def _trend(current: float, previous: float) -> str:

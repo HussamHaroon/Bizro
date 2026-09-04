@@ -45,7 +45,7 @@ def _run(audio_file, scenario=None, **settings_over):
 
 
 def _required_keys_present(tx: dict) -> None:
-    for key in ("kind", "amount_pkd", "currency", "counterparty", "description",
+    for key in ("kind", "amount_pkr", "currency", "counterparty", "description",
                 "item_lines", "occurred_at", "source", "flag", "status", "confirmation_ur"):
         assert key in tx, f"missing contract key {key}"
 
@@ -57,7 +57,7 @@ def test_clean_udhar(audio_file):
     tx = _run(audio_file, scenario="clean_udhar")
     _required_keys_present(tx)
     assert tx["kind"] == "udhar_given"
-    assert tx["amount_pkd"] == 5000
+    assert tx["amount_pkr"] == 5000
     assert tx["counterparty"]["name"] == "احمد"
     assert tx["flag"] == "none"  # 0.93 ≥ 0.75
     assert tx["status"] == "pending"
@@ -85,11 +85,11 @@ def test_mocks_are_never_presentable_as_real(audio_file):
 def test_sale_with_items(audio_file):
     tx = _run(audio_file, scenario="sale_with_items")
     assert tx["kind"] == "sale"
-    assert tx["amount_pkd"] == 1500
+    assert tx["amount_pkr"] == 1500
     lines = tx["item_lines"]
     assert len(lines) == 2
     assert lines[0]["item"] == "چائے پتی" and lines[0]["qty"] == 2
-    assert sum(li["line_total"] for li in lines) == tx["amount_pkd"]
+    assert sum(li["line_total"] for li in lines) == tx["amount_pkr"]
     assert tx["flag"] == "none"  # totals agree
     assert "1500" in tx["confirmation_ur"] and "پندرہ سو" in tx["confirmation_ur"]
 
@@ -99,7 +99,7 @@ def test_item_total_mismatch_flagged_not_fixed():
     import copy
 
     scenario = copy.deepcopy(SCENARIOS["sale_with_items"])
-    scenario["transaction"]["amount_pkd"] = 1600  # spoken total disagrees with items
+    scenario["transaction"]["amount_pkr"] = 1600  # spoken total disagrees with items
     import voice_agent.mock_data as md
 
     md.SCENARIOS["temp_mismatch"] = scenario
@@ -114,7 +114,7 @@ def test_item_total_mismatch_flagged_not_fixed():
                 p, occurred_at=WHEN, settings=_settings(), mock_scenario="temp_mismatch"
             )
         assert tx["flag"] == "total_mismatch"
-        assert tx["amount_pkd"] == 1600  # kept what was said, did NOT silently fix
+        assert tx["amount_pkr"] == 1600  # kept what was said, did NOT silently fix
     finally:
         md.SCENARIOS.pop("temp_mismatch", None)
 
@@ -132,7 +132,7 @@ def test_low_confidence_model_output_flags(audio_file):
     try:
         tx = _run(audio_file, scenario="temp_lowconf")
         assert tx["flag"] == "low_confidence"
-        assert tx["amount_pkd"] == 5000  # data kept — flagged, not discarded
+        assert tx["amount_pkr"] == 5000  # data kept — flagged, not discarded
         assert tx["status"] == "pending"
     finally:
         md.SCENARIOS.pop("temp_lowconf", None)
@@ -142,10 +142,10 @@ def test_low_confidence_model_output_flags(audio_file):
 
 
 def test_ambiguous_amount_never_guesses(audio_file):
-    """§6.2/§6.9 (F-1): ambiguous amount → amount_pkd null, never 0.0, never a guess."""
+    """§6.2/§6.9 (F-1): ambiguous amount → amount_pkr null, never 0.0, never a guess."""
     tx = _run(audio_file, scenario="ambiguous_amount")
     assert tx["flag"] == "low_confidence"
-    assert tx["amount_pkd"] is None  # null = unknown; NOT 5000, NOT 6000, NOT 0.0
+    assert tx["amount_pkr"] is None  # null = unknown; NOT 5000, NOT 6000, NOT 0.0
     assert tx["status"] == "pending"
     assert tx["source"]["confidence"] == pytest.approx(0.31)
     # confirmation is a clarification question, not a statement
@@ -160,7 +160,7 @@ def test_ambiguous_amount_never_guesses(audio_file):
 def test_not_a_transaction_notes_query(audio_file):
     tx = _run(audio_file, scenario="unclear_kind")
     assert tx["flag"] == "low_confidence"
-    assert tx["amount_pkd"] is None
+    assert tx["amount_pkr"] is None
     assert "سمجھ" in tx["confirmation_ur"]  # "I didn't understand"
 
 
@@ -170,7 +170,7 @@ def test_not_a_transaction_notes_query(audio_file):
 def test_mixed_urdu_english(audio_file):
     tx = _run(audio_file, scenario="mixed_urdu_english")
     assert tx["kind"] == "sale"
-    assert tx["amount_pkd"] == 5000  # "panch hazar" → 5000
+    assert tx["amount_pkr"] == 5000  # "panch hazar" → 5000
     assert tx["counterparty"]["name"] == "Usman"
     assert tx["flag"] == "none"
     assert "Usman" in tx["confirmation_ur"]
@@ -188,7 +188,7 @@ def test_garbage_audio(tmp_path):
                             mock_scenario="garbage_audio")
     _required_keys_present(tx)
     assert tx["flag"] == "low_confidence"
-    assert tx["amount_pkd"] is None  # §6.9: null, never 0.0
+    assert tx["amount_pkr"] is None  # §6.9: null, never 0.0
     assert tx["status"] == "pending"
     assert tx["confirmation_ur"]  # a clarification question exists
     assert tx["source"]["confidence"] == 0.0
@@ -217,7 +217,7 @@ def test_unparsable_model_output_falls_back(tmp_path):
     finally:
         pl.mock_response_text = original
     assert tx["flag"] == "low_confidence"
-    assert tx["amount_pkd"] is None
+    assert tx["amount_pkr"] is None
     assert "sorry I cannot answer" in tx["source"]["raw_output"]["transcript"]
 
 
@@ -249,12 +249,12 @@ def test_output_json_serializable_roundtrip(audio_file):
 # --- §6.10 amount bounds (QA E-1) -------------------------------------------------
 
 
-def _contract_tx(amount_pkd):
+def _contract_tx(amount_pkr):
     from voice_agent.models import Counterparty, SourceBlock, Transaction
 
     return Transaction(
         kind="udhar_given",
-        amount_pkd=amount_pkd,
+        amount_pkr=amount_pkr,
         counterparty=Counterparty(name="احمد"),
         description="bound check",
         item_lines=[],
@@ -277,9 +277,9 @@ def test_amount_over_one_crore_rejected_by_contract():
 def test_amount_bounds_valid_edges():
     from pydantic import ValidationError
 
-    assert _contract_tx(10_000_000).amount_pkd == 10_000_000  # 1 crore: valid
-    assert _contract_tx(0.5).amount_pkd == 0.5
-    assert _contract_tx(None).amount_pkd is None  # §6.2/§6.9: null = unknown, allowed
+    assert _contract_tx(10_000_000).amount_pkr == 10_000_000  # 1 crore: valid
+    assert _contract_tx(0.5).amount_pkr == 0.5
+    assert _contract_tx(None).amount_pkr is None  # §6.2/§6.9: null = unknown, allowed
     for bad in (0, -500, -0.01):  # never zero/negative when present
         with pytest.raises(ValidationError):
             _contract_tx(bad)
@@ -294,12 +294,12 @@ def test_absurd_amount_routes_to_clarification_not_guess(audio_file):
     from voice_agent.mock_data import SCENARIOS
 
     scenario = copy.deepcopy(SCENARIOS["clean_udhar"])
-    scenario["transaction"]["amount_pkd"] = 10_000_001
+    scenario["transaction"]["amount_pkr"] = 10_000_001
     md.SCENARIOS["temp_absurd"] = scenario
     try:
         tx = _run(audio_file, scenario="temp_absurd")
         assert tx["flag"] == "low_confidence"
-        assert tx["amount_pkd"] is None  # not 10000001, not 0.0
+        assert tx["amount_pkr"] is None  # not 10000001, not 0.0
         assert "کیا یہ درست ہے؟" not in tx["confirmation_ur"]
         assert "رقم" in tx["confirmation_ur"]  # asks for the amount again
         assert tx["source"]["raw_output"]["mock"] is True

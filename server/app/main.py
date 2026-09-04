@@ -17,6 +17,7 @@ from . import dashscope_client, dispatch, whatsapp_client
 from .api import router as api_router
 from .config import REPO_ROOT, ensure_repo_root_on_path, get_settings
 from .db import init_db
+from .middleware_security import SecurityHeadersRateLimitMiddleware
 from .webhook import router as webhook_router
 
 logging.basicConfig(
@@ -48,6 +49,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Bizro server", version="0.1.0", lifespan=lifespan)
+
+# Security headers on every response + per-IP rate limits (webhook: 30/h,
+# everything else: 120/min — see middleware_security.py).
+app.add_middleware(SecurityHeadersRateLimitMiddleware)
 
 app.include_router(webhook_router)
 app.include_router(api_router)

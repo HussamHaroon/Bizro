@@ -125,7 +125,7 @@ def test_c1_confirm_returns_full_wire_transaction(client):
     r = client.post(f"/api/transactions/{tx_id}/confirm")
     assert r.status_code == 200, r.text
     body = r.json()
-    for field in ("id", "kind", "amount_pkd", "status", "source", "occurred_at"):
+    for field in ("id", "kind", "amount_pkr", "status", "source", "occurred_at"):
         assert field in body, f"confirm response missing Transaction.{field}"
     assert body["id"] == tx_id  # the row itself, not an {ok,...} wrapper
     assert body["status"] == "confirmed"
@@ -142,15 +142,15 @@ def test_c1_confirm_double_still_409(client):
 
 def test_c2_patch_returns_wire_row_top_level_with_original_values(client):
     tx_id = _seed_pending_tx(client, _wa("92372"))
-    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 4242})
+    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkr": 4242})
     assert r.status_code == 200, r.text
     body = r.json()
     assert "transaction" not in body, "§6.7: no {ok, transaction:{...}} wrapper"
     assert body["id"] == tx_id
-    assert body["amount_pkd"] == 4242
+    assert body["amount_pkr"] == 4242
     assert body["status"] == "edited"
     # §6.7: PATCH additionally carries the pre-edit snapshot alongside.
-    assert body["original_values"]["amount_pkd"] != 4242
+    assert body["original_values"]["amount_pkr"] != 4242
 
 
 # ------------------------------------------------- H-1: /health JSON
@@ -225,7 +225,7 @@ def test_f1_pipeline_null_amount_result_is_rejected(client, monkeypatch):
     def null_amount_pipeline(path, merchant, occurred_at):
         return {
             "kind": "udhar_given",
-            "amount_pkd": None,
+            "amount_pkr": None,
             "occurred_at": occurred_at,
             "source": {"type": "voice", "media_id": None, "model": None,
                        "confidence": 0.2, "raw_output": {}},
@@ -327,7 +327,7 @@ def test_f4_price_history_shape_is_wire_dicts():
             s, m,
             {
                 "kind": "expense",
-                "amount_pkd": 2560.0,
+                "amount_pkr": 2560.0,
                 "counterparty": {"name": "Al-Madina Kiryana Store", "phone": None},
                 "item_lines": [{"item": "chai patti", "qty": 2, "unit": "packet",
                                 "unit_price": 350, "line_total": 700}],
@@ -345,7 +345,7 @@ def test_f4_price_history_shape_is_wire_dicts():
     assert row["item_lines"][0]["item"] == "chai patti"
     assert row["item_lines"][0]["unit_price"] == 350
     assert row["counterparty"]["name"] == "Al-Madina Kiryana Store"
-    assert row["amount_pkd"] == 2560.0
+    assert row["amount_pkr"] == 2560.0
 
 
 # ------------------------------------- E-1 (§6.10): amount upper bound
@@ -353,17 +353,17 @@ def test_f4_price_history_shape_is_wire_dicts():
 
 def test_e1_patch_rejects_over_crore(client):
     tx_id = _seed_pending_tx(client, _wa("92382"))
-    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 10_000_001})
+    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkr": 10_000_001})
     assert r.status_code == 422
-    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 1e9})
+    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkr": 1e9})
     assert r.status_code == 422
 
 
 def test_e1_patch_accepts_boundaries(client):
     tx_id = _seed_pending_tx(client, _wa("92383"))
-    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 10_000_000})
+    r = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkr": 10_000_000})
     assert r.status_code == 200
-    assert r.json()["amount_pkd"] == 10_000_000
+    assert r.json()["amount_pkr"] == 10_000_000
 
 
 def test_e1_transaction_in_rejects_absurd_pipeline_output():
@@ -373,7 +373,7 @@ def test_e1_transaction_in_rejects_absurd_pipeline_output():
 
     with pytest.raises(ValidationError):
         TransactionIn.model_validate({
-            "kind": "sale", "amount_pkd": 100_000_000,
+            "kind": "sale", "amount_pkr": 100_000_000,
             "occurred_at": "2026-08-21T10:00:00+00:00",
             "source": {"type": "manual", "confidence": 0.9},
         })
@@ -478,7 +478,7 @@ def test_w1_confirm_and_patch_responses_carry_confirmation_ur(client):
     tx_id = _seed_pending_tx(client, _wa("92388"))
     body = client.post(f"/api/transactions/{tx_id}/confirm").json()
     assert body["confirmation_ur"]
-    body = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 1234}).json()
+    body = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkr": 1234}).json()
     assert body["confirmation_ur"]
 
 

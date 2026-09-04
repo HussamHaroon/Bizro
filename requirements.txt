@@ -11,6 +11,7 @@ pydantic>=2.13,<3
 pydantic-settings>=2.4
 httpx>=0.28
 python-multipart>=0.0.9
+edge-tts>=7.0            # POST /api/tts — Urdu voice replies (ur-PK-AsadNeural, free, no key)
 
 # pipelines
 requests>=2.32          # vision-agent OCR client

@@ -38,7 +38,7 @@ Respond with ONLY a JSON object, no prose, in exactly this shape:
   "confidence": <float 0..1 — your honest confidence in the EXTRACTION, not the transcription>,
   "transaction": {
     "kind": "sale | expense | udhar_given | udhar_settlement | null",
-    "amount_pkd": <positive number, PKR rupees | null>,
+    "amount_pkr": <positive number, PKR rupees | null>,
     "counterparty": {"name": "<customer or supplier name | null>", "phone": null},
     "description": "<short English summary for the ledger>",
     "item_lines": [{"item": "...", "qty": <number>, "unit": "packet|tin|bag|...", "unit_price": <number>, "line_total": <number>}],
@@ -54,14 +54,14 @@ Kind semantics (direction is implied by kind; amount is always positive):
 
 HARD RULES:
 - If the note is NOT a transaction (a question, small talk), set kind=null and list "kind" in unclear.
-- If the amount is ambiguous ("پانچ یا چھ ہزار"), set amount_pkd=null and list "amount" in unclear.
+- If the amount is ambiguous ("پانچ یا چھ ہزار"), set amount_pkr=null and list "amount" in unclear.
   NEVER pick one of several possible amounts. NEVER invent digits.
 - Convert spoken number words to digits: "panch hazar"=5000, "پندرہ سو"=1500, "aath bori"=8 bags.
 - English number words are often written in Urdu script PHONETICALLY by the transcriber:
   "سون تھاؤزن" = 7000, "ٹو ان ہزار" = 2000, "پوائنٹ فائیو" = 0.5, "فورٹی فائیو" = 45.
   Always convert these phonetic English numbers to digits like any other spoken number.
 - item_lines only when the note clearly lists items; else [].
-- If item_lines exist and their line_totals do not sum to amount_pkd, still report what was said —
+- If item_lines exist and their line_totals do not sum to amount_pkr, still report what was said —
   do NOT silently fix; the pipeline flags the mismatch."""
 
 
@@ -190,7 +190,7 @@ def _assemble(
         ), []
 
     # -- unclear extraction → flag, never guess ------------------------------
-    amount = _safe_amount(inner.get("amount_pkd"))
+    amount = _safe_amount(inner.get("amount_pkr"))
     unknown_amount = ("amount" in unclear) or amount is None
     if "kind" in unclear or unknown_amount:
         return _low_confidence_fallback(
@@ -211,7 +211,7 @@ def _assemble(
     try:
         tx = Transaction(
             kind=inner["kind"],
-            amount_pkd=amount,
+            amount_pkr=amount,
             counterparty=(inner.get("counterparty") or {}),
             description=str(inner.get("description") or ""),
             item_lines=inner.get("item_lines") or [],
@@ -243,9 +243,9 @@ def _apply_derived_flags(tx: Transaction, settings: Settings) -> None:
     if tx.flag == "none":
         if tx.source.confidence < settings.confidence_confirm_threshold:
             tx.flag = "low_confidence"
-        elif tx.item_lines and tx.amount_pkd is not None:
+        elif tx.item_lines and tx.amount_pkr is not None:
             total = sum(li.line_total for li in tx.item_lines)
-            if abs(total - tx.amount_pkd) > 0.01:
+            if abs(total - tx.amount_pkr) > 0.01:
                 tx.flag = "total_mismatch"
     # status stays "pending": every AI entry awaits the merchant's WhatsApp reply.
 
@@ -285,7 +285,7 @@ def _low_confidence_fallback(
 
     tx = Transaction(
         kind=final_kind,
-        amount_pkd=amount,
+        amount_pkr=amount,
         counterparty={"name": counterparty_name, "phone": None},
         description=description,
         item_lines=[],

@@ -87,7 +87,7 @@ export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
           modes; digits-only in en per the numeral ruling). */}
       {mode !== 'en' && (
         <p className="bizro-urdu text-xs leading-relaxed text-ink-line opacity-70" lang="ur">
-          {urduAmountWords(value)} روپے
+          {urduAmountWords(Math.round(value))} روپے
         </p>
       )}
     </div>

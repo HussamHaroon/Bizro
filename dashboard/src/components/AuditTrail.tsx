@@ -60,7 +60,7 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
             <T en="Amount" ur="رقم" />
           </dt>
           <dd>
-            <AmountText value={t.amount_pkd} tone={toneForKind(t.kind)} showWords />
+            <AmountText value={t.amount_pkr} tone={toneForKind(t.kind)} showWords />
           </dd>
         </div>
         <div className="flex flex-col gap-0.5">

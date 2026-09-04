@@ -34,7 +34,7 @@ def _settings(**over) -> Settings:
 def udhar_tx() -> dict:
     return {
         "kind": "udhar_given",
-        "amount_pkd": 5000,
+        "amount_pkr": 5000,
         "currency": "PKR",
         "counterparty": {"name": "احمد", "phone": None},
         "description": "Udhar given to Ahmad",
@@ -102,7 +102,7 @@ def test_html_distinguishes_debit_vs_settled_by_more_than_color():
 
 def _base(kind: str) -> dict:
     return {
-        "kind": kind, "amount_pkd": 5000,
+        "kind": kind, "amount_pkr": 5000,
         "counterparty": {"name": "احمد"}, "item_lines": [],
         "occurred_at": "2026-08-21T19:03:00+05:00",
         "source": {"confidence": 0.9}, "flag": "none", "mock": False,
