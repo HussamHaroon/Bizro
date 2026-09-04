@@ -86,7 +86,7 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         # Attribution (defect 4): the model id ACTUALLY configured, and the
         # provider derived AT RUNTIME from the host the model calls really go
         # to — never a hardcoded brand claim.
-        model = os.environ.get("MODEL_REASONING", "qwen3.7-plus")
+        model = os.environ.get("MODEL_REASONING", "qwen-flash")
         provider = provider_from_base_url(
             os.environ.get("DASHSCOPE_BASE_URL", DEFAULT_BASE_URL)
         )

@@ -42,7 +42,7 @@ def _find_repo_root() -> Path:
 class Settings:
     dashscope_api_key: str = ""
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    model_voice: str = "qwen3.5-omni-plus"
+    model_voice: str = "qwen-flash"
     mock_mode: str = "auto"  # auto | always | never
     confidence_confirm_threshold: float = 0.75
     numeral_style: str = "western"  # western | urdu (design.md §4.2 — settled by user test)
@@ -80,7 +80,7 @@ def load_settings(env: dict[str, str] | None = None) -> Settings:
     return Settings(
         dashscope_api_key=get("DASHSCOPE_API_KEY"),
         dashscope_base_url=get("DASHSCOPE_BASE_URL", Settings.dashscope_base_url),
-        model_voice=get("MODEL_VOICE", "qwen3.5-omni-plus"),
+        model_voice=get("MODEL_VOICE", "qwen-flash"),
         mock_mode=get("MOCK_MODE", "auto").lower(),
         confidence_confirm_threshold=float(get("CONFIDENCE_CONFIRM_THRESHOLD", "0.75")),
         numeral_style=get("NUMERAL_STYLE", "western").lower(),

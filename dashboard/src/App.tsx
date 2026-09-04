@@ -24,6 +24,7 @@ import { IconLedger, IconReport, IconSettings, IconWhatsApp } from './components
 import { MonthlyLedgerScreen } from './screens/MonthlyLedgerScreen';
 import { CreditReadinessScreen } from './screens/CreditReadinessScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { NotFoundScreen } from './screens/NotFoundScreen';
 import { SimulatorScreen } from './screens/SimulatorScreen';
 import { ComponentsGallery } from './dev/ComponentsGallery';
 import { useMerchant } from './merchant';
@@ -150,6 +151,9 @@ export function App() {
             {/* Dev-only gallery — deliberately NOT linked from the prod footer
                 (audit SCAR); still reachable by URL while building components. */}
             <Route path="/dev/components" element={<ComponentsGallery />} />
+            {/* Catch-all — an unknown path gets an honest "not here" card and
+                one way back, never a blank shell under the nav. */}
+            <Route path="*" element={<NotFoundScreen />} />
           </Routes>
         </main>
         <footer className="bizro-no-print border-t border-gridline px-4 py-3">
