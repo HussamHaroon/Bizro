@@ -73,11 +73,19 @@ export function HeroStat({ en, value, tone, icon }: HeroStatProps) {
         <span className="inline-flex">{icon}</span>
         {en}
       </p>
-      {/* D4-1 hero numerals: clamp() scales 390px→~40px / desktop→72px, never
-          below the 2.5rem floor. The amount line wraps (prefix drops a line)
-          rather than truncating — amounts are never cut. */}
+      {/* D4-1 hero numerals: clamp() scales 390px→40px floor / wide desktop→72px
+          ceiling, never below the 2.5rem floor. The amount line wraps (prefix
+          drops a line) rather than truncating — amounts are never cut.
+          Coefficient is 5.6vw, NOT 9.8vw: 9.8vw hit the 4.5rem=72px ceiling at
+          ~735px while the KPI grid only goes 3-column at md=768px, so across
+          768–1050px the digits overflowed the card and were sliced mid-glyph
+          (measured 831px: "Rs 1,441.08" → "Rs 1,441.0", rect right=862).
+          5.6vw keeps the whole string inside the card content box from 768px up
+          (43.0px @768 … 58.8px @1050, all ≤ track−46px) and still reaches the
+          72px ceiling on wide desktops (≥1286px, where max-w-6xl gives the card
+          a 354.67px track that fits 72px). */}
       <p
-        className={`flex flex-wrap items-baseline gap-x-1 font-numerals font-bold leading-none tabular-nums text-[clamp(2.5rem,9.8vw,4.5rem)] ${TONE_CLASS[tone]}`}
+        className={`flex flex-wrap items-baseline gap-x-1 font-numerals font-bold leading-none tabular-nums text-[clamp(2.5rem,5.6vw,4.5rem)] ${TONE_CLASS[tone]}`}
       >
         <span className="text-[0.5em] font-semibold opacity-70">Rs</span>
         <bdi>{shown.toLocaleString('en-PK')}</bdi>

@@ -44,7 +44,12 @@ export function adaptCanonicalReport(
     },
     period: canonical?.period ?? derived.period,
     generated_at: canonical?.generated_at ?? derived.generated_at,
+    generated_at_display: canonical?.generated_at_display ?? null,
     model: canonical?.model ?? derived.model,
+    // Runtime attribution (audit defect 4): the provider the SERVER derived
+    // from its own base URL. Never invented client-side — absent means the
+    // screen claims no provider at all.
+    model_provider: canonical?.model_provider ?? null,
     readiness: {
       ...derived.readiness,
       level,
@@ -54,7 +59,10 @@ export function adaptCanonicalReport(
     flags: (canonical?.red_flags ?? []).map((f: any) => ({
       flag: f.flag,
       count: f.count,
-      transaction_ids: [],
+      // Audit defect 2: the payload's own refs are the traceable ids; the
+      // screen falls back to same-flag loaded entries only when they're absent.
+      transaction_ids: Array.isArray(f.refs) ? f.refs.map(String) : [],
+      reason: typeof f.refs_reason === 'string' ? f.refs_reason : null,
     })),
     narrative_ur: canonical?.narrative_ur ?? derived.narrative_ur,
     line_items,

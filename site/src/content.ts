@@ -9,8 +9,14 @@
    Brand facts stay exact even though the wording got simpler: 10.3% /
    ~33% formal-account shares, the Shariah-compliant demand blocker,
    Mawakhat (Alkhidmat Foundation) with ~800 branches, PKR 30–75k
-   Qarz-e-Hasna loans, the 99.9% repayment rate (as claimed), the Qwen
-   model names, and the PKR 5,000 / Ahmad / 96% demo figures. */
+   Qarz-e-Hasna loans, the 99.9% repayment rate (as claimed), and the
+   PKR 5,000 / Ahmad / 96% demo figures.
+
+   Honesty sweep (2026-09-04, audit KILL 2): every model name on this site
+   names the RUNNING stack — the free-tier demo models the .env actually
+   routes to. Qwen on Alibaba Cloud Model Studio is named only as the
+   production path (one environment variable), never as what runs today.
+   content.test.ts pins both halves of that law. */
 
 import { MITHU_COPY } from "./mithu-content";
 
@@ -127,21 +133,21 @@ export const COPY = {
         h3: "Send a voice note",
         p:
           "He records a short voice note on WhatsApp — the way he'd tell a helper. Bizro turns it into a ledger entry and sends a stamped invoice right back.",
-        badges: ["Qwen3.5-Omni-Plus", "WhatsApp in / out"],
+        badges: ["Whisper STT + MiniMax M3", "WhatsApp in / out"],
       },
       {
         chip: "Step 2 · Vision",
         h3: "Photograph the receipt",
         p:
           "One photo of the handwritten supplier receipt. The expense is logged, and obvious price mistakes get flagged before they hide in the notebook.",
-        badges: ["Qwen-VL-OCR", "Price-error flags"],
+        badges: ["DOTS OCR", "Price-error flags"],
       },
       {
         chip: "Step 3 · Report",
         h3: "One tap, months later",
         p:
           "One tap turns months of saved notes and photos into a Mawakhat-style Credit Readiness Report. Every number links back to its source, so a loan officer can check it.",
-        badges: ["Qwen3.7-Plus", "Mawakhat-style format"],
+        badges: ["MiniMax M3", "Mawakhat-style format"],
       },
     ],
   },
@@ -187,7 +193,7 @@ export const COPY = {
       name: "Ahmad — credit given",
       amount: "PKR 5,000",
       source: "Source: WhatsApp voice note · 0:14",
-      parsed: "Parsed by Qwen3.5-Omni-Plus · confidence 96%",
+      parsed: "Parsed by the demo AI model · confidence 96%",
       correct: "One tap to fix — the fix itself builds trust",
       stamp: "AI-Parsed · Confirmed",
       caption:
@@ -199,13 +205,13 @@ export const COPY = {
   footer: {
     tagline: "The paper ledger, given a memory.",
     credits1:
-      "Bizro · Bano Qabil × Alibaba Cloud AI Hackathon Pakistan 2026 · built on Alibaba Cloud Model Studio.",
+      "Bizro · Bano Qabil × Alibaba Cloud AI Hackathon Pakistan 2026.",
     credits2:
-      "Voice Khata by Qwen3.5-Omni-Plus · Vision Audit by Qwen-VL-OCR · Credit Readiness by Qwen3.7-Plus.",
+      "Running today on free-tier demo models: MiniMax M3 · DOTS OCR · Groq Whisper. Provider-agnostic: Qwen on Alibaba Cloud Model Studio is the production path — one environment variable.",
     linkLedger: "Live ledger",
     linkReport: "Credit Readiness Report",
     honesty:
-      "Demo build — AI answers are clearly labeled when no live key is connected. Verified figures are sourced in design.md §1; the 99.9% Mawakhat repayment rate is as claimed by Mawakhat.",
+      "Demo build — AI answers are clearly labeled when no live key is connected. Figures as stated in the pitch, sources available on request. 99.9% repayment rate as claimed by Mawakhat.",
   },
   mithu: {
     heroLabel: "Mithu the parrot presents the live demo",

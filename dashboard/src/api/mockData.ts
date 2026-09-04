@@ -14,6 +14,7 @@ import type {
   MerchantSummary,
   ReadinessLevel,
   SavingsStreak,
+  SourceType,
   Transaction,
   TransactionKind,
   TransactionSource,
@@ -22,9 +23,13 @@ import type {
   UdharOutstanding,
 } from '../types/schema';
 
-const VOICE = 'qwen3.5-omni-plus';
-const OCR_VL = 'qwen-vl-ocr';
-const OCR_NEW = 'qwen3.5-ocr';
+/* Fixture model labels (audit KILL 2): NO model ran for these rows, so they
+   must not carry a real production model id — the audit drill-down and the
+   report line items print this string, and a Qwen name here would claim a
+   parse that never happened. */
+const VOICE = 'demo-fixture (voice row, no model ran)';
+const OCR_VL = 'demo-fixture (photo row, no model ran)';
+const OCR_NEW = 'demo-fixture (photo row, no model ran)';
 
 let seq = 0;
 function tx(
@@ -81,16 +86,24 @@ const v = (confidence: number, mediaId: string, transcript?: string): Transactio
   media_id: mediaId,
   model: VOICE,
   confidence,
-  raw_output: transcript ? { transcript } : {},
+  // mock marker (D0-3): fixture rows are demo data — the ledger chip and the
+  // audit drill-down read this and never present them as real parses.
+  raw_output: transcript ? { transcript, mock: true } : { mock: true },
 });
 const o = (model: string, confidence: number, mediaId: string): TransactionSource => ({
   type: 'photo',
   media_id: mediaId,
   model,
   confidence,
-  raw_output: {},
+  raw_output: { mock: true },
 });
-const m = (): TransactionSource => ({ type: 'manual', media_id: null, model: null, confidence: null });
+const m = (): TransactionSource => ({
+  type: 'manual',
+  media_id: null,
+  model: null,
+  confidence: null,
+  raw_output: { mock: true },
+});
 
 const AHMAD = { name: 'Ahmad Rasheed', phone: '+92 300 1234567' };
 const SANA = { name: 'Sana Boutique', phone: '+92 321 9876543' };
@@ -297,8 +310,10 @@ export function deriveStreak(items: Transaction[]): SavingsStreak {
 }
 
 /* ---- Credit Readiness preview (DRAFT shape — see types/schema.ts header) -----
-   Derived transparently from the mock transactions. The real endpoint will run
-   Qwen3.7-Plus (schema.md §4 GET /api/merchants/{id}/report/preview); the scoring
+   Derived transparently from the mock transactions. The real endpoint runs
+   whatever MODEL_REASONING the server config points at (schema.md §4 GET
+   /api/merchants/{id}/report/preview) — a free-tier demo model today, Qwen
+   on Alibaba Cloud Model Studio as the production path; the scoring
    heuristic below is a stand-in for demo mode and is labeled as such on-screen. */
 
 function monthKey(iso: string): string {
@@ -323,7 +338,7 @@ export function deriveReportPreview(items: Transaction[]): CreditReportPreview {
         ai_entries: 0,
         ai_share: 0,
         avg_confidence: null,
-        by_source: { voice: { entries: 0, avg_confidence: null }, photo: { entries: 0, avg_confidence: null }, manual: { entries: 0, avg_confidence: null } },
+        by_source: { voice: { entries: 0, avg_confidence: null }, photo: { entries: 0, avg_confidence: null }, text: { entries: 0, avg_confidence: null }, manual: { entries: 0, avg_confidence: null } },
       },
       narrative_ur: null,
       line_items: [],
@@ -367,7 +382,7 @@ export function deriveReportPreview(items: Transaction[]): CreditReportPreview {
     flagMap.set(t.flag, [...(flagMap.get(t.flag) ?? []), t.id]);
   }
 
-  const bySource = (type: 'voice' | 'photo' | 'manual') => {
+  const bySource = (type: SourceType) => {
     const rows = active.filter((t) => t.source.type === type);
     const cs = rows.map((t) => t.source.confidence).filter((c): c is number => c !== null);
     return {
@@ -417,7 +432,7 @@ export function deriveReportPreview(items: Transaction[]): CreditReportPreview {
       end: sorted[sorted.length - 1].occurred_at.slice(0, 10),
     },
     generated_at: '2026-08-21T21:00:00+05:00',
-    model: null, // mock — real preview names the reasoning model (qwen3.7-plus)
+    model: null, // mock — the live preview names the reasoning model actually used
     readiness: {
       level,
       score_0_100: score,
@@ -440,7 +455,7 @@ export function deriveReportPreview(items: Transaction[]): CreditReportPreview {
       ai_entries: aiEntries.length,
       ai_share: aiShare,
       avg_confidence: avgConfidence,
-      by_source: { voice: bySource('voice'), photo: bySource('photo'), manual: bySource('manual') },
+      by_source: { voice: bySource('voice'), photo: bySource('photo'), text: bySource('text'), manual: bySource('manual') },
     },
     narrative_ur:
       'بسم اللہ کرانہ اسٹور کا تین ماہ کا ریکارڈ مستقل ہے۔ ماہانہ فروخت اور وصولیاں درج ہیں، ادھار کی رقم محدود ہے، اور ہر انٹری کی اصل آواز یا رسید محفوظ ہے۔ قرض کے لیے رپورٹ تیار ہے۔',

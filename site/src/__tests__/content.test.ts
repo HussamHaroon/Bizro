@@ -10,7 +10,9 @@
         identifiers, not copy
      3. the movie has exactly 4 scene captions and Mithu exactly 4 tips
      4. the brand facts survive the plain-wording pass unchanged:
-        10.3% / ~33% / 99.9%, PKR figures, Mawakhat, and the Qwen models */
+        10.3% / ~33% / 99.9%, PKR figures and Mawakhat — plus the honesty
+        law: model names state the RUNNING demo stack, and Qwen / Alibaba
+        Cloud Model Studio appear only as the production path */
 
 import { describe, it, expect } from "vitest";
 import { COPY } from "../content";
@@ -121,10 +123,19 @@ describe("content — brand facts survive the plain-wording pass", () => {
     expect(blob).toContain("96%");
   });
 
-  it("keeps all three Qwen model names", () => {
-    expect(blob).toContain("Qwen3.5-Omni-Plus");
-    expect(blob).toContain("Qwen-VL-OCR");
-    expect(blob).toContain("Qwen3.7-Plus");
+  it("names the RUNNING demo stack, not a production wish-list", () => {
+    expect(blob).toContain("MiniMax M3");
+    expect(blob).toContain("DOTS OCR");
+    expect(blob).toContain("Groq Whisper");
+  });
+
+  it("keeps Qwen / Model Studio named only as the production path", () => {
+    expect(blob).toContain(
+      "Qwen on Alibaba Cloud Model Studio is the production path",
+    );
+    expect(blob).not.toContain("Qwen3.5-Omni-Plus");
+    expect(blob).not.toContain("Qwen-VL-OCR");
+    expect(blob).not.toContain("Qwen3.7-Plus");
   });
 
   it("still maps every server transaction kind to an English word", () => {

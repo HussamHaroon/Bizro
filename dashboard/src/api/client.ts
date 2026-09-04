@@ -89,6 +89,18 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
     if (!res.ok) throw new Error(`API ${res.status} ${res.statusText} — ${path}`);
     return (await res.json()) as T;
   }
+  /* In-flight GET dedupe: /credit mounts listTransactions() and reportPreview()
+     together, and reportPreview needs the SAME rows to adapt the canonical
+     payload — sharing the pending promise turns two identical requests into
+     one. Keyed by full path (query included); only GETs go through it. */
+  const inflight = new Map<string, Promise<unknown>>();
+  function reqShared(path: string): Promise<unknown> {
+    const hit = inflight.get(path);
+    if (hit) return hit;
+    const pending = req<unknown>(path).finally(() => inflight.delete(path));
+    inflight.set(path, pending);
+    return pending;
+  }
   // Server wraps transaction lists as {count, transactions}; accept both shapes.
   const txList = (d: unknown): Transaction[] =>
     Array.isArray(d) ? d : ((d as { transactions?: Transaction[] })?.transactions ?? []);
@@ -101,7 +113,7 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
       if (query.to) qs.set('to', query.to);
       if (query.kind) qs.set('kind', query.kind);
       const suffix = qs.size ? `?${qs}` : '';
-      return req<unknown>(`/api/merchants/${merchantId}/transactions${suffix}`).then(
+      return reqShared(`/api/merchants/${merchantId}/transactions${suffix}`).then(
         (data): Labeled<Transaction[]> => ({ mock: false, data: txList(data) }),
       );
     },
@@ -131,7 +143,9 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
       // Server wraps as {cached, report}; the report itself is canonical §6.5.
       const canonical = (payload as { report?: unknown })?.report ?? payload;
       if (isCanonicalReport(canonical)) {
-        const rows = await req<unknown>(`/api/merchants/${merchantId}/transactions`);
+        // Shares the in-flight promise with a concurrent listTransactions()
+        // call (the /credit mount fires both) — one request, not two.
+        const rows = await reqShared(`/api/merchants/${merchantId}/transactions`);
         return {
           mock: false,
           data: adaptCanonicalReport(canonical, txList(rows)),

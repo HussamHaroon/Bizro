@@ -12,6 +12,7 @@ import { Button } from './Button';
 import { SourceMedia } from './SourceMedia';
 import { TrustSealBadge } from './TrustSealBadge';
 import { formatConfidence, formatDateTime, formatPkr } from '../lib/format';
+import { isDemoRow } from '../lib/demo';
 
 export interface AuditTrailProps {
   transaction: Transaction;
@@ -23,24 +24,41 @@ export interface AuditTrailProps {
 const SOURCE_WORDS: Record<Transaction['source']['type'], string> = {
   voice: 'Voice note',
   photo: 'Receipt photo',
+  text: 'Typed WhatsApp note',
   manual: 'Entered by hand',
 };
 
 export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = false }: AuditTrailProps) {
   const ai = t.source.type !== 'manual';
   const src = SOURCE_WORDS[t.source.type];
+  /* Honesty (audit WOUND 4): a seeded demo row never ran a model, so it gets
+     the dashed demo note instead of the verified seal + confidence bar —
+     Edit/Confirm stay fully working on it. */
+  const demo = isDemoRow(t);
 
   return (
     <div className="bizro-card flex flex-col gap-3 px-4 py-4 text-sm">
-      {/* The seal with its always-visible correction affordance (design.md §7.2). */}
-      {ai && onEdit && (
-        <TrustSealBadge
-          variant={t.status === 'pending' ? 'pending' : 'verified'}
-          model={t.source.model}
-          confidence={t.source.confidence}
-          stampIn={justConfirmed}
-          onEdit={onEdit}
-        />
+      {demo ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="inline-flex items-center rounded-chip border-2 border-dashed border-ink-line bg-fill-gold px-2 py-1 text-xs font-bold uppercase tracking-wide text-ink-line">
+            Demo entry
+          </span>
+          <p className="text-xs text-ink-line opacity-75">
+            Seeded example data — no voice note, photo, or model call is behind this row.
+          </p>
+          {onEdit && <Button onClick={onEdit}>Edit</Button>}
+        </div>
+      ) : (
+        /* The seal with its always-visible correction affordance (design.md §7.2). */
+        ai && onEdit && (
+          <TrustSealBadge
+            variant={t.status === 'pending' ? 'pending' : 'verified'}
+            model={t.source.model}
+            confidence={t.source.confidence}
+            stampIn={justConfirmed}
+            onEdit={onEdit}
+          />
+        )
       )}
       {!ai && (
         <p className="flex flex-wrap items-baseline gap-x-2 font-semibold text-ink-line">
@@ -80,8 +98,8 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
             Model
           </dt>
           <dd className="flex flex-col gap-1 text-ink-line">
-            <span>{t.source.model ?? '— (manual entry)'}</span>
-            {ai && (
+            <span>{demo ? 'none — demo entry' : (t.source.model ?? '— (manual entry)')}</span>
+            {ai && !demo && (
               <span className="flex items-center gap-2">
                 <span
                   className="inline-block h-2.5 w-24 overflow-hidden rounded-card border-2 border-ink-line bg-paper-raised"
