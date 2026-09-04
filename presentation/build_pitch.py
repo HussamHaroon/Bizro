@@ -280,9 +280,14 @@ text(s, Inches(0.95), int(top + Inches(1.1)), Inches(6.6), Inches(1.2),
      ["Record a voice note.", "Watch it become a ledger entry."],
      size=19, color=CREAM, leading=1.25)
 frame(s, Inches(8.2), top, Inches(4.5), Inches(2.5), fill=PAPER)
-# Real capture of the live site (hero mic demo) — run from the repo root.
+# Real capture of the live site (the hero's record-a-note card: green mic
+# pill + parsed invoice) — run from the repo root. Near-square asset, so
+# fit by height into the panel and center it horizontally.
+_pic_h = Inches(2.26)
+_pic_w = _pic_h * 533 / 529
 s.shapes.add_picture("presentation/assets/demo-live.png",
-                     Inches(8.32), int(top + Inches(0.12)), width=Inches(4.26))
+                     Inches(8.2) + (Inches(4.5) - _pic_w) / 2,
+                     int(top + Inches(0.12)), height=_pic_h)
 frame(s, Inches(0.6), int(top + Inches(2.85)), Inches(12.1), Inches(2.35), fill=PAPER)
 text(s, Inches(0.95), int(top + Inches(3.05)), Inches(11.4), Inches(0.4),
      "DEMO PATH", size=13, font=SLAB, color=RED)
