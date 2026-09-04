@@ -127,7 +127,7 @@ def test_voice_ingest_happy_path_persists_and_confirms(client):
     assert out["transaction_id"]
     assert out["status"] == "pending"  # every AI entry awaits confirmation
     assert _tx_count(out["merchant_id"]) == 1
-    assert any("درست" in b for b in _outbound_bodies(out["merchant_id"]))
+    assert any("Is this correct" in b for b in _outbound_bodies(out["merchant_id"]))
 
 
 def test_image_ingest_happy_path_d0_12_datetime_occurred_at(client):
@@ -225,7 +225,7 @@ def test_unknown_amount_persists_nothing(client, monkeypatch):
     out = r.json()["results"][0]
     assert _tx_count_for_wa(wa) == 0, "no guessed amount may be persisted"
     assert out["ok"] is True and out.get("persisted") is False
-    assert any("رقم" in b for b in _outbound_bodies_for_wa(wa))
+    assert any("How much" in b for b in _outbound_bodies_for_wa(wa))
 
 
 def test_non_receipt_image_persists_nothing(client, monkeypatch):
