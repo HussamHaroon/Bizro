@@ -43,11 +43,20 @@ WEBHOOK_WINDOW_S = 3600
 GENERAL_WINDOW_S = 60
 
 # Replace (not append) any same-named upstream header — ours must win.
+# CSP: page records audio and renders no third-party scripts/styles; inline
+# style attributes (React style={{...}}) need 'unsafe-inline' on style-src.
 SECURITY_HEADERS: tuple[tuple[str, str], ...] = (
     ("x-content-type-options", "nosniff"),
     ("x-frame-options", "DENY"),
     ("referrer-policy", "strict-origin-when-cross-origin"),
     ("permissions-policy", "camera=(self), microphone=(self)"),
+    (
+        "content-security-policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; "
+        "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
+        "frame-ancestors 'none'",
+    ),
 )
 
 # Sliding-window state: {f"{client_host}|{bucket}": deque[monotonic ts]}.
