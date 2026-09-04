@@ -49,10 +49,11 @@ function TopBar() {
       className="bizro-no-print sticky top-0 z-40 border-b-[3px] border-ink-line bg-paper text-ink-line"
     >
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
-        <Link
-          to="/ledger"
+        {/* Logo → the public homepage (full navigation, leaves the SPA). */}
+        <a
+          href="/"
           className="flex items-center gap-2.5 py-1"
-          aria-label="Bizro home — ledger"
+          aria-label="Bizro — back to homepage"
         >
           {/* Owner-provided wordmark lockup — same treatment as the site header
               (40px desktop / 32px phone). The image already carries both the
@@ -63,7 +64,7 @@ function TopBar() {
             className="block h-8 w-auto sm:h-10"
             style={{ imageRendering: '-webkit-optimize-contrast' }}
           />
-        </Link>
+        </a>
         {/* Desktop tabs — on phones these move to the bottom tab bar below. */}
         <nav aria-label="Screens" className="ml-2 hidden flex-wrap items-center gap-1.5 md:flex">
           {SCREEN_TABS.map(({ to, icon: Icon, label }) => (
