@@ -2,7 +2,8 @@
 
 - GET  /webhook/whatsapp : Meta verification handshake (hub.challenge echo)
 - POST /webhook/whatsapp : message ingest (audio → voice pipeline, image →
-  vision pipeline, text → confirm/reject reply handling)
+  vision pipeline, text → confirm/reject handling or the text pipeline —
+  every text reply is delivered AND stored as an outbound_messages row)
 
 X-Hub-Signature-256 is validated when WHATSAPP_APP_SECRET is set; without it,
 validation is disabled (logged + surfaced in /health) so the zero-credential
@@ -24,6 +25,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Query, Request, Response
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -48,6 +50,17 @@ HELP_REPLY_UR = (
 MEDIA_INVALID_REPLY_UR = (
     "We could not read that file, or it was too big. "
     "Please send a smaller file and try again."
+)
+
+# Typed-message parse miss / non-transaction / contract-validation failure:
+# honest simple English — we could not read it, nothing was saved.
+TEXT_PARSE_MISS_REPLY_UR = "I couldn't read that — try saying the amount again."
+
+# ONLY for a genuine timeout / model outage (the pipeline call itself failed).
+# Never used for a parse miss — failure copy must match the real failure class.
+MODEL_OUTAGE_REPLY_UR = (
+    "Bizro could not reach the AI service just now. Nothing was saved. "
+    "Please send the message again in a minute."
 )
 
 # --- onboarding (first contact) ----------------------------------------------
@@ -184,18 +197,26 @@ def _handle_message(
                 outcome = _onboarding_outcome(msg, session, merchant)
                 outcome["merchant_id"] = str(merchant.id)
                 return outcome
-            reply = dispatch.handle_text_reply(session, merchant, body)
-            if reply is None:
-                reply = HELP_REPLY_UR
-            send_result = whatsapp_client.send_text(merchant.wa_id, reply)
-            return {
-                "message_id": msg.get("id"),
-                "ok": True,
-                "type": "text",
-                "merchant_id": str(merchant.id),
-                "reply": reply,
-                "sent": send_result,
-            }
+            reply, acted_tx = dispatch.handle_text_reply(session, merchant, body)
+            if reply is not None:
+                # Confirm/reject by typed word: send_reply delivers AND writes
+                # the outbound_messages audit row (no bare send_text — every
+                # reply the simulator can render has a stored row).
+                sent = dispatch.send_reply(
+                    session, merchant, reply, kind="confirmation_text",
+                    transaction_id=acted_tx.id if acted_tx else None,
+                )
+                return {
+                    "message_id": msg.get("id"),
+                    "ok": True,
+                    "type": "text",
+                    "merchant_id": str(merchant.id),
+                    "reply": reply,
+                    "sent": sent,
+                }
+            outcome = _ingest_free_text(msg, session, merchant, body, occurred_at)
+            outcome["merchant_id"] = str(merchant.id)
+            return outcome
         if msg_type == "button":
             # §7.1: one-tap reply to our interactive confirm/correct buttons.
             # Graph API carries button.payload; older versions only button.text.
@@ -245,6 +266,83 @@ def _onboarding_outcome(
         # last body kept in `reply` so existing consumers of the text outcome
         # shape keep working
         "reply": ONBOARDING_SEQUENCE_UR[-1],
+        "sent": sent,
+    }
+
+
+def _ingest_free_text(
+    msg: dict[str, Any],
+    session,
+    merchant: Merchant,
+    body: str,
+    occurred_at,
+) -> dict[str, Any]:
+    """Free typed text → text pipeline → ledger entry (KILL-fix: typed messages
+    are parsed like voice notes, and EVERY reply gets an outbound_messages row
+    so the dashboard simulator — which polls GET /api/merchants/{id}/outbound —
+    can render it). No media row exists for text; persist with media_id None.
+
+    Failure classes stay honest (§6.9 spirit):
+    - parse miss / non-transaction / contract-validation failure →
+      TEXT_PARSE_MISS_REPLY_UR (clarify), nothing persisted;
+    - genuine timeout / model outage (pipeline call raised) →
+      MODEL_OUTAGE_REPLY_UR (busy), nothing persisted.
+    """
+    if not body:
+        sent = dispatch.send_reply(session, merchant, HELP_REPLY_UR, kind="help")
+        return {
+            "message_id": msg.get("id"), "ok": True, "type": "text",
+            "reply": HELP_REPLY_UR, "sent": sent,
+        }
+
+    try:
+        tx_data = dispatch.process_transcript(body, merchant, occurred_at)
+    except Exception:
+        logger.exception("Text pipeline failed (wamid=%s)", msg.get("id"))
+        sent = dispatch.send_reply(session, merchant, MODEL_OUTAGE_REPLY_UR)
+        return {
+            "message_id": msg.get("id"), "ok": False, "type": "text",
+            "error": "model_outage", "reply": MODEL_OUTAGE_REPLY_UR, "sent": sent,
+        }
+
+    # §6.9: no-amount / rejected / non-transaction result → clarify, persist nothing.
+    if dispatch.pipeline_rejection(tx_data) is not None:
+        return _text_miss_outcome(msg, session, merchant)
+
+    try:
+        tx = dispatch.persist_transaction(session, merchant, tx_data, None)
+    except ValidationError:
+        logger.warning(
+            "Typed message failed contract validation (wamid=%s)", msg.get("id")
+        )
+        return _text_miss_outcome(msg, session, merchant)
+
+    # Parsed transaction: deliver the confirmation exactly like the audio path —
+    # persist_transaction wrote the outbound row; send_confirmation delivers
+    # (with one-tap buttons while pending, §7.1).
+    confirmation = tx_data.get("confirmation_ur") or ""
+    sent = dispatch.send_confirmation(merchant, tx, confirmation) if confirmation else None
+    return {
+        "message_id": msg.get("id"),
+        "ok": True,
+        "type": "text",
+        "transaction_id": str(tx.id),
+        "status": tx.status,
+        "confirmation_ur": confirmation,
+        "reply": confirmation,
+        "sent": sent,
+    }
+
+
+def _text_miss_outcome(msg: dict[str, Any], session, merchant: Merchant) -> dict[str, Any]:
+    sent = dispatch.send_reply(session, merchant, TEXT_PARSE_MISS_REPLY_UR)
+    return {
+        "message_id": msg.get("id"),
+        "ok": True,
+        "type": "text",
+        "rejected": True,
+        "persisted": False,
+        "reply": TEXT_PARSE_MISS_REPLY_UR,
         "sent": sent,
     }
 

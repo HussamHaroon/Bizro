@@ -161,6 +161,83 @@ def process_voice_note(
     return tx_dict
 
 
+# Mock scenario used when a typed message arrives with no scenario pinned
+# (must exist in mock_data.SCENARIOS).
+DEFAULT_TEXT_SCENARIO = "clean_udhar"
+
+
+def process_transcript(
+    text: str,
+    merchant: dict | None = None,
+    occurred_at: str | dt.datetime | None = None,
+    *,
+    media_id: str | None = None,
+    settings: Settings | None = None,
+    mock_scenario: str | None = None,
+) -> dict:
+    """Process one TYPED WhatsApp message → schema.md §1 transaction dict.
+
+    Mirrors the STT branch of process_voice_note: the plain text model does the
+    structuring (`client.chat_text`). The only differences: there is no audio to
+    decode/transcribe, the emitted source.type is "text", and the typed message
+    itself is kept in raw_output as the audit transcript.
+
+    Model-call exceptions (timeout/outage) PROPAGATE — the server distinguishes
+    a genuine outage (busy reply) from a parse miss (clarification reply).
+    """
+    settings = settings or load_settings()
+    when = _coerce_occurred_at(occurred_at)
+    body = str(text or "").strip()
+
+    if settings.use_mock:
+        scenario = (
+            mock_scenario
+            or os.environ.get("MOCK_SCENARIO")
+            or DEFAULT_TEXT_SCENARIO
+        )
+        if scenario not in SCENARIOS:
+            raise ValueError(
+                f"unknown mock scenario {scenario!r}; options: {sorted(SCENARIOS)}"
+            )
+        model_text = mock_response_text(scenario)
+    else:
+        client = DashScopeClient(settings)  # fail fast on missing key
+        # plain text call — same path as the STT branch of process_voice_note
+        model_text = client.chat_text(
+            system=SYSTEM_PROMPT,
+            user_text=f"Typed message:\n{body}\n\n" + _user_prompt(when),
+        ).text
+
+    tx_dict, errors = _assemble(
+        model_text, when, media_id, settings, mock=settings.use_mock,
+        mock_scenario=scenario if settings.use_mock else None,
+        source_type="text",
+    )
+    if errors and not settings.use_mock:
+        model_text = _repair_call(client, settings, model_text, errors, text_mode=True)
+        tx_dict, errors = _assemble(
+            model_text, when, media_id, settings, mock=False, source_type="text"
+        )
+        if errors:
+            tx_dict = _low_confidence_fallback(
+                transcript=_extract_transcript(model_text), when=when, media_id=media_id,
+                confidence=0.0, settings=settings, mock=False,
+                note="model output failed schema validation after repair",
+                source_type="text",
+            )
+
+    # The typed message IS the transcript for this path — keep it in raw_output
+    # (audit trail) alongside whatever transcript the model echoed.
+    src = dict(tx_dict.get("source") or {})
+    raw = dict(src.get("raw_output") or {})
+    if not raw.get("transcript"):
+        raw["transcript"] = body
+    raw["typed_text"] = body
+    src["raw_output"] = raw
+    tx_dict["source"] = src
+    return tx_dict
+
+
 # ---------------------------------------------------------------------------
 # Assembly: model text → validated, flagged, confirmed transaction dict
 # ---------------------------------------------------------------------------
@@ -169,6 +246,7 @@ def process_voice_note(
 def _assemble(
     model_text: str, when: dt.datetime, media_id: str | None,
     settings: Settings, *, mock: bool, mock_scenario: str | None = None,
+    source_type: str = "voice",
 ) -> tuple[dict, list[str]]:
     """Parse + validate + apply flag rules. Returns (tx_dict, validation_errors)."""
     parsed, extract_err = _extract_json(model_text)
@@ -176,6 +254,7 @@ def _assemble(
         return _low_confidence_fallback(
             transcript=_extract_transcript(model_text), when=when, media_id=media_id,
             confidence=0.0, settings=settings, mock=mock, note=extract_err,
+            source_type=source_type,
         ), [extract_err]
 
     transcript = str(parsed.get("transcript") or "")
@@ -189,7 +268,7 @@ def _assemble(
             transcript=transcript, when=when, media_id=media_id, confidence=confidence,
             settings=settings, mock=mock, kind_hint=inner.get("kind") if inner else None,
             counterparty_name=(inner.get("counterparty") or {}).get("name"),
-            mock_scenario=mock_scenario,
+            mock_scenario=mock_scenario, source_type=source_type,
         ), []
 
     # -- unclear extraction → flag, never guess ------------------------------
@@ -202,7 +281,7 @@ def _assemble(
             counterparty_name=(inner.get("counterparty") or {}).get("name"),
             kind=None if "kind" in unclear else inner.get("kind"),
             amount=None,
-            mock_scenario=mock_scenario,
+            mock_scenario=mock_scenario, source_type=source_type,
         ), []
 
     raw_out: dict = {"transcript": transcript}
@@ -220,7 +299,7 @@ def _assemble(
             item_lines=inner.get("item_lines") or [],
             occurred_at=when,
             source={
-                "type": "voice",
+                "type": source_type,
                 "media_id": media_id,
                 "model": None if mock else settings.model_voice,
                 "confidence": confidence,
@@ -233,7 +312,7 @@ def _assemble(
         return _low_confidence_fallback(
             transcript=transcript, when=when, media_id=media_id, confidence=confidence,
             settings=settings, mock=mock, note="schema validation failed: " + "; ".join(errs[:4]),
-            mock_scenario=mock_scenario,
+            mock_scenario=mock_scenario, source_type=source_type,
         ), errs
 
     # -- derived flags -------------------------------------------------------
@@ -267,6 +346,7 @@ def _low_confidence_fallback(
     kind: str | None = None,
     amount: float | None = None,
     mock_scenario: str | None = None,
+    source_type: str = "voice",
 ) -> dict:
     """Schema-conformant 'ask again' payload. amount None = unknown, never a guess
     (§6.2/§6.9: the server must persist NOTHING and send the clarification instead)."""
@@ -294,7 +374,7 @@ def _low_confidence_fallback(
         item_lines=[],
         occurred_at=when,
         source={
-            "type": "voice",
+            "type": source_type,
             "media_id": media_id,
             "model": None if mock else settings.model_voice,
             "confidence": confidence,
@@ -366,7 +446,7 @@ def _safe_amount(value: Any) -> float | None:
 
 
 def _repair_call(client: DashScopeClient, settings: Settings,
-                 bad_output: str, errors: list[str]) -> str:
+                 bad_output: str, errors: list[str], *, text_mode: bool = False) -> str:
     prompt = (
         "Your previous reply violated the required schema. Violations:\n- "
         + "\n- ".join(errors)
@@ -375,6 +455,9 @@ def _repair_call(client: DashScopeClient, settings: Settings,
         + "\n\nReply again with ONLY the corrected JSON object per the system instructions."
     )
     try:
+        if text_mode:
+            # typed-message path uses the plain text model (no omni field set)
+            return client.chat_text(system=SYSTEM_PROMPT, user_text=prompt).text
         return client.omni_chat(system=SYSTEM_PROMPT, user_text=prompt).text
     except DashScopeError:
         return bad_output  # assembled path will fall back to low_confidence

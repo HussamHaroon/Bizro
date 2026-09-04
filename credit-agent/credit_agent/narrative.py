@@ -40,10 +40,16 @@ def _band_label_en(scored: Scored) -> str:
 
 
 def _template_ur(agg: Aggregates, scored: Scored, merchant: str) -> str:
-    """Deterministic simple-English fallback (mock-marked by the caller)."""
+    """Deterministic simple-English fallback (mock-marked by the caller).
+    The month count comes from agg.months — the SAME single computation the
+    report's period/month metric use, so the prose can never contradict the
+    numbers on the page (red-team defect 1)."""
+    months = len(agg.months)
+    month_word = "month" if months == 1 else "months"
     return (
         f"Review of {merchant}'s record: {agg.total_entries} entries were logged "
-        f"in this period, across {agg.weeks_active} weeks. Spending was "
+        f"in this period. The records cover {months} {month_word}, with "
+        f"{agg.weeks_active} active weeks. Spending was "
         f"PKR {agg.cash_out:,.0f} and income was PKR {agg.cash_in:,.0f}. "
         f"Credit of PKR {agg.udhar_outstanding:,.0f} is still to be collected. "
         f"The median confidence of the data is {agg.median_confidence or 0:.2f}. "
@@ -104,6 +110,7 @@ def build_narrative(
     payload = {
         "merchant": merchant,
         "total_entries": agg.total_entries,
+        "months_covered": len(agg.months),
         "weeks_active": agg.weeks_active,
         "weeks_in_span": agg.weeks_in_span,
         "cash_in": agg.cash_in,

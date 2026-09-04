@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 from .db_view import Customer, Transaction
+from .formatting import month_key
 
 CONFIRMED_STATUSES = ("confirmed", "edited", "pending")  # rejected excluded
 
@@ -23,6 +24,7 @@ class Aggregates:
     total_entries: int = 0
     counts: dict = field(default_factory=dict)         # kind -> count
     sums: dict = field(default_factory=dict)           # kind -> PKR total
+    months: list = field(default_factory=list)         # distinct 'YYYY-MM' (PKT), sorted
     weeks_in_span: int = 0
     weeks_active: int = 0
     entries_per_week: float = 0.0
@@ -32,6 +34,7 @@ class Aggregates:
     edited_count: int = 0
     provenance: dict = field(default_factory=dict)     # voice/photo/manual -> pct
     flag_counts: dict = field(default_factory=dict)    # flag -> count
+    flag_refs: dict = field(default_factory=dict)      # flag -> [transaction id, ...]
     udhar_outstanding: float = 0.0
     udhar_by_customer: dict = field(default_factory=dict)  # customer name -> PKR
     cash_in: float = 0.0
@@ -79,6 +82,7 @@ def compute_aggregates(
             agg.edited_count += 1
         if t.flag and t.flag != "none":
             agg.flag_counts[t.flag] = agg.flag_counts.get(t.flag, 0) + 1
+            agg.flag_refs.setdefault(t.flag, []).append(str(t.id))
 
         cust = customers_by_id.get(t.customer_id)
         cname = (cust.name if cust else None) or "نامعلوم"
@@ -103,6 +107,11 @@ def compute_aggregates(
     agg.weeks_in_span = max(1, span_weeks)
     agg.weeks_active = len(weeks)
     agg.entries_per_week = round(agg.total_entries / agg.weeks_in_span, 2)
+
+    # ONE month computation (defect 1): distinct PKT months of the ACTUAL
+    # occurred_at values — month count, header-range labels and the months
+    # metric all read from this list, so they can never contradict each other.
+    agg.months = sorted({m for m in (month_key(t.occurred_at) for t in txs) if m})
 
     if confidences:
         agg.median_confidence = round(statistics.median(confidences), 3)
