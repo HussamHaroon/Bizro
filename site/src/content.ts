@@ -33,7 +33,7 @@ export const COPY = {
     cta: "Open dashboard",
   },
   hero: {
-    sticker: "Alkhidmat × Alibaba Cloud AI Hackathon 2026",
+    sticker: "Bano Qabil × Alibaba Cloud AI Hackathon 2026",
     h1Pre: "The paper ledger, given a ",
     h1Hl: "memory",
     h1Post: ".",
@@ -71,7 +71,8 @@ export const COPY = {
     mockNote: "Mock mode — AI answers are simulated (no live key)",
     notDeliveredNote: "Saved in the ledger — the WhatsApp send is off in this demo",
     parseMiss: "Bizro couldn't read an entry from that note. Its reply:",
-    freeTierNote: "Each recording uses 1–2 free AI requests.",
+    freeTierNote:
+      "Each recording uses 1–2 AI requests and adds a public demo entry to the shared demo ledger.",
     chatLink: "Open the full WhatsApp chat",
   },
   movie: {
