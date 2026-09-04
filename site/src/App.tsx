@@ -1,8 +1,22 @@
-import type { SVGProps } from "react";
+import { useEffect, useRef, useState, type SVGProps } from "react";
 import LazyScrollMovie from "./LazyScrollMovie";
 import { GuideMithu, Mithu, SfxToggle } from "./Mascot";
 import { LANGS, useSiteLang } from "./site-i18n";
 import { useReveal } from "./useReveal";
+import type { Copy } from "./content";
+import {
+  VoiceRecorder,
+  blobToBase64,
+  buildButtonEnvelope,
+  buildVoiceEnvelope,
+  formatAmountPkr,
+  formatElapsed,
+  interpretButtonResponse,
+  interpretVoiceResponse,
+  postWebhook,
+  recorderSupported,
+  type HeroResult,
+} from "./hero-demo";
 
 /* ------------------------------------------------------------------
    Icons — filled, single-weight, rounded (design.md §4.3).
@@ -90,6 +104,23 @@ const PencilIcon = (p: IconProps) => (
   </svg>
 );
 
+const CheckIcon = (p: IconProps) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...p}
+  >
+    <path d="M4 12.6 9.4 18 20 6.8" />
+  </svg>
+);
+
 /* ------------------------------------------------------------------
    Language switcher — اردو / Mixed / English. Self-labelled (each option
    names itself the way its speakers write it), persisted, and it flips the
@@ -112,6 +143,297 @@ function LangSwitch() {
           {l.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------
+   Hero demo — the REAL pipeline behind the demo-frame (helpers in
+   hero-demo.ts). A tap records a voice note (browser MediaRecorder),
+   stop POSTs it to /webhook/whatsapp in the exact simulator envelope
+   shape, and the invoice updates with what the server ACTUALLY parsed.
+   States: example (the static read — kept until a real answer exists)
+   → recording → processing → result | rejected | error. Quick replies
+   (§7.1) post the button-reply envelope; the stamp flips to confirmed.
+   Honesty law: missing fields render as missing — never invented — and
+   the server's mock marker is shown as-is.
+------------------------------------------------------------------ */
+
+type DemoPhase =
+  | "example"
+  | "recording"
+  | "processing"
+  | "result"
+  | "confirming"
+  | "rejected"
+  | "error";
+
+function DemoFrame({ hero }: { hero: Copy["hero"] }) {
+  const [micSupported] = useState(recorderSupported);
+  const [phase, setPhase] = useState<DemoPhase>("example");
+  const [result, setResult] = useState<HeroResult | null>(null);
+  const [serverReply, setServerReply] = useState<string | null>(null);
+  const [micFailed, setMicFailed] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const recorderRef = useRef<VoiceRecorder | null>(null);
+  const startedAtRef = useRef(0);
+
+  const recording = phase === "recording";
+  const busy = phase === "processing" || phase === "confirming";
+
+  // elapsed timer (mm:ss) — ticks only while recording
+  useEffect(() => {
+    if (!recording) return;
+    const tick = () =>
+      setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
+    tick();
+    const id = window.setInterval(tick, 500);
+    return () => window.clearInterval(id);
+  }, [recording]);
+
+  // teardown an in-flight take when the frame goes away
+  useEffect(() => () => recorderRef.current?.dispose(), []);
+
+  async function toggleRecording() {
+    if (recording) {
+      await stopAndSend();
+      return;
+    }
+    if (busy) return;
+    const rec = new VoiceRecorder();
+    try {
+      await rec.start();
+    } catch {
+      setMicFailed(true);
+      setPhase("error");
+      return;
+    }
+    recorderRef.current = rec;
+    startedAtRef.current = Date.now();
+    setElapsed(0);
+    setPhase("recording");
+  }
+
+  async function stopAndSend() {
+    const rec = recorderRef.current;
+    if (!rec) return;
+    setPhase("processing");
+    try {
+      const blob = await rec.stop();
+      recorderRef.current = null;
+      if (!blob || blob.size === 0) {
+        // the take produced nothing — a mic problem, not a busy tier
+        setMicFailed(true);
+        setPhase("error");
+        return;
+      }
+      const mediaB64 = await blobToBase64(blob);
+      const outcome = await interpretVoiceResponse(
+        await postWebhook(buildVoiceEnvelope(mediaB64)),
+      );
+      if (outcome.rejected) {
+        // the pipeline really answered: nothing persisted, reply shown as-is
+        setServerReply(outcome.reply);
+        setResult(null);
+        setPhase("rejected");
+        return;
+      }
+      setServerReply(null);
+      setResult(outcome.result);
+      setPhase("result");
+    } catch {
+      setPhase("error");
+    }
+  }
+
+  async function pressQuickReply(id: string) {
+    const btn = result?.buttons.find((b) => b.id === id);
+    if (!btn || busy) return;
+    setPhase("confirming");
+    try {
+      const out = interpretButtonResponse(
+        await postWebhook(buildButtonEnvelope(btn.id, btn.title)),
+      );
+      if (out.reply) setServerReply(out.reply);
+      setResult((prev) =>
+        prev ? { ...prev, buttons: [], status: out.status ?? prev.status } : prev,
+      );
+      setPhase("result");
+    } catch {
+      setPhase("error");
+    }
+  }
+
+  function reset() {
+    setPhase("example");
+    setResult(null);
+    setServerReply(null);
+    setMicFailed(false);
+    setElapsed(0);
+  }
+
+  // Invoice line — real parsed data once the server gave it, the static
+  // example only BEFORE first use. Missing fields render as "—", never faked.
+  const kindWord = result?.kind
+    ? hero.kindWords[result.kind] ?? result.kind
+    : null;
+  let invoiceName: string;
+  if (!result) {
+    invoiceName = hero.invoiceName;
+  } else if (result.counterparty && kindWord) {
+    invoiceName = `${result.counterparty} — ${kindWord}`;
+  } else {
+    invoiceName = result.counterparty ?? kindWord ?? "—";
+  }
+  const invoiceAmount =
+    result && result.amountPkr !== null
+      ? formatAmountPkr(result.amountPkr)
+      : result
+        ? "PKR —"
+        : hero.invoiceAmount;
+  const isExpense = result?.kind === "expense";
+  const chipLabel = !result
+    ? hero.udharChip
+    : isExpense
+      ? kindWord ?? hero.udharChip
+      : hero.udharChip;
+  const confirmed = result?.status === "confirmed";
+
+  const micRow = (
+    <button
+      type="button"
+      className={`hero-demo__mic${recording ? " is-recording" : ""}`}
+      onClick={toggleRecording}
+      disabled={busy}
+      aria-pressed={recording}
+    >
+      {recording ? (
+        <>
+          <span className="hero-demo__dot" aria-hidden="true" />
+          <span className="hero-demo__timer">{formatElapsed(elapsed)}</span>
+          <span>{hero.micListening}</span>
+        </>
+      ) : (
+        <>
+          <MicIcon />
+          <span>{hero.micIdle}</span>
+        </>
+      )}
+    </button>
+  );
+
+  const noMicRow = (
+    <a className="hero-demo__mic hero-demo__mic--link" href="/simulator">
+      <MicIcon />
+      <span>{hero.micUnavailable}</span>
+    </a>
+  );
+
+  return (
+    <div className="demo-frame">
+      <span className="demo-frame__tag">{hero.demoTag}</span>
+
+      {/* mic (or its graceful fallback) + the example line it fulfills */}
+      <div className="hero-demo__mic-row">{micSupported ? micRow : noMicRow}</div>
+      <p className="hero-demo__caption">
+        <VoicePillIcon /> {hero.voiceLine}
+      </p>
+
+      <p className="flow-arrow" aria-hidden="true">
+        {hero.flowArrow}
+      </p>
+
+      {busy && (
+        <p className="hero-demo__status" role="status">
+          {phase === "confirming" ? hero.confirming : hero.reading}
+        </p>
+      )}
+
+      {phase === "error" && (
+        <p className="hero-demo__alert" role="alert">
+          {micFailed ? hero.micDenied : hero.busyError}
+        </p>
+      )}
+
+      {phase === "rejected" && (
+        <div className="hero-demo__miss" role="status">
+          <p className="hero-demo__miss-label">{hero.parseMiss}</p>
+          {serverReply && (
+            <p className="hero-demo__reply urdu" lang="ur" dir="rtl">
+              {serverReply}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flow-invoice">
+        <div className="flow-invoice__head">
+          <span className="flow-invoice__brand">{hero.invoiceBrand}</span>
+          <span className={`chip ${isExpense ? "chip--gold" : "chip--red"}`}>
+            {chipLabel}
+          </span>
+        </div>
+        <div className="flow-invoice__row">
+          <span>{invoiceName}</span>
+          <span className="flow-invoice__amount">{invoiceAmount}</span>
+        </div>
+        {result?.mock && (
+          <span className="chip chip--gold hero-demo__mock">{hero.mockNote}</span>
+        )}
+        <span className="stamp">{confirmed ? hero.stamp : result ? hero.stampPending : hero.stamp}</span>
+      </div>
+
+      {result?.confirmation && (
+        <p className="hero-demo__reply urdu" lang="ur" dir="rtl">
+          {result.confirmation}
+        </p>
+      )}
+      {phase === "result" && serverReply && (
+        <p className="hero-demo__reply urdu" lang="ur" dir="rtl">
+          {serverReply}
+        </p>
+      )}
+
+      {phase === "result" && result && result.buttons.length > 0 && (
+        <div className="hero-demo__quick" role="group" aria-label={`${hero.confirmBtn} / ${hero.changeBtn}`}>
+          <button
+            type="button"
+            className="hero-demo__quick-btn hero-demo__quick-btn--confirm"
+            disabled={busy}
+            onClick={() => pressQuickReply("confirm")}
+          >
+            <CheckIcon /> {hero.confirmBtn}
+          </button>
+          <button
+            type="button"
+            className="hero-demo__quick-btn hero-demo__quick-btn--change"
+            disabled={busy}
+            onClick={() => pressQuickReply("correct")}
+          >
+            <PencilIcon /> {hero.changeBtn}
+          </button>
+        </div>
+      )}
+
+      {(phase === "result" || phase === "rejected" || phase === "error") && (
+        <button
+          type="button"
+          className="hero-demo__reset"
+          onClick={reset}
+          disabled={busy || recording}
+        >
+          {hero.sendAnother}
+        </button>
+      )}
+
+      <div className="hero-demo__links">
+        <a className="demo-frame__link" href="/ledger">
+          {hero.link} <ArrowIcon />
+        </a>
+        <a className="demo-frame__link" href="/simulator">
+          {hero.chatLink} <ArrowIcon />
+        </a>
+      </div>
     </div>
   );
 }
@@ -188,33 +510,9 @@ export default function App() {
                 />
               </div>
 
-              {/* Placeholder frame — links to the live app, never fakes a screenshot */}
-              <div className="demo-frame">
-                <span className="demo-frame__tag">{copy.hero.demoTag}</span>
-                <div className="flow-note">
-                  <span className="flow-note__pill">
-                    <VoicePillIcon /> 0:14
-                  </span>
-                  <span className="flow-note__text">{copy.hero.voiceLine}</span>
-                </div>
-                <p className="flow-arrow" aria-hidden="true">
-                  {copy.hero.flowArrow}
-                </p>
-                <div className="flow-invoice">
-                  <div className="flow-invoice__head">
-                    <span className="flow-invoice__brand">{copy.hero.invoiceBrand}</span>
-                    <span className="chip chip--red">{copy.hero.udharChip}</span>
-                  </div>
-                  <div className="flow-invoice__row">
-                    <span>{copy.hero.invoiceName}</span>
-                    <span className="flow-invoice__amount">{copy.hero.invoiceAmount}</span>
-                  </div>
-                  <span className="stamp">{copy.hero.stamp}</span>
-                </div>
-                <a className="demo-frame__link" href="/ledger">
-                  {copy.hero.link} <ArrowIcon />
-                </a>
-              </div>
+              {/* The live demo — a real voice note into the real webhook */}
+              <DemoFrame hero={copy.hero} />
+              <p className="hero-demo__note">{copy.hero.freeTierNote}</p>
             </div>
           </div>
         </section>
