@@ -635,7 +635,11 @@ h3 {
 
 @media (min-width: 780px) {
   .steps {
-    grid-template-columns: repeat(3, 1fr);
+    /* minmax(0, 1fr): same floor bug as .diff-grid below — the nowrap chips in
+       .step__top / .step__badges set a min-content wider than the track at
+       780–1000px, so the grid overflowed its wrap (820px of content in a 775px
+       box at an 830px viewport) and clipped the third step card. */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -1017,6 +1021,15 @@ h3 {
    off-screen. (Placed after + higher specificity than the nowrap rule
    above so it wins the cascade.) */
 .chip.diff__tag {
+  white-space: normal;
+}
+
+/* Same exception for the how-it-works step cards: .step__top pairs a tone chip
+   with a fixed 52px icon tile, and .step__badges holds the model-name chips, so
+   a nowrap chip there is the min-content floor that overflowed the .steps
+   tracks. Two-class specificity beats the single-class nowrap rule above. */
+.step__top .chip,
+.step__badges .chip {
   white-space: normal;
 }
 
