@@ -109,6 +109,7 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
                 mime_type="audio/wav" if kind == "voice" else "image/png",
                 storage_path=str(path.resolve()),
                 sha256=hashlib.sha256(data).hexdigest(), created_at=when,
+                data=data,  # durable copy — the audit trail must survive serverless
             ))
             return mid_
 

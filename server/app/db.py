@@ -20,6 +20,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    LargeBinary,
     Text,
     create_engine,
     event,
@@ -96,6 +97,10 @@ class MediaBlob(Base):
     mime_type: Mapped[str] = mapped_column(Text, nullable=False)
     storage_path: Mapped[str] = mapped_column(Text, nullable=False)
     sha256: Mapped[str] = mapped_column(Text, nullable=False)
+    # Durable copy of the bytes. Serverless disk is ephemeral (Vercel wipes
+    # /tmp per instance), so the audit trail survives cold starts only because
+    # the bytes also live here. Disk stays the fast path where it exists.
+    data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )

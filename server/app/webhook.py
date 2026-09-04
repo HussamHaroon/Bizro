@@ -415,6 +415,7 @@ def _ingest_media(
         mime_type=mime_type,
         storage_path=str(path),
         sha256=digest,
+        data=data,  # durable copy — serverless disk is ephemeral
     )
     session.add(blob)
     session.flush()
