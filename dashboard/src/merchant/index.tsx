@@ -42,9 +42,14 @@ export function MerchantProvider({ children }: { children: ReactNode }) {
   const [merchantId, setMerchantId] = useState<string>(readSavedId);
   const [merchants, setMerchants] = useState<MerchantSummary[]>([]);
 
-  // Re-key the API singleton + persist on every selection change.
+  /* Re-key the API singleton during RENDER, not in an effect. React runs child
+     effects before parent effects, so an effect here fired only after every
+     screen had already fetched through the previous id — the picker lagged one
+     selection behind, and choosing Demo Store rendered Karyana's report.
+     setActiveMerchant is idempotent, so StrictMode's double render is a no-op. */
+  setActiveMerchant(merchantId);
+
   useEffect(() => {
-    setActiveMerchant(merchantId);
     try {
       localStorage.setItem(MERCHANT_STORAGE_KEY, merchantId);
     } catch {
