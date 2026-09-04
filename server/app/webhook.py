@@ -114,15 +114,40 @@ def webhook_verify(
 async def webhook_ingest(request: Request):
     raw = await request.body()
 
-    if not whatsapp_client.verify_signature(raw, request.headers.get("x-hub-signature-256")):
-        return Response(content="invalid signature", status_code=403)
-
     try:
         payload: dict[str, Any] = await request.json()
     except Exception:
+        # Signature check first for non-JSON bodies: nothing legit is non-JSON.
+        if not whatsapp_client.verify_signature(
+            raw, request.headers.get("x-hub-signature-256")
+        ):
+            return Response(content="invalid signature", status_code=403)
         # Meta retries malformed posts; acknowledge and log.
         logger.warning("Webhook received non-JSON body (%d bytes) — ignored", len(raw))
         return {"processed": 0, "results": []}
+
+    # SEC (bizro-security): with WHATSAPP_APP_SECRET set, real traffic must carry
+    # a valid X-Hub-Signature-256. The ONLY unsigned path is our own demo
+    # simulator envelope (bizro_sim) AND only for the public sandbox numbers —
+    # the hero mic and /simulator run there by design and that ledger is a
+    # public demo. bizro_sim never comes from Meta, and real wa_ids can never
+    # enter unsigned even if an attacker forges the marker.
+    _DEMO_WA_IDS = {"923001234567", "923009999888", "923009111222"}
+
+    def _sim_sandbox_only(p: dict[str, Any]) -> bool:
+        if "bizro_sim" not in p:
+            return False
+        for entry in p.get("entry", []) or []:
+            for change in entry.get("changes", []) or []:
+                for msg in (change.get("value") or {}).get("messages", []) or []:
+                    if str(msg.get("from", "")) not in _DEMO_WA_IDS:
+                        return False
+        return True
+
+    if not _sim_sandbox_only(payload) and not whatsapp_client.verify_signature(
+        raw, request.headers.get("x-hub-signature-256")
+    ):
+        return Response(content="invalid signature", status_code=403)
 
     sim_envelope = payload.get("bizro_sim") or {}
     results: list[dict[str, Any]] = []

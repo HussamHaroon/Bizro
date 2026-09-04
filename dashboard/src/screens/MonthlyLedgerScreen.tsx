@@ -259,8 +259,13 @@ export function MonthlyLedgerScreen() {
             tone="out"
             icon={<IconExpense className="h-6 w-6 text-ledger-red" />}
           />
+          {/* A loss must never print as "kept" — the label flips with the sign. */}
           <HeroStat
-            en="Net kept"
+            en={
+              stats.sales + stats.collected >= stats.expenses + stats.udharGiven
+                ? 'Net kept'
+                : 'Net lost'
+            }
             ur="خالص بچت"
             value={Math.abs(stats.sales + stats.collected - stats.expenses - stats.udharGiven)}
             tone={stats.sales + stats.collected >= stats.expenses + stats.udharGiven ? 'in' : 'out'}

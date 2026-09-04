@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://bizro-pk.vercel.app/</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://bizro-pk.vercel.app/ledger</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://bizro-pk.vercel.app/credit</loc><changefreq>daily</changefreq></url>
+  <url><loc>https://bizro-pk.vercel.app/simulator</loc><changefreq>weekly</changefreq></url>
+</urlset>
