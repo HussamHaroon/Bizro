@@ -148,9 +148,9 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
                 source_type=source,
                 source_media_id=media_id,
                 # Stamp the model ids the live pipeline actually uses today
-                # (OpenRouter free tier; see .env MODEL_*). Never invent
+                # (Alibaba Cloud Model Studio; see .env MODEL_*). Never invent
                 # capability names we can't demo live.
-                source_model={"voice": "minimax/minimax-m3:free", "photo": "dots-studio/dots-3-note-preview:free"}.get(source),
+                source_model={"voice": "qwen-flash", "photo": "qwen-vl-ocr"}.get(source),
                 confidence=conf if source != "manual" else None,
                 raw_model_output=raw_out,
                 flag=flag, status=status,
