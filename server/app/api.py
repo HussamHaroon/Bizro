@@ -70,11 +70,19 @@ def get_media(media_id: str):
             raise HTTPException(status_code=404, detail="media not found")
         path = blob.storage_path
         mime = blob.mime_type
+        blob_data = blob.data  # durable copy (Neon bytea) — detaches before IO
     import os
 
-    if not os.path.isfile(path):
-        raise HTTPException(status_code=410, detail="media file missing on disk")
-    return FileResponse(path, media_type=mime)
+    if os.path.isfile(path):
+        return FileResponse(path, media_type=mime)
+    if blob_data:
+        # Serverless disk was wiped — the audit trail survives via the DB copy.
+        return Response(
+            content=blob_data,
+            media_type=mime,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    raise HTTPException(status_code=410, detail="media file missing on disk")
 
 
 # --- TTS voice reply ("Bizro talks back") ------------------------------------
@@ -158,7 +166,15 @@ _EDITABLE_FIELDS = ("kind", "amount_pkr", "currency", "description", "occurred_a
 def list_merchants():
     """Merchant picker source (D1-2); also proves server liveness for the dashboard."""
     with db_session() as session:
-        rows = session.scalars(select(Merchant).order_by(Merchant.created_at)).all()
+        rows = session.scalars(
+            # Demo order: the healthy seeded store leads (4 months of history,
+            # a real readiness verdict) — a first-time visitor or judge landing
+            # on /ledger or /credit must not open on the thin simulator sandbox.
+            select(Merchant).order_by(
+                (Merchant.wa_id != "923009999888"),
+                Merchant.created_at,
+            )
+        ).all()
         # Privacy (D6-6): wa_id IS the merchant's phone number — never expose
         # a real user's number on a public endpoint. The two SEEDED demo
         # stores are the exception: their wa_ids are public constants in the
