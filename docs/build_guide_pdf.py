@@ -681,6 +681,23 @@ def build_body():
         + mono("server/app/webhook.py") + ".",
     ])
 
+    # end panel: fills the final page and closes the guide with the three
+    # commands a judge or new developer actually needs next.
+    story.append(Spacer(1, 18))
+    story.extend(safe_keep_together([
+        neo_panel([
+            Paragraph("<b>WHERE TO GO NEXT</b>", h2_style),
+            Spacer(1, 4),
+            Paragraph("Live product and status: " + link("https://bizro-pk.vercel.app")
+                      + "  (JSON status at " + mono("/health") + ")", body_style),
+            Paragraph("One-command local demo: " + mono("bash scripts/run_demo.sh"), body_style),
+            Paragraph("Rehearse the judge flow: " + mono("python server/scripts/demo_flow.py"), body_style),
+            Paragraph("Rebuild this guide after editing " + mono("docs/GUIDE.md") + ": "
+                      + mono("python docs/build_guide_pdf.py"), body_style),
+            Spacer(1, 3),
+        ], bg=PAPER, border=3, shadow=5, pad=(9, 11)),
+    ]))
+
     doc.multiBuild(story, onFirstPage=on_page, onLaterPages=on_page)
 
 
@@ -768,12 +785,14 @@ def build_cover():
           + stringWidth("QWEN-FLASH", SLAB, 9.5) + 70, py - 48,
           "QWEN-VL-OCR", SLAB, 9.5, CREAM, TEAL)
 
-    # footer meta
+    # footer meta: two short lines left, URL chip right-aligned to the frame
+    # (one long line previously ran under the chip and clipped)
     c.setFillColor(INK)
-    c.setFont(BODY_FONT, 9)
-    c.drawString(46, 44, "Bano Qabil x Alibaba Cloud AI Hackathon Pakistan 2026"
-                         "   ·   4 September 2026")
-    _chip(c, W - 252, 38, "BIZRO-PK.VERCEL.APP", SLAB, 9, INK, PAPER)
+    c.setFont(BODY_FONT, 8.5)
+    c.drawString(46, 52, "Bano Qabil x Alibaba Cloud AI Hackathon Pakistan 2026")
+    c.drawString(46, 38, "4 September 2026")
+    badge_w = stringWidth("BIZRO-PK.VERCEL.APP", SLAB, 9) + 16
+    _chip(c, W - 24 - badge_w - 3, 36, "BIZRO-PK.VERCEL.APP", SLAB, 9, INK, PAPER)
 
     c.showPage()
     c.save()
