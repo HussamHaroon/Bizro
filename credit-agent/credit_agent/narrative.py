@@ -70,7 +70,7 @@ def _call_reasoning_model(payload: dict) -> str | None:
     base = os.environ.get(
         "DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"
     ).rstrip("/")
-    model = os.environ.get("MODEL_REASONING", "qwen3.7-plus")
+    model = os.environ.get("MODEL_REASONING", "qwen-flash")
     try:
         import llm_guard  # free-tier budget guard (repo root; D6-2)
 

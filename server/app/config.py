@@ -32,10 +32,10 @@ class Settings(BaseSettings):
     # --- Alibaba Cloud Model Studio / DashScope ---
     dashscope_api_key: str = ""
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    model_voice: str = "qwen3.5-omni-plus"
+    model_voice: str = "qwen-flash"
     model_ocr_vl: str = "qwen-vl-ocr"
     model_ocr_new: str = "qwen3.5-ocr"
-    model_reasoning: str = "qwen3.7-plus"
+    model_reasoning: str = "qwen-flash"
 
     # --- WhatsApp Cloud API ---
     whatsapp_token: str = ""

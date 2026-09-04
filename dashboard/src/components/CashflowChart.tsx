@@ -53,7 +53,11 @@ export function CashflowChart({ months }: CashflowChartProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Legend — color + word, never color alone. */}
+      {/* Legend — color + word, never color alone. The red series is EXPENSES
+          ONLY (the credit report's cash_out): it deliberately excludes udhar
+          given, which is money owed BACK to the shop — not spending. The
+          ledger's "Money out" includes udhar given, so this label must not
+          reuse it (two screens, two different numbers, one word = defect). */}
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-ink-line">
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded-chip border border-ink-line bg-fill-green" aria-hidden="true" />
@@ -61,7 +65,10 @@ export function CashflowChart({ months }: CashflowChartProps) {
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded-chip border border-ink-line bg-fill-red" aria-hidden="true" />
-          Money out
+          Expenses
+        </span>
+        <span className="w-full font-normal opacity-70">
+          Expenses only — udhar given is money owed back to the shop, so it is not counted as spending here.
         </span>
       </p>
 
@@ -103,7 +110,7 @@ export function CashflowChart({ months }: CashflowChartProps) {
           const inX = cx - BAR_W - BAR_GAP / 2;
           const outX = cx + BAR_GAP / 2;
           const isActive = active === m.month;
-          const label = `${shortMonth(m.month)} — in ${formatPkr(m.inflow_pkd)}, out ${formatPkr(m.outflow_pkd)}, net ${formatPkr(Math.abs(m.net_pkd))}${m.net_pkd < 0 ? ' negative' : ''}`;
+          const label = `${shortMonth(m.month)} — money in ${formatPkr(m.inflow_pkd)}, expenses ${formatPkr(m.outflow_pkd)}, net ${formatPkr(Math.abs(m.net_pkd))}${m.net_pkd < 0 ? ' negative' : ''}`;
           return (
             <g
               key={m.month}
