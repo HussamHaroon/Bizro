@@ -254,9 +254,19 @@ export function CreditReadinessScreen() {
 
   /** Defect 1: the headline sentence states the month count DERIVED from the
       actual records — never a canned "three months" that can contradict the
-      consistency card or the bars. Simple English, like the rest of the screen. */
+      consistency card or the bars. Simple English, like the rest of the screen.
+
+      The ledger can span more months than the score was computed over (the
+      report window is the last 30 days), so when the two differ the sentence
+      names the scored window as well — otherwise a five-month chart sits beside
+      a two-month score and reads as a single claim. */
+  const scoredRangeLabel = formatRangeLabel(report.period.start, report.period.end);
+  const coverageOutrunsScore =
+    coverage !== null && formatRangeLabel(coverage.start, coverage.end) !== scoredRangeLabel;
+
   const summaryLine = coverage
     ? `Records cover ${coverage.months.length} ${coverage.months.length === 1 ? 'month' : 'months'}, from ${formatDateLabel(coverage.start)} to ${formatDateLabel(coverage.end)}.` +
+      (coverageOutrunsScore ? ` The score uses ${scoredRangeLabel}.` : '') +
       (coverage.pending > 0
         ? ` ${coverage.pending} ${coverage.pending === 1 ? 'entry' : 'entries'} still need confirmation.`
         : '')
@@ -371,34 +381,41 @@ export function CreditReadinessScreen() {
           <span className="font-numerals text-lg font-semibold text-ink-line">Cash-flow by month</span>
         </h2>
         <CashflowChart months={bars} />
-        <table className="sr-only w-full border-collapse text-sm">
-          <caption className="text-left">Monthly cash-flow, exact figures</caption>
-          <thead>
-            <tr className="text-left">
-              <th className="py-2 pr-2 font-semibold">Month</th>
-              <th className="py-2 pr-2 text-right font-semibold">In</th>
-              <th className="py-2 pr-2 text-right font-semibold">Out</th>
-              <th className="py-2 pr-2 text-right font-semibold">Net</th>
-              <th className="py-2 text-right font-semibold">Entries</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bars.map((m) => (
-              <tr key={m.month}>
-                <th scope="row" className="py-2.5 pr-2 text-left font-semibold text-ink-line">
-                  {formatMonth(m.month)}
-                </th>
-                <td className="py-2.5 pr-2 text-right">{formatPkr(m.inflow_pkd)}</td>
-                <td className="py-2.5 pr-2 text-right">{formatPkr(m.outflow_pkd)}</td>
-                <td className="py-2.5 pr-2 text-right">
-                  {formatPkr(Math.abs(m.net_pkd))}
-                  {m.net_pkd < 0 ? ' −' : ''}
-                </td>
-                <td className="py-2.5 text-right">{m.entries}</td>
+        {/* sr-only goes on a WRAPPER, never on the table: a <table> cannot shrink
+            below its min-content width, so sr-only's width:1px was ignored and the
+            nowrap cells gave this clipped table a real 473px box — enough to scroll
+            the whole page sideways at a 390px viewport. A block wrapper does honour
+            1px + overflow:hidden, and the table's text stays exposed to AT. */}
+        <div className="sr-only">
+          <table className="w-full border-collapse text-sm">
+            <caption className="text-left">Monthly cash-flow, exact figures</caption>
+            <thead>
+              <tr className="text-left">
+                <th className="py-2 pr-2 font-semibold">Month</th>
+                <th className="py-2 pr-2 text-right font-semibold">In</th>
+                <th className="py-2 pr-2 text-right font-semibold">Out</th>
+                <th className="py-2 pr-2 text-right font-semibold">Net</th>
+                <th className="py-2 text-right font-semibold">Entries</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {bars.map((m) => (
+                <tr key={m.month}>
+                  <th scope="row" className="py-2.5 pr-2 text-left font-semibold text-ink-line">
+                    {formatMonth(m.month)}
+                  </th>
+                  <td className="py-2.5 pr-2 text-right">{formatPkr(m.inflow_pkd)}</td>
+                  <td className="py-2.5 pr-2 text-right">{formatPkr(m.outflow_pkd)}</td>
+                  <td className="py-2.5 pr-2 text-right">
+                    {formatPkr(Math.abs(m.net_pkd))}
+                    {m.net_pkd < 0 ? ' −' : ''}
+                  </td>
+                  <td className="py-2.5 text-right">{m.entries}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* Consistency + AI sourcing — the seal earns its place here. D4r fix 2:
