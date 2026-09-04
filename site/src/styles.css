@@ -2098,3 +2098,299 @@ html[lang="ur"] .sfx-toggle {
     box-shadow: none;
   }
 }
+
+/* ============================================================
+   Hero live demo — the real mic → webhook → invoice flow inside
+   .demo-frame (hero-demo.ts + DemoFrame in App.tsx). Same token
+   law as the rest of the sheet: 3px ink borders, hard offset
+   shadows only, flat fills, radius <= 2px, motion ONLY inside
+   prefers-reduced-motion: no-preference.
+   ============================================================ */
+
+.hero-demo__mic-row {
+  margin-bottom: 0.8rem;
+}
+
+/* the mic button — a stamped-ledger control, >= 48px touch target */
+.hero-demo__mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0.55rem 1.1rem;
+  background: var(--green);
+  color: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.hero-demo__mic:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hero-demo__mic:not(:disabled):hover {
+  background: var(--teal);
+}
+
+/* recording state: red take, pulsing dot + ltr timer */
+.hero-demo__mic.is-recording {
+  background: var(--red);
+}
+
+.hero-demo__mic--link {
+  text-decoration: none;
+}
+
+.hero-demo__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px; /* a dot is a dot — not a card, radius law n/a */
+  background: #fff;
+  flex: 0 0 auto;
+}
+
+.hero-demo__timer {
+  font-family: var(--font-slab);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  direction: ltr;
+  unicode-bidi: embed;
+}
+
+/* the example line under the mic — the sentence the user is meant to say */
+.hero-demo__caption {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.6rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.hero-demo__caption svg {
+  flex: 0 0 auto;
+  translate: 0 2px;
+}
+
+/* processing line — static ellipsis; motion only with consent (below) */
+.hero-demo__status {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* error (429 / 5xx / offline / mic denied) — inline, honest, bilingual */
+.hero-demo__alert {
+  margin: 0 0 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border: 3px solid var(--red);
+  border-radius: 2px;
+  background: var(--card);
+  color: var(--red);
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+/* rejection path: the server's real "couldn't parse" reply, shown as-is */
+.hero-demo__miss {
+  margin: 0 0 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border: 3px dashed var(--ink);
+  border-radius: 2px;
+  background: var(--card);
+}
+
+.hero-demo__miss-label {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+/* Urdu confirmation / server reply bubbles — real data, never translated */
+.hero-demo__reply {
+  margin: 0.75rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border: 3px solid var(--ink);
+  border-radius: 2px;
+  background: var(--canvas);
+  font-size: 1rem;
+  line-height: 1.9;
+}
+
+/* mock-mode honesty chip rides under the invoice row */
+.hero-demo__mock {
+  margin: 0.6rem 0 0;
+}
+
+/* §7.1 quick replies — same tactile language as .btn */
+.hero-demo__quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.hero-demo__quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 48px;
+  padding: 0.5rem 1rem;
+  border: 3px solid var(--ink);
+  border-radius: 2px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.hero-demo__quick-btn--confirm {
+  background: var(--green);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-demo__quick-btn--change {
+  background: var(--card);
+  color: var(--ink);
+}
+
+.hero-demo__quick-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hero-demo__quick-btn:not(:disabled):hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+/* "Send another" — small reset link, button semantics */
+.hero-demo__reset {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--green);
+  font-family: var(--font-slab);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.hero-demo__reset:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hero-demo__reset:not(:disabled):hover {
+  background: var(--gold);
+}
+
+/* links row: ledger + full WhatsApp chat side by side */
+.hero-demo__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  margin-top: 1rem;
+}
+
+.hero-demo__links .demo-frame__link {
+  margin-top: 0;
+}
+
+/* free-tier honesty note, under the frame */
+.hero-demo__note {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+/* Urdu mode: Nastaliq + roomier line height on the new copy */
+html[lang="ur"] .hero-demo__mic,
+html[lang="ur"] .hero-demo__quick-btn,
+html[lang="ur"] .hero-demo__caption,
+html[lang="ur"] .hero-demo__status,
+html[lang="ur"] .hero-demo__alert,
+html[lang="ur"] .hero-demo__miss-label,
+html[lang="ur"] .hero-demo__reset,
+html[lang="ur"] .hero-demo__note {
+  font-family: var(--font-urdu);
+}
+
+html[lang="ur"] .hero-demo__mic,
+html[lang="ur"] .hero-demo__quick-btn {
+  line-height: 1.9;
+}
+
+html[lang="ur"] .hero-demo__caption,
+html[lang="ur"] .hero-demo__alert,
+html[lang="ur"] .hero-demo__note {
+  line-height: 2;
+}
+
+/* the one Urdu line the hero's copy never carries: the mock chip */
+html[lang="ur"] .hero-demo__mock {
+  font-family: var(--font-urdu);
+}
+
+/* motion ONLY with user consent: the recording dot pulses and the
+   processing line breathes; under prefers-reduced-motion both are
+   fully static (the ellipsis is text, not animation). */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-demo__dot {
+    animation: hero-demo-pulse 1.2s ease-in-out infinite;
+  }
+
+  .hero-demo__status {
+    animation: hero-demo-breathe 1.6s ease-in-out infinite;
+  }
+
+  .hero-demo__mic,
+  .hero-demo__quick-btn {
+    transition:
+      transform 120ms ease-out,
+      box-shadow 120ms ease-out,
+      background-color 120ms ease-out;
+  }
+
+  .hero-demo__mic:not(:disabled):hover,
+  .hero-demo__quick-btn:not(:disabled):hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .hero-demo__mic:not(:disabled):active,
+  .hero-demo__quick-btn:not(:disabled):active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+}
+
+@keyframes hero-demo-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes hero-demo-breathe {
+  50% {
+    opacity: 0.6;
+  }
+}
