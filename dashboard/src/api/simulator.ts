@@ -130,6 +130,39 @@ export function buildButtonEnvelope(
 
 /* ---- calls ------------------------------------------------------------------ */
 
+/** Why a webhook POST failed. The screen turns this into honest copy — a
+    free-tier AI timeout and a down server are NOT the same event, and on the
+    deployed lambda "is it running on :8000?" is simply false. */
+export class WebhookError extends Error {
+  constructor(
+    message: string,
+    readonly status: number | null,
+    readonly timedOut: boolean,
+  ) {
+    super(message);
+    this.name = 'WebhookError';
+  }
+}
+
+/** Honest, simple-English failure copy for one webhook cause. */
+export function webhookFailureCopy(err: unknown): string {
+  if (err instanceof WebhookError) {
+    if (err.timedOut) {
+      return 'The AI service is taking a long time. Your note may still be processed — wait a moment, and send it again only if no reply arrives.';
+    }
+    if (err.status === 429 || err.status === 502 || err.status === 503 || err.status === 504) {
+      return 'The free AI service is busy right now. Please try again in a minute.';
+    }
+    if (err.status !== null && err.status >= 500) {
+      return 'The Bizro server hit an error. Please try again.';
+    }
+    if (err.status !== null) {
+      return `The Bizro server refused that message (HTTP ${err.status}). Please try again.`;
+    }
+  }
+  return 'Could not reach the Bizro server. Check your connection, then try again.';
+}
+
 /** POST /webhook/whatsapp. Long timeout: the pipeline runs inline on free-tier
     AI (STT + parse), so this resolves only after the reply is already stored. */
 export async function postWebhookEnvelope(payload: unknown): Promise<WebhookResult[]> {
@@ -142,10 +175,18 @@ export async function postWebhookEnvelope(payload: unknown): Promise<WebhookResu
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    if (!res.ok) throw new Error(`webhook ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      throw new WebhookError(`webhook ${res.status} ${res.statusText}`, res.status, false);
+    }
     const body: unknown = await res.json();
     const results = (body as { results?: unknown })?.results;
     return Array.isArray(results) ? (results as WebhookResult[]) : [];
+  } catch (err) {
+    if (err instanceof WebhookError) throw err;
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new WebhookError('webhook timed out after 120s', null, true);
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
