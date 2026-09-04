@@ -293,7 +293,7 @@ export function CreditReadinessScreen() {
               <span className="font-semibold">{report.merchant.display_name}</span>
               <br />
               <span className="opacity-75">
-                {periodLabel} · Mawakhat-style review · criteria pending
+                {periodLabel} · Mawakhat-style review
               </span>
             </p>
             {/* ONE primary action per screen (§4.4): print the report as the
@@ -393,7 +393,7 @@ export function CreditReadinessScreen() {
               <tr className="text-left">
                 <th className="py-2 pr-2 font-semibold">Month</th>
                 <th className="py-2 pr-2 text-right font-semibold">In</th>
-                <th className="py-2 pr-2 text-right font-semibold">Out</th>
+                <th className="py-2 pr-2 text-right font-semibold">Expenses</th>
                 <th className="py-2 pr-2 text-right font-semibold">Net</th>
                 <th className="py-2 text-right font-semibold">Entries</th>
               </tr>

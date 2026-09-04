@@ -328,9 +328,29 @@ export function MonthlyLedgerScreen() {
       </div>
 
       {filtered === null && !error && (
-        <p className="px-1 py-6 text-center text-sm text-ink-line opacity-75">
-          <T en="Reading the khata…" ur="کھاتہ کھل رہا ہے" />
-        </p>
+        /* Loading state: three placeholder rows in the ledger's own card
+           shape (pulse, disabled under prefers-reduced-motion) with the
+           honest "Reading the khata…" text kept for screen readers. */
+        <div role="status">
+          <span className="sr-only">
+            <T en="Reading the khata…" ur="کھاتہ کھل رہا ہے" />
+          </span>
+          <ul aria-hidden="true" className="space-y-2.5">
+            {[0, 1, 2].map((i) => (
+              <li
+                key={i}
+                className="bizro-card flex animate-pulse items-center gap-3 px-4 py-3 motion-reduce:animate-none"
+              >
+                <span className="h-9 w-9 rounded-chip border-[3px] border-ink-line bg-ink-line opacity-15" />
+                <span className="flex-1 space-y-1.5">
+                  <span className="block h-3 w-1/3 rounded bg-ink-line opacity-15" />
+                  <span className="block h-3 w-1/4 rounded bg-ink-line opacity-10" />
+                </span>
+                <span className="h-4 w-16 rounded bg-ink-line opacity-15" />
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {filtered && filtered.length === 0 && (
