@@ -12,7 +12,6 @@
    The mobile bottom-sheet form keeps the icon. Behavior is unchanged. */
 
 import { useMerchant } from '../merchant';
-import { useT } from '../i18n';
 import { IconCustomer } from './icons';
 
 export interface MerchantPickerProps {
@@ -30,7 +29,6 @@ export function MerchantPicker({
   compact = false,
 }: MerchantPickerProps) {
   const { merchants, merchantId, setMerchant } = useMerchant();
-  const { pick } = useT();
   if (merchants.length <= 1) return null;
   return (
     <label className={`inline-flex min-h-touch items-center gap-2 ${className}`.trim()}>
@@ -38,7 +36,7 @@ export function MerchantPicker({
       <select
         value={merchantId}
         onChange={(e) => setMerchant(e.target.value)}
-        aria-label={pick('Choose merchant', 'دکاندار چنیں')}
+        aria-label="Choose merchant"
         className={`min-h-touch w-full max-w-44 rounded-chip border-2 border-ink-line bg-paper-raised px-2 text-base font-semibold text-ink-line ${selectClassName}`.trim()}
       >
         {merchants.map((m) => (

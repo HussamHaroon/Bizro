@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type SVGProps } from "react";
 import LazyScrollMovie from "./LazyScrollMovie";
 import { GuideMithu, Mithu, SfxToggle } from "./Mascot";
-import { LANGS, useSiteLang } from "./site-i18n";
 import { useReveal } from "./useReveal";
-import type { Copy } from "./content";
+import { COPY, type Copy } from "./content";
 import {
   VoiceRecorder,
   blobToBase64,
@@ -120,32 +119,6 @@ const CheckIcon = (p: IconProps) => (
     <path d="M4 12.6 9.4 18 20 6.8" />
   </svg>
 );
-
-/* ------------------------------------------------------------------
-   Language switcher — اردو / Mixed / English. Self-labelled (each option
-   names itself the way its speakers write it), persisted, and it flips the
-   whole homepage — not a bilingual overlay (owner law: no repeated words).
------------------------------------------------------------------- */
-
-function LangSwitch() {
-  const { lang, setLang, copy } = useSiteLang();
-  return (
-    <div className="lang-switch" role="group" aria-label={copy.a11y.langLabel}>
-      {LANGS.map((l) => (
-        <button
-          key={l.id}
-          type="button"
-          className={`lang-switch__btn${lang === l.id ? " is-active" : ""}`}
-          aria-pressed={lang === l.id}
-          title={l.title}
-          onClick={() => setLang(l.id)}
-        >
-          {l.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------
    Hero demo — the REAL pipeline behind the demo-frame (helpers in
@@ -293,10 +266,10 @@ function DemoFrame({ hero }: { hero: Copy["hero"] }) {
         : hero.invoiceAmount;
   const isExpense = result?.kind === "expense";
   const chipLabel = !result
-    ? hero.udharChip
+    ? hero.creditChip
     : isExpense
-      ? kindWord ?? hero.udharChip
-      : hero.udharChip;
+      ? kindWord ?? hero.creditChip
+      : hero.creditChip;
   const confirmed = result?.status === "confirmed";
 
   const micRow = (
@@ -439,8 +412,8 @@ function DemoFrame({ hero }: { hero: Copy["hero"] }) {
 }
 
 export default function App() {
-  const { copy, lang } = useSiteLang();
-  const revealRef = useReveal(lang);
+  const copy = COPY;
+  const revealRef = useReveal();
 
   return (
     <>
@@ -467,7 +440,6 @@ export default function App() {
           </nav>
           <div className="header-actions">
             <SfxToggle labelOn={copy.mithu.sfxOn} labelOff={copy.mithu.sfxOff} />
-            <LangSwitch />
             <a className="btn btn--primary header-cta" href="/ledger">
               {copy.nav.cta}
             </a>
@@ -658,23 +630,12 @@ export default function App() {
                       <span className="ledger-mock__title">
                         <MicIcon width="18" height="18" /> {copy.trust.mock.title}
                       </span>
-                      <span className="chip chip--red">{copy.trust.mock.udharChip}</span>
+                      <span className="chip chip--red">{copy.trust.mock.creditChip}</span>
                     </div>
 
                     <div className="ledger-mock__row">
                       <div>
                         <div className="ledger-mock__name">{copy.trust.mock.name}</div>
-                        {/* Urdu accent line — suppressed in pure-English mode */}
-                        {lang !== "en" && (
-                          <span
-                            className="urdu"
-                            lang="ur"
-                            dir="rtl"
-                            style={{ fontSize: "0.95rem" }}
-                          >
-                            {copy.trust.mock.urduAmount}
-                          </span>
-                        )}
                       </div>
                       <span className="ledger-mock__amount">{copy.trust.mock.amount}</span>
                     </div>

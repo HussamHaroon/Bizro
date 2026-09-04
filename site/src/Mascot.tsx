@@ -1,4 +1,4 @@
-/* Mithu (مٹھو) — Bizro's parrot mascot, pure inline SVG.
+/* Mithu — Bizro's parrot mascot, pure inline SVG.
    Stamped-ledger neobrutalism law (design.md D4-1):
      - token palette only, referenced through CSS vars
      - 3px ink outlines · radius <= 2px · flat fills, no gradients
@@ -35,7 +35,6 @@ interface MithuProps {
 
 const INK = "var(--ink)";
 const FONT_SLAB = '"Zilla Slab", Georgia, serif';
-const FONT_URDU = '"Noto Nastaliq Urdu", Georgia, serif';
 
 function Eyes({ mood }: { mood: MithuMood }) {
   if (mood === "success") {
@@ -252,7 +251,7 @@ export function Mithu({ mood = "wave", size = 160, label }: MithuProps) {
         </g>
       )}
 
-      {/* thinking: dotted trail up to a bubble holding the Urdu question mark */}
+      {/* thinking: dotted trail up to a bubble holding a question mark */}
       {mood === "thinking" && (
         <g>
           <circle cx={112} cy={40} r={3.5} fill={INK} />
@@ -272,10 +271,11 @@ export function Mithu({ mood = "wave", size = 160, label }: MithuProps) {
             y={27}
             textAnchor="middle"
             fontSize={22}
+            fontWeight={700}
             fill={INK}
-            fontFamily={FONT_URDU}
+            fontFamily={FONT_SLAB}
           >
-            ؟
+            ?
           </text>
         </g>
       )}
@@ -324,8 +324,7 @@ export function Mithu({ mood = "wave", size = 160, label }: MithuProps) {
      - open chirps, close pops (see ./sfx — Web Audio only, lazy
        context, fails silently, honors the persisted mute state)
      - fully props-driven: no content.ts import. All copy arrives
-       via props (see ./mithu-content.ts for the typed strings).
-     - styling lives in the appended "Mithu guide bubble" block at
+       via props (see ./mithu-content.ts for the typed strings).     - styling lives in the appended "Mithu guide bubble" block at
        the END of styles.css; every bit of motion there is gated
        behind prefers-reduced-motion: no-preference.
 
@@ -335,7 +334,7 @@ export function Mithu({ mood = "wave", size = 160, label }: MithuProps) {
    ============================================================ */
 
 export interface GuideMithuProps {
-  /** Rotating guide tips (the four per MITHU_GUIDE_COPY). Each open shows
+  /** Rotating guide tips (the four per MITHU_COPY). Each open shows
       the next one, cycling. */
   tips: readonly string[];
   /** Mithu size in px, forwarded to Mithu. Default 150 (hero size). */

@@ -13,7 +13,6 @@
 import { useEffect, useState } from 'react';
 import type { SourceType } from '../types/schema';
 import { api, mediaUrl } from '../api/client';
-import { T, useT } from '../i18n';
 import { IconPhoto, IconVoice } from './icons';
 
 type MediaState =
@@ -29,7 +28,6 @@ export interface SourceMediaProps {
 }
 
 export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
-  const { pick } = useT();
   const [state, setState] = useState<MediaState>(() =>
     mediaId && !api.mock ? { kind: 'loading' } : { kind: 'skip' },
   );
@@ -63,31 +61,19 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
 
   if (state.kind === 'skip') {
     return (
-      <Note>
-        <T
-          en="Original media not available in demo data"
-          ur="اصل آواز/تصویر ڈیمو ڈیٹا میں موجود نہیں"
-        />
-      </Note>
+      <Note>Original media not available in demo data</Note>
     );
   }
 
   if (state.kind === 'loading') {
     return (
-      <Note>
-        <T en="Fetching the original…" ur="اصل ریکارڈ آ رہا ہے…" />
-      </Note>
+      <Note>Fetching the original…</Note>
     );
   }
 
   if (state.kind === 'unavailable') {
     return (
-      <Note>
-        <T
-          en="Original not available on the server right now"
-          ur="اصل ریکارڈ اس وقت سرور پر دستیاب نہیں"
-        />
-      </Note>
+      <Note>Original not available on the server right now</Note>
     );
   }
 
@@ -96,7 +82,7 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
       <div className="flex flex-col gap-1">
         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-green">
           <IconVoice className="h-4 w-4" />
-          <T en="Original voice note" ur="اصل آواز" />
+          Original voice note
         </p>
         {/* eslint-disable-next-line jsx-a11y/media-has-caption -- raw WhatsApp note, no captions exist */}
         <audio controls preload="none" src={state.url} className="w-full" />
@@ -108,17 +94,17 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
     <div className="flex flex-col gap-1">
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-green">
         <IconPhoto className="h-4 w-4" />
-        <T en="Original receipt photo" ur="اصل رسید کی تصویر" />
+        Original receipt photo
       </p>
       <button
         type="button"
         onClick={() => setLightboxOpen(true)}
         className="w-fit overflow-hidden rounded-chip border-[3px] border-ink-line shadow-hard-sm transition-shadow duration-200 ease-out hover:shadow-hard-md focus-visible:shadow-hard-md motion-reduce:transition-none"
-        aria-label={pick('Show the original receipt photo larger', 'اصل رسید کی تصویر بڑی کریں')}
+        aria-label="Show the original receipt photo larger"
       >
         <img
           src={state.url}
-          alt={pick('Receipt photo thumbnail', 'رسید کی تصویر')}
+          alt="Receipt photo thumbnail"
           width={96}
           height={96}
           className="block h-24 w-24 object-cover"
@@ -129,7 +115,7 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
           className="fixed inset-0 z-50 flex items-center justify-center bg-ink-line/80 p-6"
           role="dialog"
           aria-modal="true"
-          aria-label={pick('Receipt photo — press Escape to close', 'رسید کی تصویر — بند کرنے کے لیے Escape دبائیں')}
+          aria-label="Receipt photo — press Escape to close"
           onClick={() => setLightboxOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setLightboxOpen(false);
@@ -137,7 +123,7 @@ export function SourceMedia({ mediaId, sourceType }: SourceMediaProps) {
         >
           <img
             src={state.url}
-            alt={pick('Original receipt photo, full size', 'اصل رسید کی تصویر، مکمل سائز')}
+            alt="Original receipt photo, full size"
             className="max-h-[85vh] max-w-full rounded-chip border-[3px] border-paper"
           />
         </div>

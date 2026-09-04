@@ -4,6 +4,10 @@ marked `"mock": true` and must never be presentable as real model output).
 Mock output is shaped EXACTLY like the real model's text response (a JSON object), so
 the pipeline's extraction → validation → flag → confirmation path runs for real — only
 the network call is faked.
+
+The transcripts stay casual Urdu (they stand in for the INBOUND voice notes);
+the confirmations BUILT from these transactions come out in simple English
+(confirmation.py — owner ruling 2026-09-04: all merchant-facing text is English).
 """
 
 from __future__ import annotations

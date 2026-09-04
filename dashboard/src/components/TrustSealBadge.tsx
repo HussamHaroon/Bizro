@@ -17,7 +17,6 @@
 import type { MouseEvent } from 'react';
 import { formatConfidence } from '../lib/format';
 import { IconEdit } from './icons';
-import { T, useT } from '../i18n';
 
 export type SealVariant = 'verified' | 'pending';
 
@@ -34,7 +33,6 @@ export interface TrustSealBadgeProps {
   /** REQUIRED — always-visible edit affordance (design.md §7.2 audit trail). */
   onEdit: (e: MouseEvent<HTMLButtonElement>) => void;
   editLabel?: string;
-  editLabelUr?: string;
   className?: string;
 }
 
@@ -89,23 +87,17 @@ export function TrustSealBadge({
   stampIn = false,
   onEdit,
   editLabel,
-  editLabelUr,
   className = '',
 }: TrustSealBadgeProps) {
-  const { pick } = useT();
   const spec = STAMP_TEXT[variant];
   return (
     <span className={`inline-flex flex-wrap items-center gap-x-3 gap-y-2 ${className}`}>
       {/* The rubber stamp — the ONE rotated sticker on any screen (D4-1). */}
       <span
         className={`bizro-stamp font-numerals ${spec.ink} ${STAMP_TEXT_CLASS[size]} ${stampIn ? 'bizro-stamp-in' : ''}`}
-        title={pick('AI-parsed entry, merchant-confirmed', 'اے آئی سے درج، تاجر کی تصدیق شدہ')}
+        title="AI-parsed entry, merchant-confirmed"
       >
-        {variant === 'verified' ? (
-          <T en="AI-parsed · confirmed" ur="اے آئی درج · تصدیق شدہ" />
-        ) : (
-          <T en="Needs your check" ur="تصدیق باقی" />
-        )}
+        {variant === 'verified' ? 'AI-parsed · confirmed' : 'Needs your check'}
       </span>
       <span className={`flex flex-col ${STAMP_TEXT_CLASS[size]} leading-tight`}>
         <span className="text-ink-line opacity-75">
@@ -127,7 +119,7 @@ export function TrustSealBadge({
         className="bizro-btn-press inline-flex min-h-touch items-center gap-2 rounded-button border-[3px] border-ink-line bg-paper-raised px-3 text-sm font-semibold text-ink-line"
       >
         <IconEdit className="h-[18px] w-[18px] text-ink-green" />
-        <T en={editLabel ?? 'Edit if wrong'} ur={editLabelUr ?? 'غلط ہو تو بدلیں'} />
+        {editLabel ?? 'Edit if wrong'}
       </button>
     </span>
   );

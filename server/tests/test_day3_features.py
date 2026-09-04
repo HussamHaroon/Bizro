@@ -177,7 +177,7 @@ def test_mock_send_result_logs_button_labels(client):
     out = client.post("/webhook/whatsapp", json=_audio_payload(wa)).json()["results"][0]
     assert out["sent"]["mock"] is True
     assert [b["reply"]["id"] for b in out["sent"]["buttons"]] == ["confirm", "correct"]
-    assert "بدلیں" in str(out["sent"]["buttons"])
+    assert "Edit" in str(out["sent"]["buttons"])
 
 
 def test_non_pending_confirmation_has_no_buttons(client, monkeypatch):
@@ -195,7 +195,7 @@ def test_non_pending_confirmation_has_no_buttons(client, monkeypatch):
                        "confidence": 0.96, "raw_output": {"mock": True}},
             "flag": "none",
             "status": "confirmed",
-            "confirmation_ur": "فروخت 1200 روپے درج ہو گئی۔",
+            "confirmation_ur": "Cash sale: 1200 rupees recorded.",
         }
 
     monkeypatch.setitem(disp._pipeline_cache, "voice_agent.pipeline.process_voice_note",
@@ -237,18 +237,21 @@ def test_live_send_with_buttons_posts_interactive_payload(monkeypatch):
 
     monkeypatch.setattr(wc.httpx, "post", fake_post)
 
-    wc.send_text("923001112233", "احمد کو 5000 روپے ادھر دیے۔", buttons=disp.CONFIRM_BUTTONS)
+    wc.send_text("923001112233", "Got it. 5000 rupees credit to Ahmad. Is this correct?",
+                 buttons=disp.CONFIRM_BUTTONS)
     body = captured["json"]
     assert "PNID1" in captured["url"]
     assert body["type"] == "interactive"
     assert body["interactive"]["type"] == "button"
-    assert body["interactive"]["body"]["text"] == "احمد کو 5000 روپے ادھر دیے۔"
+    assert body["interactive"]["body"]["text"] == (
+        "Got it. 5000 rupees credit to Ahmad. Is this correct?"
+    )
     sent_buttons = body["interactive"]["action"]["buttons"]
     assert [b["reply"]["id"] for b in sent_buttons] == ["confirm", "correct"]
     assert sent_buttons[0]["type"] == "reply"
 
     # and without buttons: still the plain text message
-    wc.send_text("923001112233", "سادہ پیغام")
+    wc.send_text("923001112233", "plain message")
     assert captured["json"]["type"] == "text"
 
 
@@ -291,8 +294,8 @@ def test_button_correct_keeps_pending_and_asks_for_voice_note(client):
     with db_session() as s:
         tx = s.get(Transaction, uuid.UUID(tx_id))
         assert tx.status == "pending"
-    # Urdu reply requests the corrected voice note
-    assert "دوبارہ" in out["reply"] and "آواز" in out["reply"]
+    # English reply requests the corrected voice note (owner ruling: EN output)
+    assert "voice note" in out["reply"]
 
 
 def test_button_text_fallback_confirm(client):
@@ -300,7 +303,7 @@ def test_button_text_fallback_confirm(client):
     wa = _wa("92405")
     tx_id = _seed_pending_tx(client, wa)
     r = client.post("/webhook/whatsapp",
-                    json=_button_payload(wa, text="درست ہے"))
+                    json=_button_payload(wa, text="Correct"))
     out = r.json()["results"][0]
     assert out["action"] == "confirm"
     with db_session() as s:
@@ -310,7 +313,7 @@ def test_button_text_fallback_confirm(client):
 def test_button_text_fallback_correct(client):
     wa = _wa("92406")
     tx_id = _seed_pending_tx(client, wa)
-    r = client.post("/webhook/whatsapp", json=_button_payload(wa, text="بدلیں"))
+    r = client.post("/webhook/whatsapp", json=_button_payload(wa, text="Edit"))
     out = r.json()["results"][0]
     assert out["action"] == "correct"
     with db_session() as s:
@@ -335,7 +338,7 @@ def test_button_with_no_pending_tx_gets_polite_reply(client):
     out = r.json()["results"][0]
     assert out["ok"] is True
     assert out["transaction"] is None
-    assert "زیرِ التوا" in out["reply"]
+    assert "pending" in out["reply"]
 
 
 def test_button_unknown_payload_gets_help_reply(client):
@@ -560,7 +563,7 @@ def test_nudge_includes_streak_sentence_when_positive():
     with db_session() as s:
         nudge = compute_weekly_nudge(s, mid, now=NOW)
     assert nudge["stats"]["streak_weeks"] == 2
-    assert "لگاتار" in nudge["text_ur"]
+    assert "in a row" in nudge["text_ur"]
     assert "2" in nudge["text_ur"]
 
 
@@ -571,4 +574,4 @@ def test_nudge_omits_streak_sentence_when_zero():
     with db_session() as s:
         nudge = compute_weekly_nudge(s, mid, now=NOW)
     assert nudge["stats"]["streak_weeks"] == 0
-    assert "لگاتار" not in nudge["text_ur"]
+    assert "in a row" not in nudge["text_ur"]

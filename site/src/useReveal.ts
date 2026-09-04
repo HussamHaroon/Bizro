@@ -12,9 +12,9 @@
    grid of cards cascades instead of popping in unison. Blocks separated
    vertically are not penalised with long delays (index is per-parent).
 
-   `dep` re-runs the observer — the homepage re-keys its cards on language
-   switch (site-i18n), remounting them fresh; passing `lang` here makes the
-   new nodes get observed again instead of staying at their start state. */
+   `dep` re-runs the observer when it changes — pass a key if the observed
+   tree is ever remounted wholesale; nothing on the homepage needs it now
+   that the language-switch re-key is gone. */
 
 import { useEffect, useRef } from "react";
 

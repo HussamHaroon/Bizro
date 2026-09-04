@@ -27,7 +27,6 @@ import {
   IconUdharSettled,
 } from './icons';
 import { formatDateTime } from '../lib/format';
-import { T } from '../i18n';
 
 export interface LedgerRowProps {
   transaction: Transaction;
@@ -42,12 +41,12 @@ export interface LedgerRowProps {
 
 const KIND_SPEC: Record<
   TransactionKind,
-  { icon: typeof IconSale; en: string; ur: string; tone: string }
+  { icon: typeof IconSale; label: string; tone: string }
 > = {
-  sale: { icon: IconSale, en: 'Sale', ur: 'فروخت', tone: 'text-settled-teal' },
-  expense: { icon: IconExpense, en: 'Expense', ur: 'خرچ', tone: 'text-ledger-red' },
-  udhar_given: { icon: IconUdharGiven, en: 'Udhar', ur: 'ادھار', tone: 'text-ledger-red' },
-  udhar_settlement: { icon: IconUdharSettled, en: 'Repaid', ur: 'وصولی', tone: 'text-settled-teal' },
+  sale: { icon: IconSale, label: 'Sale', tone: 'text-settled-teal' },
+  expense: { icon: IconExpense, label: 'Expense', tone: 'text-ledger-red' },
+  udhar_given: { icon: IconUdharGiven, label: 'Udhar', tone: 'text-ledger-red' },
+  udhar_settlement: { icon: IconUdharSettled, label: 'Repaid', tone: 'text-settled-teal' },
 };
 
 export function LedgerRow({
@@ -79,7 +78,7 @@ export function LedgerRow({
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-baseline gap-x-2">
               <span className="font-semibold text-ink-line">
-                <T en={kind.en} ur={kind.ur} />
+                {kind.label}
               </span>
               {t.counterparty && (
                 <span className="truncate text-sm text-ink-line opacity-80">· {t.counterparty.name}</span>
@@ -115,7 +114,7 @@ export function LedgerRow({
               className="bizro-btn-quiet inline-flex min-h-touch items-center gap-1.5 rounded-button border-2 border-ink-line bg-paper-raised px-2.5 text-sm font-semibold text-ink-line hover:bg-paper"
             >
               <IconEdit className="h-[18px] w-[18px] text-ink-green" />
-              <T en="Edit" ur="بدلیں" />
+              Edit
             </button>
           )}
           {canConfirm && (
@@ -124,7 +123,7 @@ export function LedgerRow({
               onClick={() => onConfirm(t)}
               className="bizro-btn-quiet inline-flex min-h-touch items-center gap-1.5 rounded-button border-2 border-ink-line bg-fill-green px-3 text-sm font-semibold text-paper hover:bg-ink-green-hover"
             >
-              <T en="Confirm" ur="تصدیق" />
+              Confirm
             </button>
           )}
         </span>

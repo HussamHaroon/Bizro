@@ -87,7 +87,6 @@ export function ComponentsGallery() {
       <ScreenHeader
         icon={<IconReport className="h-9 w-9 text-ink-green" />}
         title="Component Gallery"
-        titleUr="اجزاء کی نمائش"
         purpose="Every part, every state"
       />
 
@@ -134,25 +133,23 @@ export function ComponentsGallery() {
         </div>
       </Section>
 
-      <Section title="3 · Type tokens" note="Body IBM Plex Sans · numerals/headers Zilla Slab · Urdu UI Noto Sans · Nastaliq display only. Type scale: body 15px, meta 13px.">
+      <Section title="3 · Type tokens" note="Body IBM Plex Sans · numerals/headers Zilla Slab · Urdu-data runs (server transcripts, reminder drafts) render in Noto Sans. Type scale: body 15px, meta 13px.">
         <div className="bizro-card flex flex-col gap-2 px-4 py-4 text-ink-line">
           <p className="text-base">Body · The ledger remembers so you don't have to.</p>
           <p className="font-numerals text-2xl font-semibold">Numerals · Rs 12,450</p>
-          <p className="bizro-urdu text-base" lang="ur">اردو UI متن · ادھار اور وصولی</p>
-          <p className="bizro-display-ur text-2xl" lang="ur">بزرو</p>
         </div>
       </Section>
 
       <Section title="4 · Button" note="48px targets · one primary per screen · solid fill + 3px ink border + hard-sm shadow · ACTIVE presses down (translate 2px,2px, shadow gone).">
         <div className="flex flex-wrap items-center gap-3">
-          <Button>Confirm <span className="bizro-urdu font-normal" lang="ur">تصدیق</span></Button>
-          <Button variant="secondary">Back <span className="bizro-urdu font-normal" lang="ur">واپس</span></Button>
-          <Button variant="danger">Remove <span className="bizro-urdu font-normal" lang="ur">ہٹائیں</span></Button>
+          <Button>Confirm</Button>
+          <Button variant="secondary">Back</Button>
+          <Button variant="danger">Remove</Button>
           <Button disabled>Disabled</Button>
         </div>
       </Section>
 
-      <Section title="5 · StatusPill" note="Square sticker chips: tinted bg (10–14% alpha) + 2px ink border + radius 0. Icon + word (EN + UR) — color is never the only signal. D4r: optional flag prop folds a row's price flag into the ONE row chip (▲ + flag word, red); the underlying status rides the title.">
+      <Section title="5 · StatusPill" note="Square sticker chips: tinted bg (10–14% alpha) + 2px ink border + radius 0. Icon + word — color is never the only signal. D4r: optional flag prop folds a row's price flag into the ONE row chip (▲ + flag word, red); the underlying status rides the title.">
         <div className="flex flex-wrap gap-3">
           <StatusPill status="pending" />
           <StatusPill status="confirmed" />
@@ -168,7 +165,6 @@ export function ComponentsGallery() {
           <AmountText value={7450} tone="out" />
           <AmountText value={12800} tone="in" size="lg" />
           <AmountText value={3500} tone="out" size="xl" />
-          <AmountText value={2000} tone="out" showWords />
         </div>
       </Section>
 
@@ -190,7 +186,7 @@ export function ComponentsGallery() {
           />
           <div className="flex items-center gap-3">
             <Button variant="secondary" onClick={() => setStampKey((k) => k + 1)}>
-              Replay stamp <span className="bizro-urdu font-normal" lang="ur">دوبارہ دکھائیں</span>
+              Replay stamp
             </Button>
             <SealMark variant="verified" size="md" />
             <SealMark variant="pending" size="md" />
@@ -199,10 +195,10 @@ export function ComponentsGallery() {
       </Section>
 
       <Section title="8 · ReceiptCard" note="3px ink-line border + hard-md shadow · 2px radius · no perforation, no gradients.">
-        <ReceiptCard title="Month summary — Demo" titleUr="ماہانہ خلاصہ" meta="31 entries · 27 AI-verified">
+        <ReceiptCard title="Month summary — Demo" meta="31 entries · 27 AI-verified">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-ink-line">
-              Net position · <span className="bizro-urdu" lang="ur">خالص</span>
+              Net position
             </p>
             <AmountText value={9350} tone="in" size="lg" />
           </div>
@@ -287,10 +283,8 @@ export function ComponentsGallery() {
         <EmptyState
           icon={<IconLedger className="h-12 w-12" />}
           title="No entries yet"
-          titleUr="ابھی کچھ نہیں"
           hint="Send a WhatsApp voice note and it lands here."
           actionLabel="See how it works"
-          actionLabelUr="طریقہ دیکھیں"
           onAction={() => setStampKey((k) => k + 1)}
         />
       </Section>
@@ -306,9 +300,9 @@ export function ComponentsGallery() {
       <Section title="14 · Hero stat, seal gauge, cash-flow chart" note="Hero numerals slab-black clamp(2.5→4.5rem) and count up; the gauge is a flat chunky ring on a tilted sticker card; bars are flat fills with ink strokes and tilted sticker value chips on hover/focus.">
         <div className="flex flex-col gap-5">
           <div className="grid gap-4 sm:grid-cols-3">
-            <HeroStat en="Money in" ur="آمدنی" value={45300} tone="in" icon={<IconSale className="h-6 w-6 text-settled-teal" />} />
-            <HeroStat en="Money out" ur="خرچ" value={28950} tone="out" icon={<IconExpense className="h-6 w-6 text-ledger-red" />} />
-            <HeroStat en="Net kept" ur="خالص بچت" value={16350} tone="in" icon={<IconLedger className="h-6 w-6 text-ink-green" />} />
+            <HeroStat en="Money in" value={45300} tone="in" icon={<IconSale className="h-6 w-6 text-settled-teal" />} />
+            <HeroStat en="Money out" value={28950} tone="out" icon={<IconExpense className="h-6 w-6 text-ledger-red" />} />
+            <HeroStat en="Net kept" value={16350} tone="in" icon={<IconLedger className="h-6 w-6 text-ink-green" />} />
           </div>
           <div className="bizro-card flex flex-wrap items-center gap-6 px-5 py-5">
             <SealGauge score={78} label="Readiness score 78 of 100 — demo" />

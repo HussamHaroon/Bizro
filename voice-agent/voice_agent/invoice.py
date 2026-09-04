@@ -6,7 +6,9 @@ of the stamp motif — ledger-cream canvas, 3px ink borders, hard offset
 shadows (no blur, no gradients), radius <=2px, slab numerals BIG for the
 amount, and the trust seal restyled as a rotated dashed RUBBER STAMP reading
 "AI-PARSED" + confidence. §4.7 accessibility law is unchanged (icon+word,
-digits AND Urdu words, color never the sole signal, AA contrast).
+digits AND words, color never the sole signal, AA contrast) — wording is now
+SIMPLE ENGLISH everywhere (owner ruling 2026-09-04: all merchant-facing text
+is simple English; only inbound voice notes stay Urdu).
 
 Colors/fonts still come from dashboard/design-tokens/tokens.json (token law).
 New D4-1 keys are read with `tokens.get(key, fallback)` so the renderer works
@@ -30,7 +32,7 @@ import string
 from pathlib import Path
 
 from voice_agent.config import Settings, load_settings
-from voice_agent.confirmation import amount_in_urdu_words, to_numeral_digits
+from voice_agent.confirmation import amount_in_english_words, to_numeral_digits
 
 # ---------------------------------------------------------------------------
 # Token loading (token law)
@@ -104,16 +106,16 @@ def render_invoice(
 # ---------------------------------------------------------------------------
 
 _KIND_VIEW = {
-    # kind → (urdu label, english label, icon, direction word, color token key)
-    "sale": ("فروخت", "CASH SALE", "◈", "وصول ہوئے", "settledTeal"),
-    "expense": ("خرچ", "EXPENSE", "▼", "خرچ ہوئے", "ledgerRed"),
-    "udhar_given": ("ادھار دیا", "UDHAR GIVEN", "▲", "ادھار دیے", "ledgerRed"),
-    "udhar_settlement": ("ادھار وصول", "SETTLEMENT", "✓", "وصول ہوئے", "settledTeal"),
+    # kind → (simple label, caps label, icon, direction word, color token key)
+    "sale": ("Cash sale", "CASH SALE", "◈", "Money in", "settledTeal"),
+    "expense": ("Expense", "EXPENSE", "▼", "Money out", "ledgerRed"),
+    "udhar_given": ("Credit given", "UDHAR GIVEN", "▲", "Money out", "ledgerRed"),
+    "udhar_settlement": ("Credit paid back", "SETTLEMENT", "✓", "Money in", "settledTeal"),
 }
 
-_URDU_MONTHS = [
-    "جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون",
-    "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر",
+_MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
 ]
 
 # Bolder D4-1 serration: 24px tall, 20px period (was 18px/15px), ink-green fill
@@ -125,7 +127,7 @@ _TORN_PATH = (
 )
 
 _TEMPLATE = string.Template("""<!DOCTYPE html>
-<html lang="ur" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -177,7 +179,7 @@ _TEMPLATE = string.Template("""<!DOCTYPE html>
   table.items { width:100%; border-collapse:collapse; margin:0 0 8px; }
   table.items th { font-size:11px; font-weight:700; color:${ink};
                    border-top:2px solid ${ink}; border-bottom:2px solid ${ink};
-                   padding:7px 12px; text-align:right; letter-spacing:1px; }
+                   padding:7px 12px; text-align:left; letter-spacing:1px; }
   table.items td { padding:8px 12px; border-bottom:1px solid ${ink}; font-size:13px; }
   table.items .num { font-family:${fontNumerals}; direction:ltr; text-align:left;
                      font-weight:600; }
@@ -220,7 +222,7 @@ _TEMPLATE = string.Template("""<!DOCTYPE html>
     </div>
     <div class="gold-strip"></div>
 
-    <div class="greet">شکریہ! آپ کا اندراج محفوظ ہو گیا</div>
+    <div class="greet">Thank you! Your entry is saved.</div>
 
     <div class="kind">
       <span class="icon">${kindIcon}</span>
@@ -248,14 +250,14 @@ _TEMPLATE = string.Template("""<!DOCTYPE html>
       </div>
       <div class="stamp-copy">
         <span class="en">ALIBABA CLOUD &middot; AI-PARSED</span>
-        <span class="conf">آواز کا اندراج — مصنوعی ذہانت سے پڑھا گیا</span>
+        <span class="conf">Voice entry — read by AI</span>
       </div>
     </div>
 
-    <div class="edit-hint">اگر یہ اندراج غلط ہو تو اِس پیغام کے جواب میں "غلط" لکھیں۔</div>
+    <div class="edit-hint">Something wrong? Reply "0" to this message and we will remove the entry.</div>
 
     <div class="foot">
-      <span>بِزرو — آپ کے کھاتے کی ڈیجیٹل یاد</span>
+      <span>Bizro — your digital ledger</span>
       <span style="direction:ltr">${txRef}</span>
     </div>
     ${mockBand}
@@ -278,28 +280,34 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
     color = tokens["color"]
     font = tokens["font"]
     kind = tx.get("kind") or "udhar_given"
-    kind_ur, kind_en, kind_icon, kind_dir, kind_color_key = _KIND_VIEW[kind]
+    kind_label, kind_en, kind_icon, kind_dir, kind_color_key = _KIND_VIEW[kind]
     kind_color = color[kind_color_key]
 
     amount = float(tx.get("amount_pkr") or 0)
     esc = html.escape
 
     merchant = (tx.get("merchant") or {}).get("display_name") or ""
-    merchant_html = esc(merchant) if merchant else "کھاتہ — Bizro"
+    merchant_html = esc(merchant) if merchant else "Ledger — Bizro"
 
     when = _parse_when(tx.get("occurred_at"))
-    date_html = f"{to_numeral_digits(when.day, numeral_style)} {_URDU_MONTHS[when.month-1]} {to_numeral_digits(when.year, numeral_style)}"
+    date_html = f"{to_numeral_digits(when.day, numeral_style)} {_MONTHS[when.month-1]} {to_numeral_digits(when.year, numeral_style)}"
 
     cp = tx.get("counterparty") or {}
     cp_name = (cp.get("name") or "").strip()
-    cp_html = f"<b>گاہک:</b> {esc(cp_name)}" if cp_name else ""
+    cp_html = f"<b>Customer:</b> {esc(cp_name)}" if cp_name else ""
     if kind == "expense" and cp_name:
-        cp_html = f"<b>سوداگر:</b> {esc(cp_name)}"
+        cp_html = f"<b>Supplier:</b> {esc(cp_name)}"
 
     flag = tx.get("flag") or "none"
     low_conf_html = ""
     if flag != "none":
-        warn = "یہ اندراج پکا نہیں — تصدیق ضروری ہے" if flag == "low_confidence" else "توجہ: رقم میں فرق ہے" if flag == "total_mismatch" else "توجہ بھیجانا ضروری ہے"
+        warn = (
+            "Not sure about this entry — please confirm it."
+            if flag == "low_confidence"
+            else "Note: the item totals do not match the amount."
+            if flag == "total_mismatch"
+            else "Note: this entry needs your attention."
+        )
         low_conf_html = (
             f'<div style="margin-top:6px;padding:6px 10px;border:2px solid {color["ledgerRed"]};'
             f'border-radius:2px;box-shadow:{_d4(tokens, "shadow.shadowHardSm")};'
@@ -320,7 +328,7 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
     if rows:
         items_html = (
             '<table class="items">'
-            "<tr><th>چیز</th><th style='text-align:left;direction:ltr'>Qty</th>"
+            "<tr><th>Item</th><th style='text-align:left;direction:ltr'>Qty</th>"
             "<th style='text-align:left;direction:ltr'>Rate</th>"
             "<th style='text-align:left;direction:ltr'>Total</th></tr>"
             f"{rows}</table>"
@@ -329,7 +337,7 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
     src = tx.get("source") or {}
     conf = src.get("confidence")
     conf_pct = to_numeral_digits(int(round(conf * 100)), numeral_style) if isinstance(conf, (int, float)) else None
-    stamp_conf = f"AI امانت {conf_pct}%" if conf_pct is not None else "AI امانت —"
+    stamp_conf = f"AI confidence {conf_pct}%" if conf_pct is not None else "AI confidence —"
 
     # Rubber-stamp ink: red when the entry needs attention, green when clean
     # (color + flag wording both signal — §4.7 color never the sole signal).
@@ -358,9 +366,9 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
         tornPath=_TORN_PATH,
         merchantHtml=merchant_html,
         dateHtml=date_html,
-        kindUr=kind_ur, kindEn=kind_en, kindIcon=kind_icon, kindDirection=kind_dir,
+        kindUr=kind_label, kindEn=kind_en, kindIcon=kind_icon, kindDirection=kind_dir,
         amountDigits=to_numeral_digits(amount, numeral_style),
-        amountWords=f"{amount_in_urdu_words(amount)} روپے",
+        amountWords=f"{amount_in_english_words(amount)} rupees",
         itemsHtml=items_html,
         counterpartyHtml=cp_html,
         lowConfidenceHtml=low_conf_html,
@@ -378,20 +386,20 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
 
 def build_invoice_text(tx: dict, numeral_style: str = "western") -> str:
     kind = tx.get("kind") or "udhar_given"
-    kind_ur, kind_en, _icon, kind_dir, _c = _KIND_VIEW[kind]
+    kind_label, kind_en, _icon, kind_dir, _c = _KIND_VIEW[kind]
     amount = float(tx.get("amount_pkr") or 0)
     cp = (tx.get("counterparty") or {}).get("name") or ""
     when = _parse_when(tx.get("occurred_at"))
     digits = to_numeral_digits(amount, numeral_style)
-    words = amount_in_urdu_words(amount)
+    words = amount_in_english_words(amount)
 
     lines = [
-        "*بِزرو — رسید*",
-        f"{kind_ur} ({kind_en}) — {kind_dir}",
-        f"رقم: Rs. {digits} ({words} روپے)",
+        "*Bizro — Receipt*",
+        f"{kind_label} ({kind_en}) — {kind_dir}",
+        f"Amount: Rs. {digits} ({words} rupees)",
     ]
     if cp:
-        lines.append(f"گاہک: {cp}")
+        lines.append(f"Customer: {cp}")
     if tx.get("item_lines"):
         lines.append("—")
         for li in tx["item_lines"]:
@@ -401,11 +409,11 @@ def build_invoice_text(tx: dict, numeral_style: str = "western") -> str:
             )
     lines += [
         "—",
-        f"تاریخ: {to_numeral_digits(when.day, numeral_style)} {_URDU_MONTHS[when.month-1]} {to_numeral_digits(when.year, numeral_style)}",
-        "AI-PARSED · Alibaba Cloud AI Verified — اگر غلط ہو تو جواب میں لکھیں۔",
+        f"Date: {to_numeral_digits(when.day, numeral_style)} {_MONTHS[when.month-1]} {to_numeral_digits(when.year, numeral_style)}",
+        "AI-PARSED · Alibaba Cloud AI Verified — reply 0 if this is wrong.",
     ]
     if (tx.get("flag") or "none") != "none":
-        lines.append("⚠ یہ اندراج پکا نہیں — تصدیق ضروری ہے")
+        lines.append("⚠ Not sure about this entry — please confirm it.")
     if tx.get("mock"):
         lines.append("MOCK DATA — NOT A REAL ENTRY")
     return "\n".join(lines)

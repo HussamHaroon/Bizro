@@ -235,7 +235,8 @@ def _fallback_voice(
         "flag": "low_confidence",
         "status": "pending",
         "confirmation_ur": (
-            f"احمد کو {amount} روپے ادھر دیے۔ کیا یہ درست ہے؟ [mock — voice_agent not merged]"
+            f"Got it. {amount} rupees credit to Ahmad. Is this correct? "
+            "[mock — voice_agent not merged]"
         ),
     }
 
@@ -281,8 +282,8 @@ def _fallback_vision(
         "flag": "low_confidence",
         "status": "pending",
         "confirmation_ur": (
-            f"رسید: چائے پتی {qty} پیکٹ × {unit_price} = {total} روپے۔ کیا یہ درست ہے؟ "
-            "[mock — vision_agent not merged]"
+            f"Got it. Receipt: chai patti {qty} packets x {unit_price} = {total} rupees. "
+            "Is this correct? [mock — vision_agent not merged]"
         ),
     }
 
@@ -387,8 +388,11 @@ def send_confirmation(merchant: Merchant, tx: Transaction, confirmation_ur: str)
 
 # --- clarification / rejection path (schema.md §6.2 + §6.4 + §6.9) ------------
 
+# Simple English merchant-facing replies (owner ruling 2026-09-04). Constant
+# names keep their historical *_UR suffixes — stored outbound bodies, wire keys
+# (confirmation_ur, reply_ur, text_ur) and DB columns keep the old names.
 DEFAULT_CLARIFICATION_UR = (
-    "معاف کیجیے، رقم واضح نہیں ہو سکی۔ براہِ کرم رقم لکھ کر بھیجیں یا دوبارہ بولیں۔"
+    "Sorry, the amount was not clear. Please type the amount or say it again."
 )
 
 
@@ -461,8 +465,11 @@ def send_reply(
 
 BUTTON_CONFIRM_PAYLOAD = "confirm"
 BUTTON_CORRECT_PAYLOAD = "correct"
-BUTTON_CONFIRM_TITLE_UR = "درست ہے"
-BUTTON_CORRECT_TITLE_UR = "بدلیں"
+# Button TITLES are merchant-facing → simple English (owner ruling). The
+# *_UR names stay: payloads, the outbound payload shape, and tests reference
+# the constant names, never the wording. (Graph API caps titles at 20 chars.)
+BUTTON_CONFIRM_TITLE_UR = "Correct"
+BUTTON_CORRECT_TITLE_UR = "Edit"
 
 # Graph API interactive reply buttons, wire shape (§7.1): attach to every
 # outbound confirmation for a pending transaction. Live mode sends them as
@@ -472,12 +479,12 @@ CONFIRM_BUTTONS = [
     {"type": "reply", "reply": {"id": BUTTON_CORRECT_PAYLOAD, "title": BUTTON_CORRECT_TITLE_UR}},
 ]
 
-BUTTON_CONFIRM_REPLY_UR = "شکریہ! اندراج درست کر دیا گیا۔"
+BUTTON_CONFIRM_REPLY_UR = "Thank you! The entry is confirmed."
 BUTTON_CORRECT_REPLY_UR = (
-    "ٹھیک ہے — اندراج محفوظ ہے لیکن ابھی زیرِ التوا ہے۔ "
-    "براہِ کرم درست رقم بتا کر دوبارہ آواز بھیجیں۔"
+    "Okay — the entry is saved but still pending. "
+    "Please send a new voice note with the correct amount."
 )
-NO_PENDING_REPLY_UR = "کوئی زیرِ التوا اندراج نہیں ملا۔"
+NO_PENDING_REPLY_UR = "No pending entry was found."
 
 
 def handle_button_reply(
@@ -486,11 +493,11 @@ def handle_button_reply(
     """Inbound one-tap button press (§7.1) → act on the merchant's most recent
     pending transaction.
 
-    - payload `confirm` (or button text `درست ہے`): status=confirmed — exactly
+    - payload `confirm` (or button text `Correct`): status=confirmed — exactly
       the POST /api/transactions/{id}/confirm semantics, with the wire row
       returned for response logging like the REST endpoint.
-    - payload `correct` (or `بدلیں`): status stays pending; the merchant gets
-      an Urdu reply asking for the corrected voice note.
+    - payload `correct` (or `Edit`): status stays pending; the merchant gets
+      a simple English reply asking for the corrected voice note.
     Returns {"action": confirm|correct|unknown, "reply": str|None,
              "transaction": wire row | None}.
     """
@@ -560,14 +567,15 @@ def _confirmation_ur_for_tx(session: Session, transaction_id: uuid.UUID) -> str 
 
 
 # --- text replies (merchant confirms/rejects by WhatsApp text) ---------------
+# Inbound words stay multilingual (Urdu incl.) — only OUTBOUND text is English.
 
 _CONFIRM_WORDS = {"1", "haan", "han", "ji", "yes", "y", "درست", "ہاں", "جی ہاں", "ٹھیک"}
 _REJECT_WORDS = {"0", "nahi", "na", "no", "n", "غلط", "نہیں", "نہیں"}
 
 
 def handle_text_reply(session: Session, merchant: Merchant, text: str) -> str | None:
-    """Minimal confirm/reject-by-reply. Returns the Urdu reply to send, or None
-    if the text isn't a confirmation/rejection."""
+    """Minimal confirm/reject-by-reply. Returns the simple English reply to send,
+    or None if the text isn't a confirmation/rejection."""
     normalized = text.strip().lower()
     # normalize Urdu punctuation variants
     normalized = normalized.replace("؟", "").replace("۔", "")
@@ -584,14 +592,14 @@ def handle_text_reply(session: Session, merchant: Merchant, text: str) -> str | 
         .limit(1)
     )
     if tx is None:
-        return "کوئی زیرِ التوا اندراج نہیں ملا۔"
+        return NO_PENDING_REPLY_UR
 
     if wants_confirm:
         tx.status = "confirmed"
-        reply = "شکریہ! اندراج درست کر دیا گیا۔"
+        reply = BUTTON_CONFIRM_REPLY_UR
     else:
         tx.status = "rejected"
-        reply = "ٹھیک ہے، اندراج ہٹا دیا گیا۔"
+        reply = "Okay, the entry was removed."
     session.add(tx)
     session.add(
         OutboundMessage(

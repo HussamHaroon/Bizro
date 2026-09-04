@@ -193,9 +193,7 @@
     .bizro-btn-press:hover:not(:disabled),
     .bizro-btn-press:active:not(:disabled),
     .bizro-btn-quiet,
-    .bizro-btn-quiet:active:not(:disabled),
-    .bizro-lang-segment,
-    .bizro-lang-segment:active {
+    .bizro-btn-quiet:active:not(:disabled) {
       transition: none;
       transform: none;
     }
@@ -241,32 +239,15 @@
   }
 
   /* Badge-glyph knockout (icons.tsx): the filled badge circle uses currentColor
-     and the glyph defaults to paper. In the header/tab/segment contexts the
-     circle is DARK (ink-line, inactive on paper) → paper glyph; on ACTIVE
-     fill states currentColor is LIGHT (paper on green-fill) → the glyph flips
-     to ink-line. Presentation attributes lose to CSS, so no per-site props. */
-  .bizro-topbar-tab .bizro-badge-glyph,
-  .bizro-lang-segment .bizro-badge-glyph {
+     and the glyph defaults to paper. In the header/tab contexts the circle is
+     DARK (ink-line, inactive on paper) → paper glyph; on ACTIVE fill states
+     currentColor is LIGHT (paper on green-fill) → the glyph flips to ink-line.
+     Presentation attributes lose to CSS, so no per-site props. */
+  .bizro-topbar-tab .bizro-badge-glyph {
     fill: var(--bizro-paper);
   }
-  .bizro-topbar-tab[aria-current='page'] .bizro-badge-glyph,
-  .bizro-lang-segment[aria-pressed='true'] .bizro-badge-glyph {
+  .bizro-topbar-tab[aria-current='page'] .bizro-badge-glyph {
     fill: var(--bizro-ink-line);
-  }
-
-  /* Language-segment press (D4r fix 3, moved here from Tailwind active:
-     utilities) — the segment nudges down-right 2px like .bizro-btn-press.
-     Living in the components layer lets the prefers-reduced-motion block
-     above override it deterministically (utility variants would win the
-     cascade and the press would survive reduced motion). */
-  .bizro-lang-segment {
-    transition:
-      background-color var(--bizro-motion-fast),
-      color var(--bizro-motion-fast),
-      transform var(--bizro-motion-fast);
-  }
-  .bizro-lang-segment:active {
-    transform: translate(2px, 2px);
   }
 
   /* Urdu inline isolation: keeps RTL runs from disturbing surrounding Latin text. */
@@ -281,14 +262,6 @@
      bar. Harmless where inset is 0. Paired with viewport-fit=cover. */
   .bizro-safe-b {
     padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  /* Nastaliq is reserved for display moments only (app name, greetings). */
-  .bizro-display-ur {
-    font-family: var(--bizro-font-display-ur);
-    direction: rtl;
-    unicode-bidi: isolate;
-    line-height: 2.2;
   }
 
   /* The ONE animation worth budget (design.md §4.6 + D4-1 ③): the stamp
@@ -417,8 +390,7 @@
   .bizro-card-hero,
   [class*='shadow-hard'],
   .bizro-btn-press,
-  .bizro-btn-quiet,
-  .bizro-lang-segment {
+  .bizro-btn-quiet {
     /* D4r fix 4d: EVERY hard shadow flattens in print — the attribute selector
        alone missed CSS-owned shadows (.bizro-btn-press draws hard-sm from the
        token, not a shadow-hard-* utility class). */
