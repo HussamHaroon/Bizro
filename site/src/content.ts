@@ -135,7 +135,7 @@ export const COPY = {
         h3: "Send a voice note",
         p:
           "He records a short voice note on WhatsApp — the way he'd tell a helper. Bizro turns it into a ledger entry and sends a stamped invoice right back.",
-        badges: ["Whisper STT + Qwen", "WhatsApp in / out"],
+        badges: ["Qwen voice + parse", "WhatsApp in / out"],
       },
       {
         chip: "Step 2 · Vision",
@@ -209,7 +209,7 @@ export const COPY = {
     credits1:
       "Bizro · Bano Qabil × Alibaba Cloud AI Hackathon Pakistan 2026.",
     credits2:
-      "Running on Qwen (Alibaba Cloud Model Studio) with Groq Whisper for speech. Provider-agnostic by design — one environment variable swaps any model.",
+      "Running end-to-end on Qwen — speech, vision and parsing (Alibaba Cloud Model Studio) — with a Groq Whisper backup for speech. Provider-agnostic by design: one environment variable swaps any model.",
     linkLedger: "Live ledger",
     linkReport: "Credit Readiness Report",
     honesty:
