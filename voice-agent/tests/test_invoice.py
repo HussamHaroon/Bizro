@@ -89,7 +89,7 @@ def test_stamp_ink_signals_flag_state(udhar_tx):
     green, red = tokens["color"]["inkGreen"], tokens["color"]["ledgerRed"]
     assert f"border:2px dashed {green}" in clean
     assert f"border:2px dashed {red}" in flagged
-    assert "پکا نہیں" in flagged and "پکا نہیں" not in clean
+    assert "Not sure about this entry" in flagged and "Not sure about this entry" not in clean
 
 
 def test_html_distinguishes_debit_vs_settled_by_more_than_color():
@@ -119,7 +119,7 @@ def test_mock_watermark_present_only_for_mock(udhar_tx):
 def test_amounts_in_digits_and_words(udhar_tx):
     tokens = load_tokens(_settings())
     html = build_invoice_html(udhar_tx, tokens, "western")
-    assert "5000" in html and "پانچ ہزار" in html  # §4.7 numbers shown AND word form
+    assert "5000" in html and "five thousand" in html  # §4.7 numbers shown AND word form
 
 
 # --- PNG render (system Edge) + text fallback -------------------------------------
@@ -143,7 +143,7 @@ def test_render_never_blocks_confirmation_path(udhar_tx, tmp_path, monkeypatch):
     out = render_invoice(udhar_tx, tmp_path / "inv", settings=_settings())
     assert out.suffix == ".txt"
     text = out.read_text(encoding="utf-8")
-    assert "5000" in text and "پانچ ہزار" in text
+    assert "5000" in text and "five thousand" in text
     assert "MOCK DATA" in text
     assert "Alibaba Cloud AI Verified" in text
 
@@ -152,7 +152,7 @@ def test_low_confidence_invoice_carries_warning(udhar_tx, tmp_path):
     udhar_tx["flag"] = "low_confidence"
     tokens = load_tokens(_settings())
     html = build_invoice_html(udhar_tx, tokens)
-    assert "پکا نہیں" in html
+    assert "Not sure about this entry" in html
 
 
 # --- decode step -------------------------------------------------------------------

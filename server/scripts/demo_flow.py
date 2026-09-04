@@ -242,13 +242,13 @@ def step_voice_note(http, ctx: dict) -> None:
     print(f"     Ledger wire row: {row['kind']} PKR {row['amount_pkr']:,.0f} "
           f"status={row['status']} conf={row['source']['confidence']} "
           f"model={row['source']['model']} flag={row['flag']}")
-    print("     JUDGE SEES (phone): the Urdu confirmation bubble + درست ہے / بدلیں buttons")
+    print('     JUDGE SEES (phone): the confirmation bubble + "It\'s correct / Change" buttons')
     print("     JUDGE SEES (dashboard): ledger row pending, source=voice, audit drill-down live")
     ctx["voice_tx_id"] = out["transaction_id"]
 
 
 def step_button_confirm(http, ctx: dict) -> None:
-    """(2) merchant taps درست ہے → the pending row flips to confirmed."""
+    """(2) merchant taps "It's correct" → the pending row flips to confirmed."""
     sim = ctx["sim"]
     out = _webhook(http, sim, ctx["wa_id"], sim.build_payload(
         ctx["wa_id"], ctx["display_name"], None, None, None, button="confirm",
@@ -258,10 +258,10 @@ def step_button_confirm(http, ctx: dict) -> None:
         raise StepFailure(f"button confirm acted on no transaction: {out}")
     if tx["status"] != "confirmed":
         raise StepFailure(f"button confirm left status={tx['status']}: {out}")
-    print(f"     Merchant taps: [درست ہے] → Bizro replies: {out.get('reply')}")
+    print(f"     Merchant taps: [It's correct] → Bizro replies: {out.get('reply')}")
     print(f"     Wire row now: id={tx['id'][:8]}… status={tx['status']} "
           f"confirmation_ur={bool(tx['confirmation_ur'])}")
-    print("     JUDGE SEES (phone): “شکریہ! اندراج درست کر دیا گیا۔”")
+    print("     JUDGE SEES (phone): "Thanks! The entry has been corrected."")
     print("     JUDGE SEES (dashboard): ledger row pending → confirmed, zero typing")
 
 

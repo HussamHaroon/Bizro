@@ -1,15 +1,13 @@
 /* AmountText — every money figure in the app. Slab numerals (Zilla Slab) per
-   design.md §4.2. Tone maps to money direction:
+   design.md §4.2, digits only (owner directive: amounts show regular numbers,
+   no word-form line). Tone maps to money direction:
      in (sale / repaid)  → settled-teal  + ↓/← arrow at the row level
      out (expense/udhar) → ledger-red    + ↑/→ arrow at the row level
      neutral             → ink-black
    Color is never the only signal: rows pair the tone with a direction icon,
-   a kind word, and right-alignment. `showWords` adds the Urdu word form
-   (design.md §4.7) — visible in mixed + ur modes, hidden in en mode (D1-1a:
-   English-only means digits-only amounts). */
+   a kind word, and right-alignment. */
 
-import { formatAmount, urduAmountWords } from '../lib/format';
-import { useNumerals, useT } from '../i18n';
+import { formatPkr } from '../lib/format';
 
 export type AmountTone = 'in' | 'out' | 'neutral';
 
@@ -17,7 +15,6 @@ export interface AmountTextProps {
   value: number;
   tone?: AmountTone;
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  showWords?: boolean;
   className?: string;
 }
 
@@ -38,22 +35,13 @@ export function AmountText({
   value,
   tone = 'neutral',
   size = 'md',
-  showWords = false,
   className = '',
 }: AmountTextProps) {
-  const { showUrduWords } = useT();
-  const { numerals } = useNumerals(); // schema.md §8 digit style (D5-2)
-  const wordsVisible = showWords && showUrduWords;
   return (
     <span className={`inline-flex flex-col ${className}`}>
       <span className={`font-numerals font-semibold tabular-nums ${TONE_CLASS[tone]} ${SIZE_CLASS[size]}`}>
-        {formatAmount(value, numerals)}
+        {formatPkr(value)}
       </span>
-      {wordsVisible && value > 0 && (
-        <span className="bizro-urdu text-xs text-ink-line opacity-80" lang="ur">
-          {urduAmountWords(Math.round(value))} روپے
-        </span>
-      )}
     </span>
   );
 }

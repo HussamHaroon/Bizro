@@ -7,7 +7,6 @@ import { useState } from 'react';
 import type { Transaction } from '../types/schema';
 import { api } from '../api/client';
 import { Button } from './Button';
-import { T, useT } from '../i18n';
 
 export interface EditTransactionFormProps {
   transaction: Transaction;
@@ -16,7 +15,6 @@ export interface EditTransactionFormProps {
 }
 
 export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditTransactionFormProps) {
-  const { pick } = useT();
   const [amount, setAmount] = useState(String(t.amount_pkr));
   const [description, setDescription] = useState(t.description ?? '');
   const [saving, setSaving] = useState(false);
@@ -25,7 +23,7 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
   async function save() {
     const parsed = Number(amount);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setError(pick('Enter a positive amount', 'رقم درج کریں'));
+      setError('Enter a positive amount');
       return;
     }
     setSaving(true);
@@ -53,12 +51,10 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
         void save();
       }}
     >
-      <p className="text-sm font-semibold text-ink-line">
-        <T en="Correct this entry" ur="اس انٹری میں ترمیم کریں" />
-      </p>
+      <p className="text-sm font-semibold text-ink-line">Correct this entry</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm text-ink-line">
-          <T en="Amount (PKR)" ur="رقم" />
+          Amount (PKR)
           <input
             type="number"
             inputMode="numeric"
@@ -70,7 +66,7 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
           />
         </label>
         <label className="flex flex-col gap-1 text-sm text-ink-line">
-          <T en="Note" ur="تفصیل" />
+          Note
           <input
             type="text"
             value={description}
@@ -86,17 +82,14 @@ export function EditTransactionForm({ transaction: t, onSaved, onCancel }: EditT
       )}
       <div className="flex flex-wrap gap-3">
         <Button type="submit" disabled={saving}>
-          <T en={saving ? 'Saving…' : 'Save correction'} ur={saving ? 'محفوظ ہو رہا ہے…' : 'محفوظ کریں'} />
+          {saving ? 'Saving…' : 'Save correction'}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          <T en="Cancel" ur="محو کریں" />
+          Cancel
         </Button>
       </div>
       <p className="text-xs text-ink-line opacity-75">
-        <T
-          en="The original values stay on record for the audit trail (schema.md §4 PATCH)."
-          ur="اصل قیمتیں ریکارڈ میں محفوظ رہتی ہیں۔"
-        />
+        The original values stay on record for the audit trail.
       </p>
     </form>
   );

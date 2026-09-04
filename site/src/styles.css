@@ -190,7 +190,8 @@ button:focus-visible {
   outline: 3px solid var(--ink);
 }
 
-/* Nastaliq display accents — display only, generous line-height, never clipped */
+/* Urdu data accents — the live webhook's real confirmation/reply text,
+   rendered in Nastaliq. Display only, generous line-height, never clipped. */
 .urdu {
   font-family: var(--font-urdu);
   line-height: 2;
@@ -223,12 +224,6 @@ button:focus-visible {
   color: var(--ink);
 }
 
-.wordmark__urdu {
-  font-size: 1.5rem;
-  color: var(--green);
-  line-height: 1.9;
-}
-
 .wordmark__latin {
   font-family: var(--font-slab);
   font-weight: 700;
@@ -239,8 +234,8 @@ button:focus-visible {
 .site-nav {
   display: none;
   /* 0 0 auto: the nav is the one header item that must never be crushed.
-     Its natural width (468px in mixed) is the real budget — the header
-     shrinks everything else around it instead. */
+     Its natural width is the real budget — the header shrinks everything
+     else around it instead. */
   flex: 0 0 auto;
   align-items: center;
   gap: 0.35rem;
@@ -353,12 +348,6 @@ h3 {
 
 .hero .sticker {
   margin-bottom: 1.5rem;
-}
-
-.hero__urdu {
-  color: var(--green);
-  font-size: clamp(2rem, 5vw, 3rem);
-  margin: 0 0 0.25rem;
 }
 
 .hero h1 {
@@ -922,10 +911,6 @@ h3 {
   color: var(--canvas);
 }
 
-.footer-grid .wordmark__urdu {
-  color: var(--gold);
-}
-
 .footer-tagline {
   margin: 0.6rem 0 0;
   font-size: 0.95rem;
@@ -993,10 +978,6 @@ h3 {
   }
 
   .btn:active {
-    transform: none;
-  }
-
-  .lang-switch__btn:active {
     transform: none;
   }
 
@@ -1068,10 +1049,8 @@ h3 {
   }
 }
 
-/* Urdu display text: Nastaliq needs taller lines to not collide */
-.urdu,
-.wordmark__urdu,
-.hero__urdu {
+/* Urdu data text: Nastaliq needs taller lines to not collide */
+.urdu {
   line-height: 2;
 }
 
@@ -1359,12 +1338,23 @@ a:focus-visible,
 .movie__piece--receipt { width: calc(var(--c) * 0.32); }
 .movie__piece--book { width: calc(var(--c) * 0.42); }
 
-.movie__word {
-  font-family: var(--font-urdu);
+/* Latin wordmark on the coin — tight word, Z on the seam:
+   BI/Z/RO sit flush (0.04em gaps); the whole word is then shifted by
+   --zx (measured at runtime in em, see ScrollMovie) so the Z — not the
+   box — lands exactly on the coin's center seam. em scales with the
+   stamp's scale-down and rotation. The +0.07 lift undoes the piece's
+   -0.07 y-offset (a Nastaliq-word legacy that now cancels out), so the
+   Latin word sits centered on the gold. */
+.movie__word--latin {
+  display: flex;
+  align-items: center;
+  gap: 0.04em;
+  font-family: var(--font-slab);
   font-weight: 700;
-  font-size: calc(var(--c) * 0.3);
+  font-size: calc(var(--c) * 0.185);
   line-height: 1.6;
   color: var(--ink);
+  transform: translateY(calc(var(--c) * 0.07)) translateX(var(--zx, 0em));
   user-select: none;
 }
 
@@ -1414,13 +1404,6 @@ a:focus-visible,
   gap: 2px;
 }
 
-.movie__caption-ur {
-  font-family: var(--font-urdu);
-  font-size: clamp(1.1rem, 3vw, 1.45rem);
-  line-height: 2;
-  color: var(--ink);
-}
-
 .movie__caption-en {
   font-family: var(--font-slab);
   font-weight: 700;
@@ -1430,7 +1413,6 @@ a:focus-visible,
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .movie__caption-ur,
   .movie__caption-en {
     animation: movie-cap 0.45s ease-out both;
   }
@@ -1486,10 +1468,7 @@ a:focus-visible,
 }
 
 /* ============================================================
-   Site language switcher + Urdu mode (owner request 2026-08-30)
-   - .lang-switch: neobrutalist segmented control in the header
-   - html[lang="ur"]: full RTL + Nastaliq body/headings; line-heights
-     opened up for Nastaliq's tall vertical rhythm
+   Header actions (sound chip + the hidden header CTA)
    ============================================================ */
 
 .header-actions {
@@ -1499,7 +1478,7 @@ a:focus-visible,
 }
 
 /* Retired from the header at EVERY width. It was the most expensive item
-   (153px in mixed) and the most duplicated: /ledger is linked five times
+   in the header and the most duplicated: /ledger is linked five times
    inside the page and the hero carries a 237x56 primary CTA directly under
    the headline. With both it and a labeled sound chip present the header
    items sum to exactly 1120px at --wrap 1120 — zero slack — so the nav was
@@ -1510,61 +1489,7 @@ a:focus-visible,
   display: none;
 }
 
-.lang-switch {
-  display: inline-flex;
-  border: 3px solid var(--ink);
-  background: var(--card);
-  box-shadow: var(--shadow-sm);
-}
-
-.lang-switch__btn {
-  appearance: none;
-  border: none;
-  border-inline-start: 3px solid var(--ink);
-  background: var(--card);
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 0.85rem;
-  padding: 8px 12px;
-  cursor: pointer;
-  min-height: 44px;
-}
-
-.lang-switch__btn:first-child {
-  border-inline-start: none;
-}
-
-.lang-switch__btn:hover {
-  background: var(--canvas);
-}
-
-.lang-switch__btn:active {
-  transform: translateY(1px);
-}
-
-.lang-switch__btn.is-active {
-  background: var(--gold);
-  font-weight: 700;
-}
-
-.lang-switch__btn[lang="ur"],
-.lang-switch__btn:first-child {
-  font-size: 1rem;
-}
-
-@media (max-width: 860px) {
-  .lang-switch__btn {
-    padding: 8px 9px;
-    font-size: 0.8rem;
-  }
-  .lang-switch__btn:first-child {
-    font-size: 0.95rem;
-  }
-}
-
-/* the sound chip joins the header here, so the wordmark and the language
-   switch give up the ~25px it needs. Both keep their 44px touch targets. */
+/* the sound chip joins the header here */
 @media (max-width: 480px) {
   .site-header__inner {
     gap: 0.5rem;
@@ -1575,99 +1500,13 @@ a:focus-visible,
   .wordmark__logo {
     height: 26px;
   }
-  .lang-switch__btn {
-    padding: 8px 6px;
-  }
 }
 
-/* ---------- Urdu mode: RTL + Nastaliq everywhere ---------- */
-
-html[lang="ur"] body {
-  font-family: var(--font-urdu);
-  font-size: 1.05rem;
-  line-height: 2.15;
-}
-
-html[lang="ur"] h1,
-html[lang="ur"] h2,
-html[lang="ur"] h3,
-html[lang="ur"] .btn,
-html[lang="ur"] .chip,
-html[lang="ur"] .sticker,
-html[lang="ur"] .stat__num,
-html[lang="ur"] .stat__word,
-html[lang="ur"] .mini-stat dt,
-html[lang="ur"] .lang-switch__btn {
-  font-family: var(--font-urdu);
-  line-height: 1.9;
-}
-
-html[lang="ur"] h1 {
-  font-size: clamp(2rem, 5vw, 3rem);
-}
-
-html[lang="ur"] h2 {
-  font-size: clamp(1.7rem, 4.2vw, 2.4rem);
-  line-height: 1.9;
-}
-
-html[lang="ur"] .lede,
-html[lang="ur"] .stat p,
-html[lang="ur"] .step p,
-html[lang="ur"] .diff p,
-html[lang="ur"] .mawakmat-card p {
-  line-height: 2.2;
-}
-
-html[lang="ur"] .site-nav a,
-html[lang="ur"] .footer-links a,
-html[lang="ur"] .flow-note__text,
-html[lang="ur"] .mock-caption,
-html[lang="ur"] .honesty,
-html[lang="ur"] .footer-credits,
-html[lang="ur"] .fine,
-html[lang="ur"] .demo-frame__link,
-html[lang="ur"] .ledger-mock__title,
-html[lang="ur"] .ledger-mock__name,
-html[lang="ur"] .ledger-mock__correct {
-  font-family: var(--font-urdu);
-}
-
-html[lang="ur"] .movie__caption-text {
-  font-family: var(--font-urdu);
-  font-size: clamp(1.15rem, 3vw, 1.5rem);
-  line-height: 2.1;
-}
-
-html[lang="ur"] .stamp {
-  font-family: var(--font-urdu);
-}
-
-/* numerals/model names stay LTR inside RTL prose */
-html[lang="ur"] .stat__num,
-html[lang="ur"] .flow-invoice__amount,
-html[lang="ur"] .ledger-mock__amount,
-html[lang="ur"] .mini-stat dt {
-  direction: ltr;
-  unicode-bidi: embed;
-}
-
-/* Latin wordmark on the coin (English mode) — tight word, Z on the seam:
-   BI/Z/RO sit flush (0.04em gaps); the whole word is then shifted by
-   --zx (measured at runtime in em, see ScrollMovie) so the Z — not the
-   box — lands exactly on the coin's center seam. em scales with the
-   stamp's scale-down and rotation. Latin caps have no Nastaliq
-   descenders, so undo the piece's -0.07 lift. */
-.movie__word--latin {
-  display: flex;
-  align-items: center;
-  gap: 0.04em;
-  font-family: var(--font-slab);
-  font-weight: 700;
-  font-size: calc(var(--c) * 0.185);
-  transform: translateY(calc(var(--c) * 0.07)) translateX(var(--zx, 0em));
-  user-select: none;
-}
+/* ---------- Urdu data text (webhook replies): Nastaliq, roomier lines.
+     All html[lang="ur"] / html[dir="rtl"] MODE rules were removed with the
+     language switcher (owner directive 2026-09-04): the site is
+     English-only, and the sole Urdu rendering left is real server data
+     inside the .urdu class defined at the top of this sheet. ---------- */
 
 /* ============================================================
    Mithu integration layer (2026-09-03) — hero presenter, movie
@@ -1704,8 +1543,7 @@ html[lang="ur"] .mini-stat dt {
 }
 
 /* hero: feet planted on the demo-frame's top edge, clear of its
-   tag (which lives at the frame's left); physical-right so he
-   never lands on the tag in RTL either */
+   tag (which lives at the frame's left) */
 .hero__mithu {
   position: relative;
   z-index: 2;
@@ -1719,10 +1557,9 @@ html[lang="ur"] .mini-stat dt {
 
 .hero__mithu svg {
   /* 20px inset from the column's outer edge. Logical, not physical: the
-     row-reverse .guide-mithu packs Mithu to the inline-END in both writing
-     directions, so margin-inline-end always faces away from the bubble —
-     a physical margin-right would land on the bubble's side in RTL and
-     push the tail's point 24px clear of his beak. */
+     row-reverse .guide-mithu packs Mithu to the inline-END, so
+     margin-inline-end always faces away from the bubble and the tail's
+     point stays 24px clear of his beak. */
   margin-inline-end: 1.25rem;
 }
 
@@ -1829,8 +1666,8 @@ html[lang="ur"] .mini-stat dt {
        (as before) and the bubble takes the empty band to his
        left, above the demo frame. Because it reserves its own
        box it cannot cover the sticky header, the hero copy or
-       the frame's protruding tag at ANY width, language or tip
-       length — a long Urdu tip just makes the row taller.
+       the frame's protruding tag at ANY width or tip length —
+       a long tip just makes the row taller.
      - phones flip the row to column-reverse: the bubble sits
        above a centered Mithu, again in flow.
      - show/hide is pure visibility (works with zero JS motion):
@@ -1897,13 +1734,6 @@ html[lang="ur"] .mini-stat dt {
   color: var(--ink);
 }
 
-/* full-Urdu mode: Nastaliq, generous line-height, never clipped */
-html[lang="ur"] .mithu-bubble__tip {
-  font-family: var(--font-urdu);
-  font-size: 1rem;
-  line-height: 2.1;
-}
-
 /* tip progress dots — stamped little squares, decorative */
 .mithu-bubble__dots {
   display: flex;
@@ -1936,20 +1766,7 @@ html[lang="ur"] .mithu-bubble__tip {
   transform: rotate(45deg);
 }
 
-/* RTL (Urdu): the row mirrors, so Mithu is on the bubble's LEFT — mirror
-   the point with him. Scoped above the phone breakpoint so it can never
-   out-specify the downward tail used on the stacked layout. */
-@media (min-width: 641px) {
-  html[dir="rtl"] .mithu-bubble__tail {
-    right: auto;
-    left: -10px;
-    border-right: none;
-    border-left: 3px solid var(--ink);
-    transform: rotate(-45deg);
-  }
-}
-
-/* ---------- SFX toggle — a chip in the .chip / .lang-switch language ---------- */
+/* ---------- SFX toggle — a chip in the .chip language ---------- */
 
 .sfx-toggle {
   display: inline-flex;
@@ -1974,7 +1791,7 @@ html[lang="ur"] .mithu-bubble__tip {
 }
 
 .sfx-toggle.is-on {
-  background: var(--gold); /* same "active = gold" as .lang-switch__btn.is-active */
+  background: var(--gold); /* the shared "active = gold" accent */
 }
 
 .sfx-toggle__icon {
@@ -1986,26 +1803,17 @@ html[lang="ur"] .mithu-bubble__tip {
   white-space: nowrap;
 }
 
-html[lang="ur"] .sfx-toggle {
-  font-family: var(--font-urdu);
-  font-size: 0.95rem;
-  letter-spacing: 0;
-  text-transform: none;
-  line-height: 1.9;
-}
-
 /* ---------- header width budget: keep the nav on ONE line ----------
    Two steps buy the room back, cheapest first:
      <= 1199  chip loses its word label (icon-only)   frees 57-131px
      <= 1023  nav gutter tightens                     frees ~48px
-   With those plus the retired header CTA above, mixed mode needs 1037.5px
-   inside the 1120px wrap (en 983.5, ur 922.5) and the nav shows from 960px
-   up with 46px to spare. */
+   With those plus the retired header CTA above, the header needs 1037.5px
+   inside the 1120px wrap and the nav shows from 960px up with 46px to spare. */
 @media (max-width: 1199px) {
   /* icon-only chip — below this width the header has no room for the word
-     label next to the wordmark, the nav and the three-button language
-     switch. Clipped, not removed, so the accessible name and aria-pressed
-     survive; the 44px touch target does too. */
+     label next to the wordmark and the nav. Clipped, not removed, so the
+     accessible name and aria-pressed survive; the 44px touch target does
+     too. */
   .sfx-toggle {
     gap: 0;
     padding: 0.4rem;
@@ -2036,7 +1844,7 @@ html[lang="ur"] .sfx-toggle {
 }
 
 /* phones: the row flips — the bubble reserves its box ABOVE a centered
-   Mithu, still in flow, so a long Urdu tip can only push the hero taller */
+   Mithu, still in flow, so a long tip can only push the hero taller */
 @media (max-width: 640px) {
   .guide-mithu {
     flex-direction: column-reverse;
@@ -2320,34 +2128,6 @@ html[lang="ur"] .sfx-toggle {
   margin: 0.6rem 0 0;
   font-size: 0.85rem;
   color: var(--ink);
-}
-
-/* Urdu mode: Nastaliq + roomier line height on the new copy */
-html[lang="ur"] .hero-demo__mic,
-html[lang="ur"] .hero-demo__quick-btn,
-html[lang="ur"] .hero-demo__caption,
-html[lang="ur"] .hero-demo__status,
-html[lang="ur"] .hero-demo__alert,
-html[lang="ur"] .hero-demo__miss-label,
-html[lang="ur"] .hero-demo__reset,
-html[lang="ur"] .hero-demo__note {
-  font-family: var(--font-urdu);
-}
-
-html[lang="ur"] .hero-demo__mic,
-html[lang="ur"] .hero-demo__quick-btn {
-  line-height: 1.9;
-}
-
-html[lang="ur"] .hero-demo__caption,
-html[lang="ur"] .hero-demo__alert,
-html[lang="ur"] .hero-demo__note {
-  line-height: 2;
-}
-
-/* the one Urdu line the hero's copy never carries: the mock chip */
-html[lang="ur"] .hero-demo__mock {
-  font-family: var(--font-urdu);
 }
 
 /* motion ONLY with user consent: the recording dot pulses and the

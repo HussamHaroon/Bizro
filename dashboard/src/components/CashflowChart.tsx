@@ -8,8 +8,7 @@
    per-group aria-labels carry the numbers. */
 
 import { useState } from 'react';
-import { T, useT } from '../i18n';
-import { formatPkr, urduMonth } from '../lib/format';
+import { formatPkr } from '../lib/format';
 
 export interface CashflowMonth {
   month: string; // YYYY-MM
@@ -45,7 +44,6 @@ function shortMonth(ym: string): string {
 }
 
 export function CashflowChart({ months }: CashflowChartProps) {
-  const { mode, pick } = useT();
   const [active, setActive] = useState<string | null>(null);
 
   if (months.length === 0) return null;
@@ -59,11 +57,11 @@ export function CashflowChart({ months }: CashflowChartProps) {
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-ink-line">
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded-chip border border-ink-line bg-fill-green" aria-hidden="true" />
-          <T en="Money in" ur="آمدنی" />
+          Money in
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded-chip border border-ink-line bg-fill-red" aria-hidden="true" />
-          <T en="Money out" ur="خرچ" />
+          Money out
         </span>
       </p>
 
@@ -77,13 +75,13 @@ export function CashflowChart({ months }: CashflowChartProps) {
           className="overflow-x-auto rounded-button print:overflow-visible"
           role="region"
           tabIndex={0}
-          aria-label={pick('Monthly cash-flow bars — scrollable', 'ماہانہ نقد رواں — پھیرا جا سکتا ہے')}
+          aria-label="Monthly cash-flow bars — scrollable"
         >
           <svg
             viewBox={`0 0 ${W} ${H}`}
             className="h-auto w-full min-w-[560px] print:min-w-0"
             role="group"
-            aria-label={pick('Monthly cash-flow bars', 'ماہانہ نقد رواں')}
+            aria-label="Monthly cash-flow bars"
           >
         {/* D4-1 gridlines: 1px ink at 20% alpha; the baseline rides 2px ink. */}
         {[0, 0.25, 0.5, 0.75, 1].map((p) => (
@@ -105,10 +103,7 @@ export function CashflowChart({ months }: CashflowChartProps) {
           const inX = cx - BAR_W - BAR_GAP / 2;
           const outX = cx + BAR_GAP / 2;
           const isActive = active === m.month;
-          const label = pick(
-            `${shortMonth(m.month)} — in ${formatPkr(m.inflow_pkd)}, out ${formatPkr(m.outflow_pkd)}, net ${formatPkr(Math.abs(m.net_pkd))}${m.net_pkd < 0 ? ' negative' : ''}`,
-            `${urduMonth(m.month)} — آمدنی ${m.inflow_pkd.toLocaleString('en-PK')} روپے، خرچ ${m.outflow_pkd.toLocaleString('en-PK')} روپے`,
-          );
+          const label = `${shortMonth(m.month)} — in ${formatPkr(m.inflow_pkd)}, out ${formatPkr(m.outflow_pkd)}, net ${formatPkr(Math.abs(m.net_pkd))}${m.net_pkd < 0 ? ' negative' : ''}`;
           return (
             <g
               key={m.month}
@@ -225,7 +220,7 @@ export function CashflowChart({ months }: CashflowChartProps) {
                 fill="var(--bizro-ink-line)"
                 opacity="0.85"
               >
-                {mode === 'ur' ? urduMonth(m.month) : mode === 'en' ? shortMonth(m.month) : `${shortMonth(m.month)} · ${urduMonth(m.month)}`}
+                {shortMonth(m.month)}
               </text>
             </g>
           );
@@ -241,7 +236,7 @@ export function CashflowChart({ months }: CashflowChartProps) {
         />
       </div>
       <p className="flex items-center gap-1 text-xs text-ink-line opacity-70 sm:hidden">
-        <T en="Swipe for more months" ur="مزید مہینوں کے لیے پھیریں" />
+        Swipe for more months
         <span aria-hidden="true" className="font-numerals font-semibold">→</span>
       </p>
     </div>

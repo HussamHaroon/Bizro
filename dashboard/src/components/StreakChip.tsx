@@ -7,7 +7,6 @@
 
 import type { SavingsStreak } from '../types/schema';
 import { IconStreak } from './icons';
-import { T } from '../i18n';
 
 export interface StreakChipProps {
   streak: SavingsStreak;
@@ -22,10 +21,7 @@ export function StreakChip({ streak, className = '' }: StreakChipProps) {
     >
       <IconStreak className="h-7 w-7 shrink-0 text-ink-green" />
       <span className="font-numerals text-lg font-semibold text-ink-line">
-        <T
-          en={pluralWeeks(streak.streak_weeks)}
-          ur={`${streak.streak_weeks} ہفتوں کا سلسلہ`}
-        />
+        {pluralWeeks(streak.streak_weeks)}
       </span>
     </span>
   );

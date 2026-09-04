@@ -8,7 +8,6 @@
    the running week (a past month's window would build a wrong "this week"). */
 
 import { useEffect, useMemo, useState } from 'react';
-import { T, useNumerals, useT } from '../i18n';
 import { monthOf } from '../lib/format';
 import type { Transaction, TransactionKind } from '../types/schema';
 import { CARD_HEIGHT, CARD_WIDTH, ProgressCard, drawProgressCard } from './ProgressCard';
@@ -49,8 +48,6 @@ export interface ProgressCardButtonProps {
 }
 
 export function ProgressCardButton({ txs, month, streakWeeks }: ProgressCardButtonProps) {
-  const { pick } = useT();
-  const { numerals } = useNumerals();
   const [open, setOpen] = useState(false);
 
   const stats = useMemo(
@@ -78,7 +75,7 @@ export function ProgressCardButton({ txs, month, streakWeeks }: ProgressCardButt
     canvas.height = CARD_HEIGHT;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    drawProgressCard(ctx, cardStats, numerals); // same pure draw → identical image
+    drawProgressCard(ctx, cardStats); // same pure draw → identical image
     const a = document.createElement('a');
     a.href = canvas.toDataURL('image/png');
     a.download = FILE_NAME;
@@ -93,7 +90,7 @@ export function ProgressCardButton({ txs, month, streakWeeks }: ProgressCardButt
         className="bizro-btn-press inline-flex min-h-touch min-w-touch items-center gap-2 self-start rounded-chip border-[3px] border-ink-line bg-paper-raised px-4 text-sm font-semibold text-ink-line transition-colors duration-200 ease-out hover:bg-paper"
       >
         <IconSend className="h-5 w-5 text-ink-green" />
-        <T en="Share this week" ur="ہفتہ شیئر کریں" />
+        Share this week
       </button>
 
       {open && (
@@ -101,14 +98,14 @@ export function ProgressCardButton({ txs, month, streakWeeks }: ProgressCardButt
           {/* Backdrop doubles as the close affordance (click outside closes). */}
           <button
             type="button"
-            aria-label={pick('Close', 'بند کریں')}
+            aria-label="Close"
             onClick={() => setOpen(false)}
             className="absolute inset-0 h-full w-full cursor-default bg-ink-line/80"
           />
           <div
             role="dialog"
             aria-modal="true"
-            aria-label={pick('Weekly progress card', 'ہفتے کا کارڈ')}
+            aria-label="Weekly progress card"
             className="bizro-card relative w-full max-w-xl p-3 sm:p-4"
           >
             <ProgressCard stats={cardStats} className="block h-auto w-full" />
@@ -118,14 +115,14 @@ export function ProgressCardButton({ txs, month, streakWeeks }: ProgressCardButt
                 onClick={() => setOpen(false)}
                 className="bizro-btn-quiet inline-flex min-h-touch items-center rounded-chip border-[3px] border-ink-line bg-paper-raised px-4 text-sm font-semibold text-ink-line"
               >
-                <T en="Close" ur="بند کریں" />
+                Close
               </button>
               <button
                 type="button"
                 onClick={download}
                 className="bizro-btn-press inline-flex min-h-touch items-center gap-2 rounded-button border-[3px] border-ink-line bg-fill-green px-5 text-sm font-semibold text-paper"
               >
-                <T en="Download" ur="ڈاؤن لوڈ" />
+                Download
               </button>
             </div>
           </div>
