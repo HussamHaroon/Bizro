@@ -174,9 +174,9 @@ top = headline(s, "Creditworthy, but invisible to the lender meant for them.",
                chip_label="01 · The problem")
 stats = [
     ("Formal account", RED, "10.3%", 54,
-     "of Pakistani adults hold a formal financial-institution account — at the last national baseline."),
+     "of Pakistani adults hold a formal financial-institution account — World Bank Global Findex."),
     ("South Asia, for contrast", TEAL, "~33%", 54,
-     "the South Asian average of adults with a formal financial-institution account."),
+     "the South Asian average of adults with a formal financial-institution account (World Bank Global Findex)."),
     ("The blocker", GOLD, "Shariah-\ncompliant\ndemand", 30,
      "small businesses avoiding formal finance cite one specific reason: they are waiting for a Shariah-compliant option, not an interest-bearing one."),
 ]
@@ -243,9 +243,9 @@ text(s, Inches(0.95), int(top + Inches(0.18)), Inches(11.4), Inches(1.25),
      "receipt photos into a lender-legible credit history.",
      size=21, font=SLAB, color=CREAM, leading=1.05)
 steps = [
-    ("VOICE", GREEN, "Send the voice note", "Parsed into a structured sale or credit entry; a stamped invoice returns on WhatsApp.", "Qwen3.5-Omni-Plus"),
+    ("VOICE", GREEN, "Send the voice note", "Parsed into a structured sale or credit entry; a stamped invoice returns on WhatsApp.", "Qwen ASR + Qwen Flash"),
     ("VISION", TEAL, "Photograph the receipt", "The expense is logged — and obvious pricing errors are flagged.", "Qwen-VL-OCR"),
-    ("REPORT", GOLD, "Tap, months later", "Accumulated history becomes a Mawakhat-style Credit Readiness Report.", "Qwen3.7-Plus"),
+    ("REPORT", GOLD, "Tap, months later", "Accumulated history becomes a Mawakhat-style Credit Readiness Report.", "Qwen Flash"),
 ]
 sw_, sy = Inches(3.7), int(top + Inches(1.95))
 for i, (name, tone, h3, body, model) in enumerate(steps):
@@ -280,8 +280,9 @@ text(s, Inches(0.95), int(top + Inches(1.1)), Inches(6.6), Inches(1.2),
      ["Record a voice note.", "Watch it become a ledger entry."],
      size=19, color=CREAM, leading=1.25)
 frame(s, Inches(8.2), top, Inches(4.5), Inches(2.5), fill=PAPER)
-text(s, Inches(8.4), int(top + Inches(0.95)), Inches(4.1), Inches(0.7),
-     "[ screenshot space ]", size=14, align=PP_ALIGN.CENTER, color=TEAL, bold=True)
+# Real capture of the live site (hero mic demo) — run from the repo root.
+s.shapes.add_picture("presentation/assets/demo-live.png",
+                     Inches(8.32), int(top + Inches(0.12)), width=Inches(4.26))
 frame(s, Inches(0.6), int(top + Inches(2.85)), Inches(12.1), Inches(2.35), fill=PAPER)
 text(s, Inches(0.95), int(top + Inches(3.05)), Inches(11.4), Inches(0.4),
      "DEMO PATH", size=13, font=SLAB, color=RED)
@@ -302,13 +303,13 @@ top = headline(s, "Three taps' worth of effort — months' worth of credit histo
 steps = [
     ("Step 1 · Voice", GREEN, "Send the voice note",
      "A casual Urdu voice note, the way he'd talk to an employee. It's parsed into a structured sale or credit entry, and a stamped invoice comes straight back on WhatsApp.",
-     "Qwen3.5-Omni-Plus · WhatsApp in / out"),
+     "Qwen ASR + Qwen Flash · WhatsApp in / out"),
     ("Step 2 · Vision", TEAL, "Photograph the receipt",
      "One photo of the messy, handwritten supplier receipt. The expense is logged — and obvious pricing errors are flagged before they can hide in a hand-tallied notebook.",
      "Qwen-VL-OCR · Price-error flags"),
     ("Step 3 · Report", GOLD, "Tap, months later",
      "One tap turns months of accumulated, source-linked history into a Mawakhat-style Credit Readiness Report — with a full audit trail a loan officer can drill into.",
-     "Qwen3.7-Plus · Mawakhat-style format"),
+     "Qwen Flash · Mawakhat-style format"),
 ]
 cw, cy = Inches(3.95), int(top + Inches(0.1))
 for i, (cchip, tone, h3, body, badge) in enumerate(steps):
@@ -336,9 +337,9 @@ notes(s, "The whole flow is three taps' worth of effort. Step one: he sends a vo
 s = new_slide()
 top = headline(s, "Provider-agnostic AI backbone", chip_label="Technology")
 pipe = [
-    ("1 · Speech-to-text", GREEN, "Urdu / mixed-language voice note → transcript. Runs on Qwen3.5-Omni-Plus."),
+    ("1 · Speech-to-text", GREEN, "Urdu / mixed-language voice note → transcript. Runs on Qwen ASR (qwen3-asr-flash)."),
     ("2 · Structured JSON", TEAL, "Transcript & receipt photo → typed transaction JSON with confidence scores. Qwen-VL-OCR reads the receipts."),
-    ("3 · Urdu narrative", GOLD, "Ledger history → a Credit Readiness Report a loan officer can read, reasoned by Qwen3.7-Plus."),
+    ("3 · Urdu narrative", GOLD, "Ledger history → a Credit Readiness Report a loan officer can read, reasoned by Qwen Flash."),
 ]
 cw, cy = Inches(3.7), int(top + Inches(0.1))
 for i, (h3, tone, body) in enumerate(pipe):
@@ -354,17 +355,18 @@ for i, (h3, tone, body) in enumerate(pipe):
              Inches(0.6), "→", size=30, font=SLAB, align=PP_ALIGN.CENTER)
 frame(s, Inches(0.6), int(cy + Inches(3.0)), Inches(12.1), Inches(1.35), fill=INK, line=INK)
 text(s, Inches(0.95), int(cy + Inches(3.2)), Inches(11.4), Inches(1.0),
-     [[("Runs on free tiers today. ", {"color": CREAM, "bold": True}),
-       ("Qwen via Alibaba Cloud Model Studio is the production path — ", {"color": CREAM}),
-       ("one environment variable.", {"color": CREAM, "bold": True, "font": SLAB})]],
+     [[("Running end-to-end on Qwen today ", {"color": GOLD, "bold": True, "font": SLAB}),
+       ("— speech, vision and parsing on Alibaba Cloud Model Studio, with a Groq Whisper backup. ", {"color": CREAM}),
+       ("Provider-agnostic: one environment variable.", {"color": CREAM, "bold": True})]],
      size=18, leading=1.2)
 text(s, Inches(0.6), int(cy + Inches(4.6)), Inches(12.1), Inches(0.6),
-     "Stack: FastAPI + Postgres-compatible storage · React dashboard · WhatsApp Cloud API shape · deployed on Vercel.",
+     "Stack: Qwen (qwen3-asr-flash · qwen-flash · qwen-vl-ocr) · FastAPI + Neon Postgres · React dashboard · WhatsApp Cloud API, signatures enforced · Vercel.",
      size=13, align=PP_ALIGN.CENTER)
-notes(s, "The backbone is deliberately provider-agnostic. Voice goes to speech-to-text, then to "
-         "structured JSON with confidence scores, then to an Urdu narrative for loan officers. "
-         "Today it runs entirely on free tiers; switching to Qwen through Alibaba Cloud Model "
-         "Studio — the production path — is literally one environment variable.")
+notes(s, "The backbone is deliberately provider-agnostic. Voice goes to Qwen ASR, then to "
+         "structured JSON with confidence scores, then to a lender-ready narrative. "
+         "It runs on Qwen through Alibaba Cloud Model Studio today — speech, vision and "
+         "parsing — verified live in production, with a Groq Whisper backup for speech. "
+         "Swapping any model is literally one environment variable.")
 
 # ---------------------------------------------------------- 8 · TRUST & AUDIT
 s = new_slide()
@@ -396,7 +398,7 @@ text(s, Inches(7.25), int(top + Inches(1.35)), Inches(5.15), Inches(0.55),
        ("پانچ ہزار", {"size": 16, "color": TEAL})]])
 for k, line in enumerate([
         "Source: WhatsApp voice note · 0:14",
-        "Parsed by Qwen3.5-Omni-Plus · confidence 96%",
+        "Parsed by Qwen Flash · confidence 96%",
         "One-tap correct — the fix is itself a trust signal"]):
     yy = int(top + Inches(2.15) + k * Inches(0.52))
     bar(s, Inches(7.25), int(yy + Inches(0.4)), Inches(5.1), Inches(0.02), INK)
@@ -450,6 +452,9 @@ text(s, Inches(0.95), int(top + Inches(0.22)), Inches(11.4), Inches(1.6),
        ("10 million+", {"color": GOLD, "size": 40, "font": SLAB}),
        (" unbanked micro-entrepreneurs of Pakistan.", {"color": CREAM, "size": 24})]],
      leading=1.1)
+text(s, Inches(0.95), int(top + Inches(1.52)), Inches(11.4), Inches(0.35),
+     "Scale estimate: informal micro-enterprises vs the 10.3% formal-account share (World Bank Global Findex).",
+     size=11, color=CREAM)
 caps = [
     "He sends the voice note. He snaps the receipt. That's the whole job.",
     "No typing. The pieces assemble themselves into a ledger entry.",
