@@ -100,7 +100,7 @@ export function LedgerRow({
             </span>
           </span>
           <span className="ml-auto pr-1 text-right">
-            <AmountText value={t.amount_pkd} tone={toneForKind(t.kind)} />
+            <AmountText value={t.amount_pkr} tone={toneForKind(t.kind)} />
           </span>
           <IconChevronDown
             className={`h-6 w-6 text-ink-green transition-transform duration-200 ease-out motion-reduce:transition-none ${expanded ? 'rotate-180' : ''}`}

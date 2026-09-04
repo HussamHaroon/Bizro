@@ -40,7 +40,7 @@ MERCHANT = "wa:923001234567"  # demo merchant (audit context only)
 HISTORY = [
     {
         "kind": "expense",
-        "amount_pkd": 2560,
+        "amount_pkr": 2560,
         "counterparty": {"name": "Al-Madina Kiryana Store", "phone": None},
         "item_lines": [
             {"item": "chai patti", "qty": 2, "unit": "packet", "unit_price": 350, "line_total": 700},
@@ -122,15 +122,15 @@ def main() -> int:
             # Offline amounts are deterministic (mock_data scenarios) — check them.
             expected_amount = {"receipt_clean.png": 2560, "receipt_wrong_price.png": 8860,
                                "receipt_blurry.png": 700}[filename]
-            ok = tx["amount_pkd"] == expected_amount
+            ok = tx["amount_pkr"] == expected_amount
         if not ok:
             failures.append(
                 f"{filename}: flag={flag} kind={tx['kind']} status={tx['status']} "
-                f"amount={tx['amount_pkd']} — expected flag={expected_flag}"
+                f"amount={tx['amount_pkr']} — expected flag={expected_flag}"
             )
 
         print(f"  kind        : {tx['kind']}")
-        print(f"  amount      : {tx['amount_pkd']} PKR")
+        print(f"  amount      : {tx['amount_pkr']} PKR")
         print(f"  flag        : {flag} (expected {expected_flag})")
         print(f"  confidence  : {tx['source']['confidence']}  model: {tx['source']['model']}")
         print(f"  status      : {tx['status']}")

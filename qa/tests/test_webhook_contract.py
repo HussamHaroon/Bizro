@@ -298,7 +298,7 @@ def _persist_with_confidence(conf: float, status: str = "confirmed") -> tuple[st
             m,
             {
                 "kind": "sale",
-                "amount_pkd": 100.0,
+                "amount_pkr": 100.0,
                 "occurred_at": "2026-08-21T10:00:00+00:00",
                 "source": {"type": "manual", "confidence": conf},
                 "status": status,
@@ -338,11 +338,11 @@ def test_patch_with_counterparty_correction(client):
 def test_patch_keeps_original_values_audit_snapshot(client):
     r = client.post("/webhook/whatsapp", json=_audio_payload(wa_id="923302222222"))
     tx_id = r.json()["results"][0]["transaction_id"]
-    resp = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 6000})
+    resp = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkr": 6000})
     assert resp.status_code == 200
     body = resp.json()  # §6.7: wire row top-level, original_values inside
-    assert body["original_values"]["amount_pkd"] == 5000  # first-edit snapshot
-    assert body["amount_pkd"] == 6000
+    assert body["original_values"]["amount_pkr"] == 5000  # first-edit snapshot
+    assert body["amount_pkr"] == 6000
     assert body["status"] == "edited"
 
 
@@ -350,7 +350,7 @@ def test_rejected_transaction_not_editable(client):
     r = client.post("/webhook/whatsapp", json=_audio_payload(wa_id="923303333333"))
     tx_id = r.json()["results"][0]["transaction_id"]
     client.patch(f"/api/transactions/{tx_id}", json={"status": "rejected"})
-    resp = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkd": 10})
+    resp = client.patch(f"/api/transactions/{tx_id}", json={"amount_pkr": 10})
     assert resp.status_code == 409
 
 

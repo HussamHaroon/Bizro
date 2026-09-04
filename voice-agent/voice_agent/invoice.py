@@ -281,7 +281,7 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
     kind_ur, kind_en, kind_icon, kind_dir, kind_color_key = _KIND_VIEW[kind]
     kind_color = color[kind_color_key]
 
-    amount = float(tx.get("amount_pkd") or 0)
+    amount = float(tx.get("amount_pkr") or 0)
     esc = html.escape
 
     merchant = (tx.get("merchant") or {}).get("display_name") or ""
@@ -379,7 +379,7 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
 def build_invoice_text(tx: dict, numeral_style: str = "western") -> str:
     kind = tx.get("kind") or "udhar_given"
     kind_ur, kind_en, _icon, kind_dir, _c = _KIND_VIEW[kind]
-    amount = float(tx.get("amount_pkd") or 0)
+    amount = float(tx.get("amount_pkr") or 0)
     cp = (tx.get("counterparty") or {}).get("name") or ""
     when = _parse_when(tx.get("occurred_at"))
     digits = to_numeral_digits(amount, numeral_style)

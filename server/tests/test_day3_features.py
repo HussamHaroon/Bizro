@@ -133,7 +133,7 @@ def _seed_tx(merchant_id, kind: str, amount: float, occurred_at: str, status: st
             s.get(Merchant, merchant_id),
             {
                 "kind": kind,
-                "amount_pkd": float(amount),
+                "amount_pkr": float(amount),
                 "occurred_at": occurred_at,
                 "source": {"type": "manual", "media_id": None, "model": None,
                            "confidence": 0.95, "raw_output": {}},
@@ -188,7 +188,7 @@ def test_non_pending_confirmation_has_no_buttons(client, monkeypatch):
     def confident_pipeline(path, merchant, occurred_at):
         return {
             "kind": "sale",
-            "amount_pkd": 1200.0,
+            "amount_pkr": 1200.0,
             "counterparty": {"name": "Walk-in", "phone": None},
             "occurred_at": occurred_at,
             "source": {"type": "voice", "media_id": None, "model": None,

@@ -210,7 +210,7 @@ def _fallback_voice(
     amount = _synth_amount(media_sha256, 1500, 9000)
     return {
         "kind": "udhar_given",
-        "amount_pkd": float(amount),
+        "amount_pkr": float(amount),
         "currency": "PKR",
         "counterparty": {"name": "Ahmad", "phone": None},
         "description": "Udhar given to Ahmad",
@@ -248,7 +248,7 @@ def _fallback_vision(
     total = qty * unit_price
     return {
         "kind": "expense",
-        "amount_pkd": float(total),
+        "amount_pkr": float(total),
         "currency": "PKR",
         "counterparty": {"name": "Karachi Wholesale Supplier", "phone": None},
         "description": "Supplier receipt (synthetic)",
@@ -343,7 +343,7 @@ def persist_transaction(
         merchant_id=merchant.id,
         customer_id=customer.id if customer else None,
         kind=parsed.kind,
-        amount_pkd=parsed.amount_pkd,
+        amount_pkr=parsed.amount_pkr,
         currency=parsed.currency or "PKR",
         description=parsed.description,
         item_lines=[line.model_dump() for line in parsed.item_lines] or [],
@@ -395,14 +395,14 @@ DEFAULT_CLARIFICATION_UR = (
 def pipeline_rejection(tx_data: Any) -> str | None:
     """Classify a pipeline result per §6.9: either an explicit rejection
     (`rejected: true` + `reply_ur`, §6.4) or a no-amount result
-    (`amount_pkd` null/0/negative — §6.2 says null, legacy pipelines emit 0.0).
+    (`amount_pkr` null/0/negative — §6.2 says null, legacy pipelines emit 0.0).
     Returns the Urdu reply to send, or None when the result is a normal
     persistable transaction."""
     if not isinstance(tx_data, dict):
         return None
     if tx_data.get("rejected") is True:
         return _reply_or_default(tx_data.get("reply_ur"), tx_data.get("confirmation_ur"))
-    amount = tx_data.get("amount_pkd")
+    amount = tx_data.get("amount_pkr")
     if amount is None or (isinstance(amount, (int, float)) and amount <= 0):
         return _reply_or_default(tx_data.get("confirmation_ur"), tx_data.get("reply_ur"))
     return None
@@ -656,7 +656,7 @@ def generate_report_preview(session: Session, merchant_id: uuid.UUID) -> dict[st
     totals = {"sale": 0.0, "expense": 0.0, "udhar_given": 0.0, "udhar_settlement": 0.0}
     for t in txs:
         if t.status != "rejected":
-            totals[t.kind] = totals.get(t.kind, 0.0) + float(t.amount_pkd)
+            totals[t.kind] = totals.get(t.kind, 0.0) + float(t.amount_pkr)
     confirmed = sum(1 for t in txs if t.status in ("confirmed", "edited"))
     pending = sum(1 for t in txs if t.status == "pending")
     ai_parsed = [t for t in txs if t.source_type in ("voice", "photo")]

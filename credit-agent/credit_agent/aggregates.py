@@ -65,7 +65,7 @@ def compute_aggregates(
 
     for t in txs:
         agg.counts[t.kind] = agg.counts.get(t.kind, 0) + 1
-        amount = float(t.amount_pkd)
+        amount = float(t.amount_pkr)
         agg.sums[t.kind] = agg.sums.get(t.kind, 0.0) + amount
 
         if t.confidence is not None:

@@ -35,7 +35,7 @@ def test_clean_receipt_conforms_to_schema_mirror(tmp_path):
     tx = _run(tmp_path, "clean")  # filename without tokens -> CLEAN scenario
     mirror = MirrorTransaction.model_validate(tx)
     assert mirror.kind == "expense"
-    assert mirror.amount_pkd == 2560  # stated total wins (D-V4)
+    assert mirror.amount_pkr == 2560  # stated total wins (D-V4)
     assert len(mirror.item_lines) == 3
     assert mirror.source.model.startswith("mock:")  # D-V7: mock id prefix
     assert "source.raw_output.mock" in mock_marker_locations(tx)  # §6.3 canonical marker
@@ -45,7 +45,7 @@ def test_blurry_receipt_flags_low_confidence_and_never_guesses(tmp_path):
     tx = _run(tmp_path, "blurry")
     mirror = MirrorTransaction.model_validate(tx)
     assert mirror.flag == "low_confidence"
-    assert 0 < mirror.amount_pkd == 700  # single readable line only; no guessed digits
+    assert 0 < mirror.amount_pkr == 700  # single readable line only; no guessed digits
     assert mirror.source.confidence < VISION_SETTINGS.confidence_confirm_threshold
     assert mirror.confirmation_ur.strip()
 
@@ -80,7 +80,7 @@ def test_occurred_at_patch_weakened_string_validation():
     ok = TransactionResult.model_validate(
         {
             "kind": "expense",
-            "amount_pkd": 100,
+            "amount_pkr": 100,
             "occurred_at": "definitely-not-a-timestamp",
             "source": {"type": "photo", "confidence": 0.9},
             "confirmation_ur": "x",
@@ -102,7 +102,7 @@ def test_occurred_at_non_iso_string_rejected_per_6_6():
         TransactionResult.model_validate(
             {
                 "kind": "expense",
-                "amount_pkd": 100,
+                "amount_pkr": 100,
                 "occurred_at": "definitely-not-a-timestamp",
                 "source": {"type": "photo", "confidence": 0.9},
                 "confirmation_ur": "x",
@@ -115,7 +115,7 @@ def test_price_anomaly_fires_with_history_pipeline_level(tmp_path):
     history = [
         {
             "kind": "expense",
-            "amount_pkd": 2560,
+            "amount_pkr": 2560,
             "item_lines": [{"item": "chai patti", "unit_price": 350}],
             "counterparty": {"name": "Al-Madina Kiryana Store"},
             "occurred_at": "2026-08-20T10:00:00+00:00",

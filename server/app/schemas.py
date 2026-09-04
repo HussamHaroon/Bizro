@@ -23,7 +23,7 @@ Status = Literal["pending", "confirmed", "edited", "rejected"]
 # E-1 (ruling §6.10): amount enters the system as 0 < amount ≤ 10,000,000 PKR
 # (1 crore, ~4× Mawakhat's max loan). Hallucinated billion-rupee entries must
 # never reach the ledger/udhar/credit report.
-AMOUNT_MAX_PKD = 10_000_000
+AMOUNT_MAX_PKR = 10_000_000
 
 
 class Counterparty(BaseModel):
@@ -66,7 +66,7 @@ class TransactionIn(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     kind: Kind
-    amount_pkd: float = Field(gt=0, le=AMOUNT_MAX_PKD)
+    amount_pkr: float = Field(gt=0, le=AMOUNT_MAX_PKR)
     currency: str = "PKR"
     counterparty: Counterparty | None = None
     description: str | None = None
@@ -82,7 +82,7 @@ class TransactionPatch(BaseModel):
     """PATCH /api/transactions/{id} body — any subset of editable fields."""
 
     kind: Kind | None = None
-    amount_pkd: float | None = Field(default=None, gt=0, le=AMOUNT_MAX_PKD)
+    amount_pkr: float | None = Field(default=None, gt=0, le=AMOUNT_MAX_PKR)
     currency: str | None = None
     description: str | None = None
     counterparty: Counterparty | None = None
@@ -132,7 +132,7 @@ def transaction_to_wire(
         "id": str(tx.id),
         "merchant_id": str(tx.merchant_id),
         "kind": tx.kind,
-        "amount_pkd": float(tx.amount_pkd),
+        "amount_pkr": float(tx.amount_pkr),
         "currency": tx.currency,
         "counterparty": counterparty,
         "description": tx.description,

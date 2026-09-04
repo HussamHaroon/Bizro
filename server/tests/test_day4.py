@@ -80,7 +80,7 @@ def _seed_tx(
             s.get(Merchant, merchant_id),
             {
                 "kind": kind,
-                "amount_pkd": float(amount),
+                "amount_pkr": float(amount),
                 "currency": "PKR",
                 "counterparty": ({"name": counterparty, "phone": None} if counterparty else None),
                 "description": desc,
@@ -135,7 +135,7 @@ def test_export_csv_row_values_and_quoting_roundtrip(client):
     assert len(rows) == 2, "embedded newline must not split the csv record"
     row = dict(zip(CSV_COLUMNS, rows[1]))
     assert row["kind"] == "udhar_given"
-    assert row["amount_pkd"] == "5000.00"
+    assert row["amount_pkr"] == "5000.00"
     assert row["currency"] == "PKR"
     assert row["description"] == desc
     assert row["counterparty_name"] == "Ahmad"
@@ -344,9 +344,9 @@ def test_nudge_from_wire_rows_uses_real_nudge_math():
     mid = uuid.uuid4()
     now = datetime.now(timezone.utc)
     rows = [
-        {"id": str(uuid.uuid4()), "kind": "sale", "amount_pkd": 5000.0,
+        {"id": str(uuid.uuid4()), "kind": "sale", "amount_pkr": 5000.0,
          "occurred_at": now.isoformat(), "status": "confirmed", "source": {"type": "voice"}},
-        {"id": str(uuid.uuid4()), "kind": "sale", "amount_pkd": 1000.0,
+        {"id": str(uuid.uuid4()), "kind": "sale", "amount_pkr": 1000.0,
          "occurred_at": now.isoformat(), "status": "pending", "source": {"type": "voice"}},
     ]
     nudge = demo_flow._nudge_from_wire_rows(str(mid), rows)

@@ -14,7 +14,7 @@ from vision_agent.schemas import ExtractedItem, ReceiptExtraction
 HISTORY = [
     {
         "kind": "expense",
-        "amount_pkd": 2560,
+        "amount_pkr": 2560,
         "counterparty": {"name": "Al-Madina Kiryana Store", "phone": None},
         "item_lines": [
             {"item": "chai patti", "qty": 2, "unit": "packet", "unit_price": 350, "line_total": 700},
@@ -25,7 +25,7 @@ HISTORY = [
     },
     {
         "kind": "sale",  # sales never contribute price history
-        "amount_pkd": 400,
+        "amount_pkr": 400,
         "item_lines": [{"item": "chai patti", "qty": 1, "unit": "packet", "unit_price": 400}],
         "occurred_at": "2026-08-19T10:00:00+05:00",
         "status": "confirmed",
