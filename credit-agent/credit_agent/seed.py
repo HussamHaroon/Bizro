@@ -147,7 +147,10 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
                 occurred_at=when,
                 source_type=source,
                 source_media_id=media_id,
-                source_model={"voice": "qwen3.5-omni-plus", "photo": "qwen-vl-ocr"}.get(source),
+                # Stamp the model ids the live pipeline actually uses today
+                # (OpenRouter free tier; see .env MODEL_*). Never invent
+                # capability names we can't demo live.
+                source_model={"voice": "minimax/minimax-m3:free", "photo": "dots-studio/dots-3-note-preview:free"}.get(source),
                 confidence=conf if source != "manual" else None,
                 raw_model_output=raw_out,
                 flag=flag, status=status,
