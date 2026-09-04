@@ -69,6 +69,7 @@ export const COPY = {
     sendAnother: "Send another",
     busyError: "The free AI service is busy. Please try again in a minute.",
     mockNote: "Mock mode — AI answers are simulated (no live key)",
+    notDeliveredNote: "Saved in the ledger — the WhatsApp send is off in this demo",
     parseMiss: "Bizro couldn't read an entry from that note. Its reply:",
     freeTierNote: "Each recording uses 1–2 free AI requests.",
     chatLink: "Open the full WhatsApp chat",

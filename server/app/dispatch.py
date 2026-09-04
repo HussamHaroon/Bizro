@@ -452,13 +452,43 @@ def persist_transaction(
     return tx
 
 
+def deliver(
+    wa_id: str, body: str, buttons: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    """Best-effort WhatsApp delivery.
+
+    A rejected recipient must never discard work that already succeeded: the
+    parse ran, the transaction row is in the ledger and the outbound_messages
+    audit row is written. Meta returns 131030 for any number outside the test
+    allow-list, which is every demo number, so raising here turned a saved entry
+    into a webhook error and a "busy" message on the demo surfaces. Buttons are
+    echoed back on failure so the simulator and the site hero frame can still
+    render the one-tap reply (§7.1).
+    """
+    try:
+        return whatsapp_client.send_text(wa_id, body, buttons=buttons)
+    except Exception as exc:
+        logger.warning(
+            "WhatsApp delivery to %s failed (entry is still saved): %s", wa_id, exc
+        )
+        result: dict[str, Any] = {
+            "delivered": False,
+            "error": str(exc)[:300],
+            "to": wa_id,
+            "body": body,
+        }
+        if buttons:
+            result["buttons"] = buttons
+        return result
+
+
 def send_confirmation(merchant: Merchant, tx: Transaction, confirmation_ur: str) -> dict[str, Any]:
     """Send (or mock-log) the WhatsApp confirmation text. The outbound row is
     persisted by persist_transaction; this only does delivery. §7.1: when the
     transaction is pending, the confirmation goes out with the one-tap
     confirm/correct reply buttons (interactive message when live)."""
     buttons = CONFIRM_BUTTONS if tx.status == "pending" else None
-    return whatsapp_client.send_text(merchant.wa_id, confirmation_ur, buttons=buttons)
+    return deliver(merchant.wa_id, confirmation_ur, buttons)
 
 
 # --- clarification / rejection path (schema.md §6.2 + §6.4 + §6.9) ------------
@@ -534,7 +564,7 @@ def send_reply(
     caller never has one for this path. `transaction_id` links the row to an
     acted-on transaction when the reply answers one (confirm/reject replies);
     the dashboard simulator renders replies from these rows."""
-    sent = whatsapp_client.send_text(merchant.wa_id, body)
+    sent = deliver(merchant.wa_id, body)
     session.add(
         OutboundMessage(
             merchant_id=merchant.id,
