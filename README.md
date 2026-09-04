@@ -63,7 +63,7 @@ WhatsApp Cloud API
 ```
 
 All model calls run on Alibaba Cloud Model Studio (DashScope
-OpenAI-compatible mode). See `docs/GUIDE.md` for the full pipeline walkthrough,
+OpenAI-compatible mode). See `docs/Bizro_Guide.pdf` for the full pipeline walkthrough,
 the model stack and its fallbacks, and the security posture.
 
 ## Repo layout
@@ -188,6 +188,7 @@ not yet listed in `.env.example`.
 
 ## Documentation
 
-- `docs/GUIDE.md` — local setup end-to-end, the webhook flow, the Qwen model
+- `docs/Bizro_Guide.pdf` — the deep guide as a print-ready PDF (built from the
+  local `docs/GUIDE.md` source via `python docs/build_guide_pdf.py`): local setup, the webhook flow, the Qwen model
   stack and fallbacks, the demo walkthrough, security posture, ops, and
   troubleshooting.
