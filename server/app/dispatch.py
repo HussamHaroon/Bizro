@@ -759,7 +759,11 @@ def generate_report_preview(session: Session, merchant_id: uuid.UUID) -> dict[st
     engine (observed in the full-repo test run; see STATUS.agent.md D3)."""
     fn = _load_pipeline_fn("credit-agent", "credit_agent.report", "generate_report")
     if fn is not None:
-        db_url = str(session.get_bind().url)
+        # render_as_string(hide_password=False): str(url) masks the password as
+        # the literal "***", so credit_agent's own engine reached Neon with a
+        # bogus password and every report 500ed in production. SQLite has no
+        # password, which is why the offline suite never caught it.
+        db_url = session.get_bind().url.render_as_string(hide_password=False)
         try:
             result = fn(merchant_id, period="last_30_days", db_url=db_url)
         except TypeError:

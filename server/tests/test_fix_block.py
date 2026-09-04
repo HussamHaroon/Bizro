@@ -460,6 +460,41 @@ def test_r1_fallback_report_keeps_mock_key_and_model(client, monkeypatch):
             s.commit()
 
 
+def test_r1_credit_agent_receives_a_dsn_it_can_authenticate_with(monkeypatch):
+    """`str(engine.url)` masks the password as the literal `***`. That string was
+    handed to credit_agent as its own DSN, so every production report 500ed on
+    "password authentication failed for user neondb_owner" while the
+    SQLite-backed suite stayed green — SQLite URLs have no password to mask.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from server.app import dispatch as disp
+
+    seen: dict[str, object] = {}
+
+    def fake_generate_report(merchant_id, period=None, db_url=None):
+        seen["db_url"] = db_url
+        return {"readiness": {"band": "READY", "score": 80}}
+
+    monkeypatch.setitem(
+        disp._pipeline_cache, "credit_agent.report.generate_report", fake_generate_report
+    )
+    engine = create_engine(
+        "postgresql+psycopg2://neondb_owner:s3cretpw@ep-example.neon.tech/neondb?sslmode=require"
+    )
+    try:
+        with Session(engine) as session:
+            disp.generate_report_preview(session, uuid.uuid4())
+    finally:
+        engine.dispose()
+
+    dsn = str(seen["db_url"])
+    assert "***" not in dsn, "a masked password cannot authenticate"
+    assert dsn.startswith("postgresql+psycopg2://neondb_owner:s3cretpw@")
+    assert "sslmode=require" in dsn, "connect args must survive the round-trip"
+
+
 # ------------------------------------- W-1: confirmation_ur on the wire
 
 
