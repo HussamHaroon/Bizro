@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -27,6 +28,16 @@ logging.basicConfig(
 logger = logging.getLogger("bizro.main")
 
 
+def _safe_db_label(url: str) -> str:
+    """DSN minus credentials: this line lands in the Vercel log stream on every
+    cold start, so the Neon password must never ride along with it."""
+    try:
+        parts = urlsplit(url)
+        return f"{parts.scheme}://{parts.hostname or '?'}/{(parts.path or '/').lstrip('/')}"
+    except ValueError:
+        return "<unparseable dsn>"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_repo_root_on_path()  # make voice_agent/vision_agent importable
@@ -38,7 +49,7 @@ async def lifespan(app: FastAPI):
         "live" if whatsapp_client.is_live() else "mock",
         "enforced" if s.signature_enforced() else "disabled",
         s.mock_mode,
-        s.database_url,
+        _safe_db_label(s.database_url),
     )
     if not dashscope_client.is_live():
         logger.warning(

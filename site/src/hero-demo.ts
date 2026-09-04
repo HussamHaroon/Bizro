@@ -30,6 +30,9 @@ export interface HeroResult {
   confidence: number | null;
   /** True when the send carried the server's mock marker (no live keys). */
   mock: boolean;
+  /** False when the server parsed and saved the entry but Meta refused the
+      WhatsApp send (demo numbers sit outside the test allow-list). */
+  delivered: boolean;
   /** §7.1 quick replies when the response carried them (else empty). */
   buttons: QuickReplyButton[];
 }
@@ -270,6 +273,7 @@ export async function interpretVoiceResponse(body: Row): Promise<WebhookOutcome>
       counterparty: parsed?.counterparty ?? null,
       confidence: parsed?.confidence ?? null,
       mock: sent?.mock === true,
+      delivered: sent?.delivered !== false,
       buttons: buttonsFrom(sent),
     },
   };
