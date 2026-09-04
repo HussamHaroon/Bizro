@@ -374,13 +374,14 @@ def _text_miss_outcome(msg: dict[str, Any], session, merchant: Merchant) -> dict
 
 def _upsert_merchant(session, wa_id: str, contact: dict[str, Any] | None) -> Merchant:
     merchant = session.scalar(select(Merchant).where(Merchant.wa_id == wa_id))
-    display_name = ((contact or {}).get("profile") or {}).get("name")
     if merchant is None:
+        # Name only at CREATION. A contact profile name is attacker-controlled
+        # text (anyone can name their WhatsApp profile anything) — letting it
+        # rename an existing merchant's ledger has bitten us twice. An existing
+        # merchant keeps the name it was created (or seeded) with.
+        display_name = ((contact or {}).get("profile") or {}).get("name")
         merchant = Merchant(wa_id=wa_id, display_name=display_name)
         session.add(merchant)
-        session.flush()
-    elif display_name and merchant.display_name != display_name:
-        merchant.display_name = display_name
         session.flush()
     return merchant
 
