@@ -57,7 +57,7 @@ def test_unclear_scenario_never_guesses(tmp_path, scenario):
     assert tx["confirmation_ur"].strip()
     if scenario == "ambiguous_amount":
         assert tx["amount_pkr"] is None  # §6.9 (D2-1): null, never 0.0
-        assert "رقم" in tx["confirmation_ur"]  # asks about the amount
+        assert "How much" in tx["confirmation_ur"]  # asks about the amount
 
 
 @pytest.mark.xfail(
