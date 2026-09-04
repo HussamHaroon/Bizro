@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, Uuid, create_engine
+from sqlalchemy import Date, DateTime, ForeignKey, LargeBinary, Numeric, String, Text, Uuid, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
@@ -42,6 +42,9 @@ class MediaBlob(Base):
     mime_type: Mapped[str] = mapped_column(String)
     storage_path: Mapped[str] = mapped_column(String)
     sha256: Mapped[str] = mapped_column(String)
+    # Durable bytes (bytea) — mirrors server/app/db.py; the seeder fills it so
+    # the audit trail survives on serverless where disk is wiped.
+    data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
