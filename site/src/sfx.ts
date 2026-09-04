@@ -148,7 +148,7 @@ export function playClick(): void {
   }
 }
 
-const BUTTON_SFX_SELECTOR = "button, .btn, .chip, .lang-switch__btn";
+const BUTTON_SFX_SELECTOR = "button, .btn, .chip";
 const BUTTON_SFX_DEDUPE_MS = 40;
 let lastButtonClickAt = 0;
 
