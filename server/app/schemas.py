@@ -14,7 +14,9 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Kind = Literal["sale", "expense", "udhar_given", "udhar_settlement"]
-SourceType = Literal["voice", "photo", "manual"]
+# "text": typed WhatsApp message parsed by voice_agent.pipeline.process_transcript
+# (matches the migrated DB CHECK ck_tx_source_type in db.py — 'text' accepted).
+SourceType = Literal["voice", "photo", "manual", "text"]
 Flag = Literal[
     "none", "price_anomaly", "total_mismatch", "duplicate_suspect", "low_confidence"
 ]

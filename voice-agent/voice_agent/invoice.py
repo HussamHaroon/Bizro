@@ -276,6 +276,17 @@ def _logo_data_uri() -> str:
         return ""
     return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
 
+# Fallback reference printed on the invoice when an entry carries no media id —
+# named after the entry's ACTUAL source type, so a typed note never claims to
+# be a voice note.
+_ENTRY_REF = {
+    "voice": "voice-entry",
+    "photo": "photo-entry",
+    "text": "text-entry",
+    "manual": "manual-entry",
+}
+
+
 def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -> str:
     color = tokens["color"]
     font = tokens["font"]
@@ -374,7 +385,7 @@ def build_invoice_html(tx: dict, tokens: dict, numeral_style: str = "western") -
         lowConfidenceHtml=low_conf_html,
         stampInk=stamp_ink,
         stampConfidence=stamp_conf,
-        txRef=esc(str(tx.get("source", {}).get("media_id") or "voice-entry")),
+        txRef=esc(str(src.get("media_id") or _ENTRY_REF.get(src.get("type"), "entry"))),
         mockBand=mock_band,
     )
 

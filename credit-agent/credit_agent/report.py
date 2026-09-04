@@ -14,6 +14,13 @@ from sqlalchemy import select
 
 from .aggregates import Aggregates, compute_aggregates
 from .db_view import CreditReport, Customer, Merchant, Transaction, get_sessionmaker
+from .formatting import (
+    DEFAULT_BASE_URL,
+    format_date_label,
+    format_datetime_label,
+    format_range_label,
+    provider_from_base_url,
+)
 from .narrative import build_narrative
 from .rubric import score
 
@@ -76,10 +83,49 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         scored = score(agg)
         narrative_ur, is_mock = build_narrative(agg, scored, mname)
 
+        # Attribution (defect 4): the model id ACTUALLY configured, and the
+        # provider derived AT RUNTIME from the host the model calls really go
+        # to — never a hardcoded brand claim.
+        model = os.environ.get("MODEL_REASONING", "qwen3.7-plus")
+        provider = provider_from_base_url(
+            os.environ.get("DASHSCOPE_BASE_URL", DEFAULT_BASE_URL)
+        )
+        generated_at = datetime.now(timezone.utc)
+
+        # Period (defects 1 + 3): month count, header-range labels and every
+        # downstream bar/month list read from the SAME computation over the
+        # actual occurred_at values (agg.months / agg.period_*), and formatted
+        # human labels ride along so no surface prints raw ISO strings.
+        period_start = agg.period_start or start
+        period_end = agg.period_end or end
+
+        red_flags = []
+        for f, n in sorted(agg.flag_counts.items()):
+            # Defect 2: every flag carries refs to the entries it flags —
+            # never an untraceable "0 refs".
+            refs = list(agg.flag_refs.get(f, []))
+            entry = {
+                "flag": f,
+                "count": n,
+                "refs": refs,
+                "note_en": f"{n} entries flagged {f}",
+                "note_ur": f"{n} اندراجات میں {f} کا اشارہ",
+            }
+            if not refs:
+                entry["refs_reason"] = (
+                    "the flagged entry ids were not stored with this report"
+                )
+            red_flags.append(entry)
+
         report: dict = {
             "period": {
-                "start": (agg.period_start or start).date().isoformat(),
-                "end": (agg.period_end or end).date().isoformat(),
+                "start": period_start.date().isoformat(),
+                "end": period_end.date().isoformat(),
+                "start_display": format_date_label(period_start),
+                "end_display": format_date_label(period_end),
+                "label": format_range_label(period_start, period_end),
+                "months": agg.months,
+                "months_count": len(agg.months),
             },
             "readiness": {
                 "score": scored.score,
@@ -97,6 +143,10 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
                 _metric("udhar", "Udhar outstanding (PKR)", "بقایا اُدھار",
                         agg.udhar_outstanding, f"PKR {agg.udhar_outstanding:,.0f}",
                         _prov(agg)),
+                # Appended last so existing metrics[i] consumers keep their
+                # indexes; same single computation as period.months_count.
+                _metric("months", "Months of records", "ریکارڈ کے مہینے",
+                        len(agg.months), str(len(agg.months)), _prov(agg)),
             ],
             "line_items": [
                 {
@@ -110,14 +160,12 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
                 }
                 for t in list(txs)[:MAX_LINE_ITEMS]
             ],
-            "red_flags": [
-                {"flag": f, "count": n, "note_en": f"{n} entries flagged {f}",
-                 "note_ur": f"{n} اندراجات میں {f} کا اشارہ"}
-                for f, n in sorted(agg.flag_counts.items())
-            ],
+            "red_flags": red_flags,
             "criteria_basis": "general-microfinance-pending-mawakhat",
-            "model": os.environ.get("MODEL_REASONING", "qwen3.7-plus"),
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "model": model,
+            "model_provider": provider,
+            "generated_at": generated_at.isoformat(),
+            "generated_at_display": format_datetime_label(generated_at),
             "merchant": {"id": str(mid), "name": mname},
             "narrative_ur": narrative_ur,
             "pillars": scored.pillars,
