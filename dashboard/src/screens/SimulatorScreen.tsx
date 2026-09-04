@@ -876,7 +876,7 @@ export function SimulatorScreen() {
           </p>
 
           <p className="mx-auto max-w-[95%] border-2 border-dashed border-ink-line bg-paper px-3 py-1.5 text-center text-xs text-ink-line opacity-80">
-            Press the mic and speak your entry — e.g. “Ahmad ko panch hazar ka udhar diya” — or attach a receipt photo.
+            Press the mic and speak your entry — e.g. “I gave Ahmad five thousand rupees on credit” — or attach a receipt photo.
           </p>
 
           {messages.map((m) => {
