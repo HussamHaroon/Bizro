@@ -692,7 +692,13 @@ h3 {
 
 @media (min-width: 780px) {
   .diff-grid {
-    grid-template-columns: repeat(3, 1fr);
+    /* minmax(0, 1fr): a bare 1fr track cannot shrink below its min-content —
+       the nowrap .diff__tag chip ("A real credit rail, not a score") set a
+       min-content wider than the track at 768–1050px, pushing the grid past
+       the wrap (scrollWidth 926 vs 831 viewport) and clipping the third
+       "Why Bizro" card entirely. Zero floor makes the tracks obey the wrap;
+       the chip wraps too (see .chip.diff__tag below). */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -1001,6 +1007,17 @@ h3 {
 .chip--red,
 .chip--teal {
   white-space: nowrap;
+}
+
+/* …EXCEPT the differentiator tag: it is a sentence, not a name. At
+   768–1050px the three .diff-grid tracks are narrower than this chip's
+   nowrap min-content, which forced the grid past the wrap and clipped the
+   third "Why Bizro" card. Wrapping inside the chip keeps every chip token
+   identical — the text just takes two lines instead of pushing the card
+   off-screen. (Placed after + higher specificity than the nowrap rule
+   above so it wins the cascade.) */
+.chip.diff__tag {
+  white-space: normal;
 }
 
 /* Stat cards: aligned baselines, tabular digits, breathing room */

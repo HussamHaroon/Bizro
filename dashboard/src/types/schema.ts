@@ -10,7 +10,9 @@ export type TransactionKind =
   | 'udhar_given'
   | 'udhar_settlement';
 
-export type SourceType = 'voice' | 'photo' | 'manual';
+/** 'text' = a typed WhatsApp message parsed by the same pipeline as voice
+    (server ck_tx_source_type widened 2026-09-04). */
+export type SourceType = 'voice' | 'photo' | 'text' | 'manual';
 
 export type TransactionFlag =
   | 'none'
@@ -161,7 +163,13 @@ export interface CreditReportPreview {
   merchant: { id: string; display_name: string };
   period: { start: string; end: string }; // YYYY-MM-DD
   generated_at: string;
-  model: string | null; // e.g. 'qwen3.7-plus'
+  /** Pre-formatted PKT label from the payload, e.g. "Sep 3, 2026, 7:51 pm".
+      Absent → the screen formats generated_at itself. */
+  generated_at_display?: string | null;
+  model: string | null; // the model id ACTUALLY used, e.g. 'minimax/minimax-m3:free'
+  /** Provider the SERVER derived from its own base URL at generation time.
+      Null/absent → no provider is claimed (honest absence, audit defect 4). */
+  model_provider?: string | null;
   readiness: {
     level: ReadinessLevel;
     score_0_100: number;
@@ -180,10 +188,17 @@ export interface CreditReportPreview {
     avg_entries_per_week: number;
     longest_gap_days: number;
   };
-  flags: { flag: Exclude<TransactionFlag, 'none'>; count: number; transaction_ids: string[] }[];
+  flags: {
+    flag: Exclude<TransactionFlag, 'none'>;
+    count: number;
+    /** Traceable entry ids behind the flag (canonical red_flags[].refs). */
+    transaction_ids: string[];
+    /** Honest reason when the payload stored no refs (red_flags[].refs_reason). */
+    reason?: string | null;
+  }[];
   sourcing: {
     total_entries: number;
-    ai_entries: number; // source.type voice|photo
+    ai_entries: number; // source.type voice|photo|text (anything not manual)
     ai_share: number; // 0..1
     avg_confidence: number | null; // over AI entries
     by_source: Record<

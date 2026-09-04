@@ -27,6 +27,11 @@ import {
   IconUdharSettled,
 } from './icons';
 import { formatDateTime } from '../lib/format';
+import { isDemoRow } from '../lib/demo';
+
+/** Honesty-surface helper — lives in lib/demo so the AuditTrail drill-down can
+    label the same rows without a circular import. Re-exported for callers. */
+export { isDemoRow };
 
 export interface LedgerRowProps {
   transaction: Transaction;
@@ -61,6 +66,10 @@ export function LedgerRow({
   const KindIcon = kind.icon;
   const aiSourced = t.source.type !== 'manual';
   const canConfirm = t.status === 'pending' && onConfirm;
+  // Seeded demo history (source.raw_output.mock === true): the verified seal
+  // would claim a real voice/photo parse that never happened — a "demo" chip
+  // takes its place; confirm/edit stay fully working.
+  const demoRow = isDemoRow(t);
 
   return (
     <li className="bizro-rule-h">
@@ -83,12 +92,23 @@ export function LedgerRow({
               {t.counterparty && (
                 <span className="truncate text-sm text-ink-line opacity-80">· {t.counterparty.name}</span>
               )}
-              {aiSourced && (
+              {aiSourced && !demoRow && (
                 <SealMark
                   variant={t.status === 'pending' ? 'pending' : 'verified'}
                   stampIn={justConfirmed}
                   className="translate-y-[1px]"
                 />
+              )}
+              {demoRow && (
+                /* Qualifier for the status chip on seeded rows: gold fill +
+                   ink text (the approved stamp pair), dashed border so it
+                   never reads as a real verified seal. */
+                <span
+                  className="inline-flex translate-y-[1px] items-center rounded-chip border-2 border-dashed border-ink-line bg-fill-gold px-1.5 text-xs font-bold uppercase tracking-wide text-ink-line"
+                  title="Demo data — seeded example entry, not a real voice note or photo"
+                >
+                  demo
+                </span>
               )}
             </span>
             {/* Meta line (D4r fix 1): datetime + the ONE status chip — the

@@ -12,7 +12,8 @@ import { AmountText } from '../components/AmountText';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { EmptyState } from '../components/EmptyState';
 import { HeroStat } from '../components/HeroStat';
-import { LedgerDayHeader, LedgerRow } from '../components/LedgerRow';
+import { LedgerDayHeader, LedgerRow, isDemoRow } from '../components/LedgerRow';
+import { reportDemoRows } from '../components/MockBanner';
 import { ProgressCardButton } from '../components/ProgressCardButton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SealMark } from '../components/TrustSealBadge';
@@ -161,6 +162,17 @@ export function MonthlyLedgerScreen() {
     };
   }, [txs]);
 
+  /** Honesty surface: does the viewed month contain seeded demo rows
+      (source.raw_output.mock === true)? Published to MockBanner, and it
+      replaces the "stamped from voice or photos" claim below — that claim is
+      false for seeded examples. */
+  const hasDemoRows = useMemo(() => !!txs && txs.some(isDemoRow), [txs]);
+
+  useEffect(() => {
+    reportDemoRows(hasDemoRows);
+    return () => reportDemoRows(false);
+  }, [hasDemoRows]);
+
   return (
     /* D4r fix 2: +~15% vertical rhythm below md so hard-shadow offsets never
        visually collide — base 24→28px, 640–767 32→36px; ≥md stays 32px. */
@@ -268,11 +280,22 @@ export function MonthlyLedgerScreen() {
           <SplitCell icon={<IconUdharGiven className="h-7 w-7 text-ledger-red" />} en="Udhar given" ur="ادھار" amount={stats.udharGiven} tone="out" />
           <SplitCell icon={<IconUdharSettled className="h-7 w-7 text-settled-teal" />} en="Collected" ur="وصولی" amount={stats.collected} tone="in" />
           <p className="col-span-2 flex flex-wrap items-center gap-2 border-t-2 border-ink-line px-4 py-3 text-sm text-ink-line sm:col-span-4">
-            <SealMark variant="verified" />
-            <span className="font-numerals font-semibold">
-              {Math.round((stats.aiEntries / stats.entries) * 100)}%
-            </span>{' '}
-            <T en="of entries stamped from voice or photos" ur="انٹریاں آواز یا تصویر سے درج" />
+            {hasDemoRows ? (
+              /* Seeded demo history: the "stamped from voice or photos" claim
+                 would be false — say plainly what these entries are. */
+              <T
+                en="Demo data — seeded example entries. Not stamped from real voice notes or photos."
+                ur="ڈیمو ڈیٹا — مثال کی انٹریاں۔ اصلی آواز یا تصویر سے درج نہیں۔"
+              />
+            ) : (
+              <>
+                <SealMark variant="verified" />
+                <span className="font-numerals font-semibold">
+                  {Math.round((stats.aiEntries / stats.entries) * 100)}%
+                </span>{' '}
+                <T en="of entries stamped from voice or photos" ur="انٹریاں آواز یا تصویر سے درج" />
+              </>
+            )}
           </p>
         </section>
       )}

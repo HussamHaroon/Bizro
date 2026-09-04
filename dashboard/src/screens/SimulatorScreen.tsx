@@ -42,6 +42,7 @@ import {
   fileToSimMedia,
   pickRecorderMime,
   postWebhookEnvelope,
+  webhookFailureCopy,
 } from '../api/simulator';
 import type { WaReplyButton } from '../api/simulator';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -535,12 +536,14 @@ export function SimulatorScreen() {
       const typingId = addMessage({ side: 'in', kind: 'note', body: '', typing: true });
       try {
         await postWebhookEnvelope(envelope);
-      } catch {
+      } catch (err) {
         removeMessage(typingId);
         addMessage({
           side: 'system',
           kind: 'error',
-          body: 'Could not reach the Bizro server — is it running on :8000?',
+          // Honest per-cause copy (audit WOUND 5): a busy free AI tier, a
+          // timeout and an unreachable server are three different events.
+          body: webhookFailureCopy(err),
         });
         setSending(false);
         return;

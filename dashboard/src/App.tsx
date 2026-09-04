@@ -1,5 +1,7 @@
-/* App shell — two demo surfaces (design.md §6 screens 3–4) + the /dev/components
-   gallery. D4-1 "stamped-ledger" restyle: the sticky top bar is PAPER with a 3px
+/* App shell — the merchant / loan-officer surfaces (design.md §6 screens 3–4).
+   The /dev/components gallery stays routable for development but is NOT linked
+   from the production footer (audit SCAR). D4-1 "stamped-ledger" restyle: the
+   sticky top bar is PAPER with a 3px
    ink-line bottom rule and a 6px seal-gold accent segment; the brand wordmark is
    slab bold ink; screen tabs are chunky bordered segments (active = green-fill
    with paper text); nav links stay icon+word pairs (§4.3: never icon-only).
@@ -15,7 +17,7 @@
    tabs stay one tap away at every width. Desktop (≥md) keeps top tabs and never
    shows the bottom bar. */
 
-import { BrowserRouter, Link, NavLink, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter, NavLink, Route, Routes, Navigate } from 'react-router-dom';
 import { MerchantPicker } from './components/MerchantPicker';
 import { MockBanner } from './components/MockBanner';
 import { IconLedger, IconReport, IconSettings, IconWhatsApp } from './components/icons';
@@ -145,15 +147,14 @@ export function App() {
             <Route path="/credit" element={<CreditReadinessScreen />} />
             <Route path="/simulator" element={<SimulatorScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />
+            {/* Dev-only gallery — deliberately NOT linked from the prod footer
+                (audit SCAR); still reachable by URL while building components. */}
             <Route path="/dev/components" element={<ComponentsGallery />} />
           </Routes>
         </main>
         <footer className="bizro-no-print border-t border-gridline px-4 py-3">
           <p className="mx-auto max-w-6xl text-xs text-ink-line opacity-70">
-            Bizro control room · stamped-ledger edition ·{' '}
-            <Link to="/dev/components" className="font-semibold underline">
-              Component gallery
-            </Link>
+            Bizro control room · stamped-ledger edition
           </p>
         </footer>
         <BottomNav />
