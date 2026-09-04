@@ -22,7 +22,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from voice_agent.config import Settings, load_settings
-from voice_agent.confirmation import UNCLEAR_KIND_MARKER, build_confirmation_ur
+from voice_agent.confirmation import UNCLEAR_KIND_MARKER, build_confirmation
 from voice_agent.dashscope_client import DashScopeClient, DashScopeError
 from voice_agent.decode import DecodeError, decode_audio
 from voice_agent.mock_data import SCENARIOS, infer_scenario, mock_response_text
@@ -45,6 +45,10 @@ Respond with ONLY a JSON object, no prose, in exactly this shape:
     "unclear": [<list of field names you are NOT sure about: "amount", "kind", "counterparty_name">]
   }
 }
+
+Reply language: the transcript stays in the spoken Urdu, but every field the
+merchant reads (description, item names when you can) is written as a short,
+simple confirmation in English — short sentences, everyday words.
 
 Kind semantics (direction is implied by kind; amount is always positive):
 - "sale": customer bought and PAID now (cash in).
@@ -118,8 +122,7 @@ def process_voice_note(
                 model_text = client.chat_text(
                     system=SYSTEM_PROMPT,
                     user_text=(
-                        f"السماعی نوٹ کا متن (transcript):\n{transcript}\n\n"
-                        + _user_prompt(when)
+                        f"Voice note transcript:\n{transcript}\n\n" + _user_prompt(when)
                     ),
                 ).text
             except Exception as exc:  # noqa: BLE001 — webhook path never crashes
@@ -235,7 +238,7 @@ def _assemble(
 
     # -- derived flags -------------------------------------------------------
     _apply_derived_flags(tx, settings)
-    tx.confirmation_ur = build_confirmation_ur(tx, settings.numeral_style)
+    tx.confirmation_ur = build_confirmation(tx, settings.numeral_style)
     return tx.model_dump(mode="json"), []
 
 
@@ -301,7 +304,7 @@ def _low_confidence_fallback(
         status="pending",
         mock=mock,
     )
-    tx.confirmation_ur = build_confirmation_ur(tx, settings.numeral_style)
+    tx.confirmation_ur = build_confirmation(tx, settings.numeral_style)
     return tx.model_dump(mode="json")
 
 

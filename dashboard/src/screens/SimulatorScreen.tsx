@@ -24,9 +24,11 @@
    VISUAL LAW (D4-1 stamped-ledger): this is Bizro's stamped version of a
    WhatsApp chat, NOT a clone — dark-green header bar, cream/teal-tint bubbles
    with 3px ink borders, hard offset shadows (zero blur), radius ≤ 2px, square
-   chips, every color from tokens. i18n via <T>/pick (en/ur/mixed). Messages
-   file under the merchant the top-bar picker has selected (their wa_id is what
-   the webhook envelope carries), so the Ledger screen reflects the same rows. */
+   chips, every color from tokens. UI chrome is English-only (owner directive
+   2026-09-04); Urdu in the chat BODIES is the pipeline's real output and stays.
+   Messages file under the merchant the top-bar picker has selected (their wa_id
+   is what the webhook envelope carries), so the Ledger screen reflects the same
+   rows. */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
@@ -54,8 +56,7 @@ import {
   IconUdharSettled,
   IconWhatsApp,
 } from '../components/icons';
-import { T, useNumerals, useT } from '../i18n';
-import { formatAmount } from '../lib/format';
+import { formatPkr } from '../lib/format';
 import { useMerchant } from '../merchant';
 import type { TransactionKind, TransactionStatus } from '../types/schema';
 
@@ -109,6 +110,12 @@ function nowLabel(): string {
 /** mm:ss — the recording timer and the voice-bubble duration label. */
 function mmss(totalSeconds: number): string {
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
+/** §7.1 quick-reply chips — English labels for the confirm/correct pair (the
+    server's Urdu titles stay in the wire payload only). */
+function chipLabel(replyId: string): string {
+  return replyId === 'confirm' ? "It's correct" : 'Change';
 }
 
 /** Releases shorter than this are accidental taps, not voice notes — discarded
@@ -215,11 +222,11 @@ function GlyphSpeakerOff({ className = '' }: { className?: string }) {
 
 /* ---- mini invoice card (polled transactions, rendered inside confirmations) - */
 
-const KIND_SPEC: Record<TransactionKind, { icon: typeof IconSale; en: string; ur: string }> = {
-  sale: { icon: IconSale, en: 'Sale', ur: 'فروخت' },
-  expense: { icon: IconExpense, en: 'Expense', ur: 'خرچ' },
-  udhar_given: { icon: IconUdharGiven, en: 'Udhar given', ur: 'ادھار دیا' },
-  udhar_settlement: { icon: IconUdharSettled, en: 'Repaid', ur: 'وصولی' },
+const KIND_SPEC: Record<TransactionKind, { icon: typeof IconSale; label: string }> = {
+  sale: { icon: IconSale, label: 'Sale' },
+  expense: { icon: IconExpense, label: 'Expense' },
+  udhar_given: { icon: IconUdharGiven, label: 'Udhar given' },
+  udhar_settlement: { icon: IconUdharSettled, label: 'Repaid' },
 };
 
 interface TxMini {
@@ -232,7 +239,6 @@ interface TxMini {
 }
 
 function MiniInvoice({ tx }: { tx: TxMini }) {
-  const { numerals } = useNumerals();
   const spec = KIND_SPEC[tx.kind] ?? KIND_SPEC.sale;
   const Icon = spec.icon;
   return (
@@ -240,14 +246,12 @@ function MiniInvoice({ tx }: { tx: TxMini }) {
       <p className="flex items-center gap-2">
         <Icon className="h-6 w-6 shrink-0 text-ink-green" />
         <span className="min-w-0 flex-1 truncate text-xs font-bold">
-          {tx.counterparty ? <MessageBody text={tx.counterparty} /> : <T en="Unknown" ur="نامعلوم" />}
+          {tx.counterparty ? <MessageBody text={tx.counterparty} /> : 'Unknown'}
         </span>
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t-2 border-ink-line pt-1.5">
-        <span className="font-numerals text-sm font-bold">{formatAmount(tx.amount_pkr, numerals)}</span>
-        <span className="text-xs font-semibold">
-          <T en={spec.en} ur={spec.ur} />
-        </span>
+        <span className="font-numerals text-sm font-bold">{formatPkr(tx.amount_pkr)}</span>
+        <span className="text-xs font-semibold">{spec.label}</span>
         <StatusPill status={tx.status} className="ml-auto" />
       </div>
     </div>
@@ -258,7 +262,6 @@ function MiniInvoice({ tx }: { tx: TxMini }) {
 
 export function SimulatorScreen() {
   const { merchants, merchantId } = useMerchant();
-  const { pick } = useT();
 
   const merchant = merchants.find((m) => m.id === merchantId);
   // The webhook envelope carries THIS wa_id, so entries file under the merchant
@@ -516,15 +519,12 @@ export function SimulatorScreen() {
         addMessage({
           side: 'system',
           kind: 'note',
-          body: pick(
-            'No reply yet — the free AI tier can be slow. Check the Ledger in a moment.',
-            'ابھی جواب نہیں آیا — مفت AI ٹائر آہستہ ہو سکتا ہے۔ کچھ دیر میں کھاتہ دیکھیں۔',
-          ),
+          body: 'No reply yet — the free AI tier can be slow. Check the Ledger in a moment.',
         });
       }
       return false;
     },
-    [addMessage, merchantId, pick, speakReply],
+    [addMessage, merchantId, speakReply],
   );
 
   /* ---- the one send path ------------------------------------------------------- */
@@ -540,10 +540,7 @@ export function SimulatorScreen() {
         addMessage({
           side: 'system',
           kind: 'error',
-          body: pick(
-            'Could not reach the Bizro server — is it running on :8000?',
-            'بزرو سرور تک رسائی نہیں ہو سکی — کیا یہ :8000 پر چل رہا ہے؟',
-          ),
+          body: 'Could not reach the Bizro server — is it running on :8000?',
         });
         setSending(false);
         return;
@@ -561,7 +558,7 @@ export function SimulatorScreen() {
         setSending(false);
       }
     },
-    [addMessage, pick, pollForReply, removeMessage],
+    [addMessage, pollForReply, removeMessage],
   );
 
   /* ---- input handlers --------------------------------------------------------- */
@@ -582,7 +579,7 @@ export function SimulatorScreen() {
       addMessage({
         side: 'system',
         kind: 'error',
-        body: pick('Photo is over 5MB — send a smaller one.', 'تصویر 5MB سے بڑی ہے — چھوٹی تصویر بھیجیں۔'),
+        body: 'Photo is over 5MB — send a smaller one.',
       });
       return;
     }
@@ -596,7 +593,7 @@ export function SimulatorScreen() {
       addMessage({
         side: 'system',
         kind: 'error',
-        body: pick('Could not read that file — try another photo.', 'وہ فائل پڑھی نہیں جا سکی — دوسری تصویر آزمائیں۔'),
+        body: 'Could not read that file — try another photo.',
       });
     }
   }
@@ -636,10 +633,7 @@ export function SimulatorScreen() {
       addMessage({
         side: 'system',
         kind: 'error',
-        body: pick(
-          'This browser cannot record audio — use the photo or text options.',
-          'یہ براؤزر آواز ریکارڈ نہیں کر سکتا — تصویر یا متن استعمال کریں۔',
-        ),
+        body: 'This browser cannot record audio — use the photo or text options.',
       });
       return;
     }
@@ -660,7 +654,7 @@ export function SimulatorScreen() {
           addMessage({
             side: 'system',
             kind: 'error',
-            body: pick('Nothing was recorded — hold the mic and speak.', 'کچھ ریکارڈ نہیں ہوا — مائیک دبا کر بولیں۔'),
+            body: 'Nothing was recorded — hold the mic and speak.',
           });
           return;
         }
@@ -689,10 +683,7 @@ export function SimulatorScreen() {
       addMessage({
         side: 'system',
         kind: 'error',
-        body: pick(
-          'Microphone unavailable — allow mic access in the browser.',
-          'مائیک دستیاب نہیں — براؤزر میں مائیک کی اجازت دیں۔',
-        ),
+        body: 'Microphone unavailable — allow mic access in the browser.',
       });
     }
   }
@@ -764,7 +755,7 @@ export function SimulatorScreen() {
       addMessage({
         side: 'system',
         kind: 'error',
-        body: pick('The recording could not be sent — try once more.', 'ریکارڈنگ بھیجی نہیں جا سکی — دوبارہ کوشش کریں۔'),
+        body: 'The recording could not be sent — try once more.',
       });
     }
   }
@@ -772,11 +763,12 @@ export function SimulatorScreen() {
   function pressQuickReply(messageId: string, button: WaReplyButton) {
     if (sending) return;
     const payload = button.reply.id === 'confirm' ? 'confirm' : 'correct';
+    const label = chipLabel(button.reply.id);
     // Lock the pair, echo the press as the merchant's own outgoing bubble…
     setMessages((ms) =>
       ms.map((m) => (m.id === messageId ? { ...m, answeredPayload: button.reply.id } : m)),
     );
-    addMessage({ side: 'out', kind: 'text', body: button.reply.title, timeLabel: nowLabel() });
+    addMessage({ side: 'out', kind: 'text', body: label, timeLabel: nowLabel() });
     // …and run the REAL §7.1 button-reply flow through the webhook.
     void runEnvelope(buildButtonEnvelope(waId, contactProfileName, payload));
   }
@@ -815,9 +807,7 @@ export function SimulatorScreen() {
       <ScreenHeader
         icon={<IconWhatsApp className="h-9 w-9 text-ink-green" />}
         title="WhatsApp Simulator"
-        titleUr="واٹس ایپ سمیولیٹر"
         purpose="Try the real pipeline — no WhatsApp needed"
-        purposeUr="اصل پائپ لائن — واٹس ایپ کے بغیر"
       />
 
       <div className="bizro-card bizro-card-hero mx-auto flex w-full max-w-md flex-col overflow-hidden">
@@ -839,10 +829,10 @@ export function SimulatorScreen() {
                     aria-hidden="true"
                     className="bizro-rec-pulse inline-block h-2 w-2 rounded-full bg-fill-red"
                   />
-                  <T en="Listening… record your entry" ur="سن رہا ہوں… اندراج بتائیں" />
+                  Listening… record your entry
                 </>
               ) : (
-                <T en="Business account · replies in seconds" ur="کاروبار اکاؤنٹ · جواب چند لمحوں میں" />
+                'Business account · replies in seconds'
               )}
             </p>
           </div>
@@ -853,16 +843,16 @@ export function SimulatorScreen() {
             aria-pressed={ttsOn}
             aria-label={
               ttsOn
-                ? pick('Bizro voice replies are on — tap to mute', 'بزرو کی آواز آن ہے — بند کریں')
-                : pick('Bizro voice replies are off — tap to unmute', 'بزرو کی آواز بند ہے — چلائیں')
+                ? 'Bizro voice replies are on — tap to mute'
+                : 'Bizro voice replies are off — tap to unmute'
             }
-            title={pick('Bizro speaks confirmations aloud', 'بزرو تصدیق زبان سے سناتا ہے')}
+            title="Bizro speaks confirmations aloud"
             className={`bizro-btn-quiet inline-flex shrink-0 items-center gap-1 rounded-chip border-2 border-ink-line px-2 py-1.5 text-[11px] font-bold ${
               ttsOn ? 'bg-fill-gold text-ink-line' : 'bg-paper-raised text-ink-line opacity-70'
             }`}
           >
             {ttsOn ? <GlyphSpeaker className="h-4 w-4" /> : <GlyphSpeakerOff className="h-4 w-4" />}
-            <T en="Voice" ur="آواز" />
+            Voice
           </button>
           <span aria-hidden="true" className="bizro-stamp bg-fill-gold text-[10px] text-ink-line">
             SIM
@@ -874,19 +864,16 @@ export function SimulatorScreen() {
           ref={scrollRef}
           role="log"
           aria-live="polite"
-          aria-label={pick('Chat with Bizro', 'بزرو سے گفتگو')}
+          aria-label="Chat with Bizro"
           className="flex h-[min(60dvh,460px)] min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-paper px-3 py-4"
         >
           {/* Date chip — WhatsApp's "Today" divider, stamped */}
           <p className="mx-auto border-2 border-ink-line bg-paper-raised px-3 py-1 text-center text-xs font-semibold">
-            <T en="Today" ur="آج" />
+            Today
           </p>
 
           <p className="mx-auto max-w-[95%] border-2 border-dashed border-ink-line bg-paper px-3 py-1.5 text-center text-xs text-ink-line opacity-80">
-            <T
-              en="Press the mic and speak an Urdu entry — e.g. “Ahmad ko panch hazar ka udhar diya” — or attach a receipt photo."
-              ur="مائیک دبا کر اردو میں اندراج بتائیں — مثلاً «احمد کو پانچ ہزار کا ادھار دیا» — یا رسید کی تصویر بھیجیں۔"
-            />
+            Press the mic and speak your entry — e.g. “Ahmad ko panch hazar ka udhar diya” — or attach a receipt photo.
           </p>
 
           {messages.map((m) => {
@@ -906,7 +893,7 @@ export function SimulatorScreen() {
                         <span className="bizro-typing-dot inline-block h-2 w-2 bg-ink-line" />
                         <span className="bizro-typing-dot inline-block h-2 w-2 bg-ink-line" />
                       </span>
-                      <T en="Bizro is typing…" ur="بزرو لکھ رہا ہے…" />
+                      Bizro is typing…
                     </span>
                   </div>
                 </div>
@@ -932,9 +919,7 @@ export function SimulatorScreen() {
 
             const out = m.side === 'out';
             const ticksLabel =
-              m.ticks === 'two'
-                ? pick('Sent · Bizro replied', 'بھیج دیا · بزرو نے جواب دیا')
-                : pick('Sent', 'بھیج دیا');
+              m.ticks === 'two' ? 'Sent · Bizro replied' : 'Sent';
             return bubbleRow(m, (
               <>
                 {!out && (
@@ -948,9 +933,7 @@ export function SimulatorScreen() {
                       onClick={() => toggleVoicePlayback(m)}
                       disabled={!m.audioUrl}
                       aria-label={
-                        playingId === m.id
-                          ? pick('Pause voice note', 'آواز روکیں')
-                          : pick('Play voice note', 'آواز چلائیں')
+                        playingId === m.id ? 'Pause voice note' : 'Play voice note'
                       }
                       aria-pressed={playingId === m.id}
                       className="bizro-btn-quiet inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-chip border-2 border-ink-line bg-paper-raised text-ink-line disabled:cursor-not-allowed disabled:opacity-50"
@@ -974,7 +957,7 @@ export function SimulatorScreen() {
                 {m.imageUrl ? (
                   <img
                     src={m.imageUrl}
-                    alt={pick('Receipt photo you sent', 'آپ کی بھیجی ہوئی رسید')}
+                    alt="Receipt photo you sent"
                     className="mb-1.5 max-h-36 w-full border-2 border-ink-line object-cover"
                   />
                 ) : null}
@@ -990,7 +973,7 @@ export function SimulatorScreen() {
                 {m.mediaId && !m.mediaHidden && (
                   <img
                     src={mediaUrl(m.mediaId)}
-                    alt={pick('Bizro’s stamped invoice for this entry', 'بزرو کی مہرشدہ رسید')}
+                    alt="Bizro’s stamped invoice for this entry"
                     onError={() =>
                       setMessages((ms) =>
                         ms.map((x) => (x.id === m.id ? { ...x, mediaHidden: true } : x)),
@@ -1011,8 +994,8 @@ export function SimulatorScreen() {
                       aria-pressed={ttsPlayingId === m.id}
                       aria-label={
                         ttsPlayingId === m.id
-                          ? pick('Pause Bizro’s voice reply', 'بزرو کی آواز روکیں')
-                          : pick('Play Bizro’s voice reply', 'بزرو کی آواز چلائیں')
+                          ? 'Pause Bizro’s voice reply'
+                          : 'Play Bizro’s voice reply'
                       }
                       className="bizro-btn-quiet inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-chip border-2 border-ink-line bg-paper-raised text-ink-line"
                     >
@@ -1022,9 +1005,7 @@ export function SimulatorScreen() {
                         <GlyphPlay className="h-4 w-4" />
                       )}
                     </button>
-                    <span className="text-xs font-semibold">
-                      <T en="Bizro’s voice reply" ur="بزرو کی آوازی جواب" />
-                    </span>
+                    <span className="text-xs font-semibold">Bizro’s voice reply</span>
                   </div>
                 )}
 
@@ -1047,10 +1028,7 @@ export function SimulatorScreen() {
                               : 'bg-paper text-ink-line hover:bg-paper-raised disabled:opacity-50'
                           }`}
                         >
-                          <T
-                            en={b.reply.id === 'confirm' ? "It's correct" : 'Change'}
-                            ur={b.reply.title}
-                          />
+                          {chipLabel(b.reply.id)}
                         </button>
                       );
                     })}
@@ -1090,19 +1068,19 @@ export function SimulatorScreen() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') sendText();
               }}
-              placeholder={pick('Type a message…', 'پیغام لکھیں…')}
-              aria-label={pick('Message Bizro', 'بزرو کو پیغام')}
+              placeholder="Type a message…"
+              aria-label="Message Bizro"
               className="min-h-touch min-w-0 flex-1 rounded-button border-[3px] border-ink-line bg-paper px-3 text-sm text-ink-line placeholder:text-ink-line placeholder:opacity-50"
             />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={sending || recording}
-              aria-label={pick('Attach a receipt photo', 'رسید کی تصویر لگائیں')}
+              aria-label="Attach a receipt photo"
               className="bizro-btn-press inline-flex min-h-touch items-center gap-1.5 rounded-chip border-[3px] border-ink-line bg-paper px-2.5 text-xs font-semibold text-ink-line disabled:cursor-not-allowed disabled:opacity-60"
             >
               <IconPaperclip className="h-5 w-5" />
-              <T en="Photo" ur="تصویر" />
+              Photo
             </button>
             <button
               type="button"
@@ -1114,8 +1092,8 @@ export function SimulatorScreen() {
               aria-pressed={recording}
               aria-label={
                 recording
-                  ? pick('Stop recording', 'ریکارڈنگ روکیں')
-                  : pick('Record a voice note — hold to record', 'آواز ریکارڈ کریں — دبا کر بولیں')
+                  ? 'Stop recording'
+                  : 'Record a voice note — hold to record'
               }
               className={`bizro-btn-press inline-flex min-h-touch touch-manipulation select-none items-center gap-1.5 rounded-chip border-[3px] border-ink-line px-2.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
                 recording ? 'bg-fill-red text-paper' : 'bg-paper text-ink-line'
@@ -1130,42 +1108,39 @@ export function SimulatorScreen() {
               <IconMic className="h-5 w-5" />
               {recording ? (
                 <>
-                  <T en="Stop" ur="روکیں" />
+                  Stop
                   <span className="font-numerals">{mmss(recordSeconds)}</span>
                 </>
               ) : (
-                <T en="Mic" ur="مائیک" />
+                'Mic'
               )}
             </button>
             <button
               type="button"
               onClick={sendText}
               disabled={!input.trim() || sending || recording}
-              aria-label={pick('Send message', 'پیغام بھیجیں')}
+              aria-label="Send message"
               className="bizro-btn-press inline-flex min-h-touch items-center gap-1.5 rounded-chip border-[3px] border-ink-line bg-fill-green px-3 text-sm font-semibold text-paper disabled:cursor-not-allowed disabled:bg-ink-green-disabled"
             >
               <IconSend className="h-5 w-5" />
-              <T en="Send" ur="بھیجیں" />
+              Send
             </button>
           </div>
           {recording ? (
             <p role="status" className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-ink-line">
               <span aria-hidden="true" className="bizro-rec-pulse inline-block h-2 w-2 rounded-full bg-fill-red" />
-              <T en="Recording" ur="ریکارڈنگ" />
+              Recording
               <span className="font-numerals">{mmss(recordSeconds)}</span>
               <span aria-hidden="true">·</span>
-              <T en="release to send" ur="چھوڑیں تو بھیج جائے گی" />
+              release to send
             </p>
           ) : micHint ? (
             <p role="status" className="mt-2 border-2 border-dashed border-ink-line px-2 py-1 text-xs font-semibold text-ink-line">
-              <T en="Too short — hold the mic while you speak." ur="بہت مختصر — بولتے ہوئے مائیک دبائے رکھیں۔" />
+              Too short — hold the mic while you speak.
             </p>
           ) : (
             <p className="mt-2 text-xs text-ink-line opacity-75">
-              <T
-                en="Free AI tier — each message uses 1-2 AI requests"
-                ur="مفت AI ٹائر — ہر پیغام پر 1-2 AI درخواستیں لگتی ہیں"
-              />
+              Free AI tier — each message uses 1-2 AI requests
             </p>
           )}
         </div>
@@ -1180,11 +1155,8 @@ export function SimulatorScreen() {
       />
 
       <p className="text-center text-xs text-ink-line opacity-75">
-        <T
-          en="Entries file under the merchant selected in the top bar:"
-          ur="اندراجات اوپر منتخب شدہ تاجر کے کھاتے میں جائیں گے:"
-        />{' '}
-        <span className="font-semibold">{merchant?.display_name ?? pick('first merchant', 'پہلا تاجر')}</span>
+        Entries file under the merchant selected in the top bar:{' '}
+        <span className="font-semibold">{merchant?.display_name ?? 'first merchant'}</span>
       </p>
     </div>
   );

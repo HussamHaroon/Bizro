@@ -39,7 +39,7 @@ function Badge({ children, className = '', ...rest }: IconProps & { children: Re
 
 /* ---- Money direction (kinds) ---------------------------------------------- */
 
-/** Sale — cash IN. Pair with the word "Sale · فروخت". */
+/** Sale — cash IN. Pair with the word "Sale". */
 export function IconSale({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -49,7 +49,7 @@ export function IconSale({ className, ...rest }: IconProps) {
   );
 }
 
-/** Expense — cash OUT (gone). Pair with "Expense · خرچ". */
+/** Expense — cash OUT (gone). Pair with the kind word. */
 export function IconExpense({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -59,7 +59,7 @@ export function IconExpense({ className, ...rest }: IconProps) {
   );
 }
 
-/** Udhar given — credit OUT to a customer (they owe it back). Pair with "Udhar · ادھار". */
+/** Udhar given — credit OUT to a customer (they owe it back). Pair with the kind word. */
 export function IconUdharGiven({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -69,7 +69,7 @@ export function IconUdharGiven({ className, ...rest }: IconProps) {
   );
 }
 
-/** Udhar settlement — money back IN. Pair with "Repaid · وصولی". */
+/** Udhar settlement — money back IN. Pair with the kind word. */
 export function IconUdharSettled({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -81,7 +81,7 @@ export function IconUdharSettled({ className, ...rest }: IconProps) {
 
 /* ---- Sources ---------------------------------------------------------------- */
 
-/** Voice note source. Pair with "Voice · آواز". */
+/** Voice note source. Pair with the kind word. */
 export function IconVoice({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -92,7 +92,7 @@ export function IconVoice({ className, ...rest }: IconProps) {
   );
 }
 
-/** Receipt photo source. Pair with "Photo · تصویر". */
+/** Receipt photo source. Pair with the kind word. */
 export function IconPhoto({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -102,7 +102,7 @@ export function IconPhoto({ className, ...rest }: IconProps) {
   );
 }
 
-/** Manual entry. Pair with "Manual · دستی". */
+/** Manual entry. Pair with the kind word. */
 export function IconManual({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -114,7 +114,7 @@ export function IconManual({ className, ...rest }: IconProps) {
 
 /* ---- States ------------------------------------------------------------------ */
 
-/** Confirmed / verified check. Pair with "Verified · تصدیق شدہ". */
+/** Confirmed / verified check. Pair with the kind word. */
 export function IconCheck({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -123,7 +123,7 @@ export function IconCheck({ className, ...rest }: IconProps) {
   );
 }
 
-/** Awaiting merchant confirmation. Pair with "Confirm pending · تصدیق باقی". */
+/** Awaiting merchant confirmation. Pair with the kind word. */
 export function IconPending({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -133,7 +133,7 @@ export function IconPending({ className, ...rest }: IconProps) {
   );
 }
 
-/** Merchant corrected an entry. Pair with "Edited · ترمیم شدہ". */
+/** Merchant corrected an entry. Pair with the kind word. */
 export function IconEdited({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -143,7 +143,7 @@ export function IconEdited({ className, ...rest }: IconProps) {
   );
 }
 
-/** Rejected entry. Pair with "Rejected · مسترد". */
+/** Rejected entry. Pair with the kind word. */
 export function IconRejected({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -164,7 +164,7 @@ export function IconFlag({ className, ...rest }: IconProps) {
 
 /* ---- Feature glyphs ------------------------------------------------------------ */
 
-/** Udhar Radar widget. Pair with "Udhar Radar · ادھار راڈار". */
+/** Udhar Radar widget. Pair with the kind word. */
 export function IconRadar({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -177,7 +177,7 @@ export function IconRadar({ className, ...rest }: IconProps) {
 }
 
 /** Savings streak flame (D3-3). Pair with the week-streak words, e.g.
-    "3 week streak · ہفتوں کا سلسلہ". */
+    "3 week streak". */
 export function IconStreak({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -188,7 +188,7 @@ export function IconStreak({ className, ...rest }: IconProps) {
   );
 }
 
-/** Credit report document. Pair with "Report · رپورٹ". */
+/** Credit report document. Pair with the kind word. */
 export function IconReport({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -212,7 +212,7 @@ export function IconCustomer({ className, ...rest }: IconProps) {
   );
 }
 
-/** Ledger book (screen identity). Pair with "Ledger · کھاتہ". */
+/** Ledger book (screen identity). Pair with the kind word. */
 export function IconLedger({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -226,7 +226,7 @@ export function IconLedger({ className, ...rest }: IconProps) {
   );
 }
 
-/** Settings gear (screen identity, D5-2). Pair with "Settings · سیٹنگز".
+/** Settings gear (screen identity, D5-2). Pair with the kind word.
     The ticket named the lucide `Settings` glyph — the dashboard has no lucide
     dependency and its icon law is filled badges (design.md §4.3), so this is
     the same gear drawn in the house grammar: knockout ring + 8 rounded teeth
@@ -254,7 +254,7 @@ export function IconSettings({ className, ...rest }: IconProps) {
   );
 }
 
-/** WhatsApp chat screen (screen identity, /simulator). Pair with "WhatsApp · واٹس ایپ".
+/** WhatsApp chat screen (screen identity, /simulator). Pair with the kind word.
     House grammar: a speech bubble + tail knocked out of the badge with three
     currentColor dots — reads as "chat" at tab size without cloning WhatsApp's
     own logo (this is Bizro's stamped version of it). */
@@ -287,7 +287,7 @@ export function IconChevronRight({ className, ...rest }: IconProps) {
   );
 }
 
-/** Edit affordance (always visible on AI entries). Pair with "Edit if wrong · غلط ہو تو بدلیں". */
+/** Edit affordance (always visible on AI entries). Pair with the kind word. */
 export function IconEdit({ className, ...rest }: IconProps) {
   return (
     <Badge className={className} {...rest}>
@@ -306,7 +306,7 @@ export function IconChevronDown({ className, ...rest }: IconProps) {
 }
 
 /** Send / paper-plane (chat input bar). Solid currentColor — sits on filled or
-    bordered chips where the badge treatment would vanish. Pair with "Send · بھیجیں". */
+    bordered chips where the badge treatment would vanish. Pair with the kind word. */
 export function IconSend({ className, ...rest }: IconProps) {
   return (
     <svg
@@ -324,7 +324,7 @@ export function IconSend({ className, ...rest }: IconProps) {
 
 /** Paperclip (chat input bar, photo attach). The one stroked glyph in the set:
     a filled paperclip is unreadable knots at 20px, and a 2.4-weight stroke
-    keeps the single-weight, solid-at-a-glance law. Pair with "Photo · تصویر". */
+    keeps the single-weight, solid-at-a-glance law. Pair with the kind word. */
 export function IconPaperclip({ className, ...rest }: IconProps) {
   return (
     <svg
@@ -347,7 +347,7 @@ export function IconPaperclip({ className, ...rest }: IconProps) {
 
 /** Microphone (chat input bar, voice note). Same treatment as the badge-set
     mic (IconVoice) drawn as a standalone currentColor glyph. Pair with
-    "Mic · مائیک" / "Stop · روکیں". */
+    "Mic" / "Stop". */
 export function IconMic({ className, ...rest }: IconProps) {
   return (
     <svg
@@ -363,46 +363,6 @@ export function IconMic({ className, ...rest }: IconProps) {
       <rect x="11.1" y="14.9" width="1.8" height="3.2" rx="0.9" />
       <rect x="8.4" y="17.7" width="7.2" height="1.8" rx="0.9" />
     </svg>
-  );
-}
-
-/* ---- Language modes (D1-1a segmented control) ------------------------------ */
-/* Letter-glyph badges: the word on the segment carries the meaning; the icon
-   keeps the filled-badge weight consistent with the rest of the set. */
-
-/** Urdu mode. Pair with the word "اردو". */
-export function IconLangUr({ className, ...rest }: IconProps) {
-  return (
-    <Badge className={className} {...rest}>
-      <text x="12" y="16.5" textAnchor="middle" fontSize="13" fontWeight="700">
-        ا
-      </text>
-    </Badge>
-  );
-}
-
-/** English mode. Pair with the word "English". */
-export function IconLangEn({ className, ...rest }: IconProps) {
-  return (
-    <Badge className={className} {...rest}>
-      <text x="12" y="16.5" textAnchor="middle" fontSize="12" fontWeight="700">
-        A
-      </text>
-    </Badge>
-  );
-}
-
-/** Mixed mode — both scripts side by side. Pair with the word "Mixed". */
-export function IconLangMixed({ className, ...rest }: IconProps) {
-  return (
-    <Badge className={className} {...rest}>
-      <text x="7.6" y="16" textAnchor="middle" fontSize="10" fontWeight="700">
-        ا
-      </text>
-      <text x="15.6" y="16" textAnchor="middle" fontSize="10" fontWeight="700">
-        A
-      </text>
-    </Badge>
   );
 }
 

@@ -1,10 +1,13 @@
-"""confirmation_ur builder — clean Urdu text for WhatsApp (design.md §4.7: numbers in
-digits AND word form; schema.md §1: Western digits by default, NUMERAL_STYLE env).
+"""confirmation_ur builder — SIMPLE ENGLISH confirmation text for WhatsApp.
 
-Urdu conventions used:
-- South-Asian scale words: سو (100), ہزار (10^3), لاکھ (10^5), کروڑ (10^7).
-- 1100..99000 round hundreds spoken the natural way where possible: 1500 → پندرہ سو.
-- 0–99 have irregular single words (اکیس، بائیس، …) — full table encoded below.
+Owner ruling (2026-09-04): ALL merchant-facing output is simple English — short
+sentences, everyday words ("We got it. 5000 rupees credit to Ahmad. Is this
+correct?"). Only the CONTENT changed: the field name `confirmation_ur`, the DB
+column, and the API keys keep their historical names (contracts unchanged).
+
+INBOUND voice notes are still Urdu — Whisper still transcribes Urdu and the
+parse prompt still understands Urdu transcripts. Only this OUTPUT text is
+English. Numbers stay in digits (NUMERAL_STYLE still honored: western|urdu).
 """
 
 from __future__ import annotations
@@ -30,7 +33,69 @@ def to_numeral_digits(value: float, numeral_style: str = "western") -> str:
 
 
 # ---------------------------------------------------------------------------
-# Urdu number words (0 .. 99,99,99,999)
+# Amount in simple English words (South-Asian scale: thousand / lakh / crore)
+# ---------------------------------------------------------------------------
+
+_ONES = [
+    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+    "seventeen", "eighteen", "nineteen",
+]
+_TENS_EN = {
+    2: "twenty", 3: "thirty", 4: "forty", 5: "fifty",
+    6: "sixty", 7: "seventy", 8: "eighty", 9: "ninety",
+}
+
+
+def _words_under_100_en(n: int) -> str:
+    if n < 20:
+        return _ONES[n]
+    tens, unit = divmod(n, 10)
+    return _TENS_EN[tens] if unit == 0 else f"{_TENS_EN[tens]}-{_ONES[unit]}"
+
+
+def _words_under_1000_en(n: int) -> str:
+    hundreds, rest = divmod(n, 100)
+    parts = []
+    if hundreds:
+        parts.append(f"{_ONES[hundreds]} hundred")
+    if rest:
+        parts.append(_words_under_100_en(rest))
+    return " ".join(parts)
+
+
+def amount_in_english_words(amount: float) -> str:
+    """Amount → simple English words WITHOUT the trailing 'rupees' (caller adds it).
+    South-Asian scale, the way Pakistani merchants say numbers: 125000 →
+    "one lakh twenty-five thousand"."""
+    rupees = int(amount)
+    paisa = round((float(amount) - rupees) * 100)
+
+    if rupees == 0:
+        words = "zero"
+    else:
+        parts: list[str] = []
+        crore, rest = divmod(rupees, 10_000_000)
+        lakh, rest = divmod(rest, 100_000)
+        thousand, rest = divmod(rest, 1000)
+        if crore:
+            parts.append(f"{_words_under_100_en(crore)} crore")
+        if lakh:
+            parts.append(f"{_words_under_100_en(lakh)} lakh")
+        if thousand:
+            parts.append(f"{_words_under_100_en(thousand)} thousand")
+        if rest:
+            parts.append(_words_under_1000_en(rest))
+        words = " ".join(parts)
+
+    if paisa:
+        return f"{words} point {_words_under_100_en(paisa)}"
+    return words
+
+
+# ---------------------------------------------------------------------------
+# Legacy Urdu number words — KEPT ONLY because voice_agent/__init__.py exports
+# `amount_in_urdu_words` (name contract; no longer used by any output text).
 # ---------------------------------------------------------------------------
 
 _UNITS = [
@@ -68,7 +133,7 @@ def _words_under_100(n: int) -> str:
     tens, unit = (n // 10) * 10, n % 10
     if unit == 0:
         return _TENS[tens]
-    return f"{_UNITS[unit]} {_TENS[tens]}"  # e.g. 34 → چونتیس irregular; 105 → پانچ سو
+    return f"{_UNITS[unit]} {_TENS[tens]}"
 
 
 def _words_under_1000(n: int) -> str:
@@ -82,9 +147,8 @@ def _words_under_1000(n: int) -> str:
 
 
 def amount_in_urdu_words(amount: float) -> str:
-    """Amount → Urdu words WITHOUT the trailing 'روپے' (caller appends currency).
-    Handles paisa as 'X روپے Y پیسے' fragments via the caller if fractional.
-    """
+    """LEGACY (unused by output text): Amount → Urdu words WITHOUT the trailing
+    'روپے'. Kept for the voice_agent package export contract only."""
     rupees = int(amount)
     paisa = round((float(amount) - rupees) * 100)
 
@@ -116,10 +180,10 @@ def amount_in_urdu_words(amount: float) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Confirmation sentences
+# Confirmation sentences (simple English)
 # ---------------------------------------------------------------------------
 
-QUESTION = "کیا یہ درست ہے؟"  # "Is this correct?" — one-tap reply yes/no
+QUESTION = "Is this correct?"  # one-tap / 1-or-0 reply yes/no
 
 # Transaction descriptions starting with this marker mean "kind itself was unclear"
 # (pipeline sets it when the model could not tell what kind of entry this was).
@@ -127,70 +191,66 @@ UNCLEAR_KIND_MARKER = "UNCLEAR_KIND"
 
 
 def _amount_phrase(amount: float, numeral_style: str) -> str:
-    """'5000 روپے (پانچ ہزار روپے)' — digits AND words (design.md §4.7)."""
-    digits = to_numeral_digits(amount, numeral_style)
-    words = amount_in_urdu_words(amount)
-    if float(amount).is_integer():
-        return f"{digits} روپے ({words} روپے)"
-    return f"{digits} روپے ({words})"  # words already carry the paisa fragment
+    """'5000 rupees' — digits per NUMERAL_STYLE, everyday wording."""
+    return f"{to_numeral_digits(amount, numeral_style)} rupees"
 
 
 _KIND_TEMPLATES = {
-    # {name} {amount}: minimal-word, register-safe Urdu. direction per schema.md §1.
-    "sale": "{name} نے {amount} کا سودا لیا، ادائیگی نقد کی۔",
-    "expense": "آپ نے {amount} کا خرچ کیا۔{supplier}",
-    "udhar_given": "{name} کو {amount} ادھار دیے۔",
-    "udhar_settlement": "{name} نے {amount} ادھار لوٹائے۔",
-}
-
-_KIND_LABEL_UR = {
-    "sale": "فروخت",
-    "expense": "خرچ",
-    "udhar_given": "ادھار دیا",
-    "udhar_settlement": "ادھار وصول",
+    # {amount}: minimal, simple English. direction per schema.md §1.
+    "sale": "{amount} cash sale to {name}.",
+    "expense": "You spent {amount}.{supplier}",
+    "udhar_given": "{amount} credit to {name}.",
+    "udhar_settlement": "{name} paid back {amount}.",
 }
 
 
 def _name_or_fallback(counterparty) -> str:
     name = (getattr(counterparty, "name", None) or "").strip()
-    return name if name else "کسی گاہک"  # "a customer" — only when model found no name
+    return name if name else "a customer"  # only when the model found no name
 
 
-def build_confirmation_ur(tx: Transaction, numeral_style: str = "western") -> str:
-    """Build the WhatsApp text confirmation. For flag=low_confidence this returns a
-    CLARIFICATION QUESTION, never a statement (schema.md §1: never guess)."""
+def build_confirmation(tx: Transaction, numeral_style: str = "western") -> str:
+    """Build the WhatsApp text confirmation in SIMPLE ENGLISH. For flag=low_confidence
+    this returns a CLARIFICATION QUESTION, never a statement (schema.md §1: never
+    guess). NOTE: callers store it in the `confirmation_ur` field/DB column — the
+    name is historical, the content is English (owner ruling, 2026-09-04)."""
     if tx.flag == "low_confidence":
-        return _build_clarification_ur(tx, numeral_style)
+        return _build_clarification(tx, numeral_style)
 
     amount = _amount_phrase(tx.amount_pkr, numeral_style)
     tpl = _KIND_TEMPLATES[tx.kind]
     if tx.kind == "expense":
         supplier = (tx.counterparty.name or "").strip() if tx.counterparty else ""
-        suffix = f" {supplier} سے۔" if supplier else ""
+        suffix = f" Bought from {supplier}." if supplier else ""
         sentence = tpl.format(amount=amount, supplier=suffix)
     else:
         sentence = tpl.format(name=_name_or_fallback(tx.counterparty), amount=amount)
-    return f"{sentence} {QUESTION}"
+    return f"Got it. {sentence} {QUESTION}"
+
+
+# Historical name kept: voice_agent/__init__.py (and older callers) import
+# `build_confirmation_ur`. The content it builds is simple English now.
+build_confirmation_ur = build_confirmation
 
 
 # Per-field clarification questions for ambiguous parses.
-_CLARIFY_AMOUNT = "رقم کتنی تھی؟ نمبر میں لکھ کر بھیجیں یا دوبارہ بولیں۔"
-_CLARIFY_KIND = "کیا یہ ادھار تھا، نقد فروخت، یا خرچ؟"
-_CLARIFY_NAME = "گاہک کا نام کیا ہے؟"
+_CLARIFY_AMOUNT = "How much was it? Please type the amount or say it again."
+_CLARIFY_KIND = "Was this credit, a cash sale, or an expense?"
+_CLARIFY_NAME = "What is the customer's name?"
 
 
-def _build_clarification_ur(tx: Transaction, numeral_style: str) -> str:
+def _build_clarification(tx: Transaction, numeral_style: str) -> str:
     # §6.2/§6.9: unknown amount travels as None (never 0.0); <= 0 kept as a
     # defensive legacy guard.
     unknown_amount = tx.amount_pkr is None or tx.amount_pkr <= 0
     unknown_kind = tx.description.startswith(UNCLEAR_KIND_MARKER)
     known_name = (tx.counterparty.name or "").strip() if tx.counterparty else ""
 
-    lead = "یہ اندراج پکا نہیں ہو سکا۔"  # "This entry could not be confirmed."
+    lead = "Sorry, we could not confirm this entry."
     if known_name and not unknown_kind:
-        lead = f"{known_name} کا اندراج پکا نہیں ہو سکا۔"
+        lead = f"Sorry, we could not confirm {known_name}'s entry."
     if unknown_kind:
-        lead = "آپ کی بات سمجھ نہیں آئی۔"  # "I could not understand."
+        lead = "Sorry, we did not understand your note."  # "I could not understand."
 
     asks: list[str] = []
     if unknown_amount:
@@ -200,6 +260,6 @@ def _build_clarification_ur(tx: Transaction, numeral_style: str) -> str:
     elif not known_name and tx.kind in ("sale", "udhar_given", "udhar_settlement"):
         asks.append(_CLARIFY_NAME)
     if not asks:
-        asks.append("براہ کرم دوبارہ بولیں۔")
+        asks.append("Please say it again.")
 
     return f"{lead} {' '.join(asks)}"

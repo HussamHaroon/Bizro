@@ -1,15 +1,14 @@
 /* HeroStat — D1-1 art direction §2, D4-1 restyle: the month summary as
    large-format stats — slab-BLACK numerals, clamp(2.5rem → 4.5rem), on a
    stamped paper card (.bizro-card + hover lift). Label in small-caps
-   letter-spaced 13px with the Urdu pair; the tone color rides on the label
-   icon, never the numeral alone (§4.7). The number counts up on mount
-   (300ms ease-out, one easing curve — NOT a second animation loop; skipped
-   entirely under prefers-reduced-motion). */
+   letter-spaced 13px; the tone color rides on the label icon, never the
+   numeral alone (§4.7). The number counts up on mount (300ms ease-out, one
+   easing curve — NOT a second animation loop; skipped entirely under
+   prefers-reduced-motion). English-only (owner directive 2026-09-04): the
+   ur prop is accepted from older call sites but never rendered. */
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { T, useNumerals, useT } from '../i18n';
-import { toNumerals, urduAmountWords } from '../lib/format';
 
 /** 0 → target over `duration` ms, ease-out quad. Reduced motion = instant. */
 export function useCountUp(target: number, duration = 300): number {
@@ -41,8 +40,10 @@ export function useCountUp(target: number, duration = 300): number {
 export type HeroTone = 'in' | 'out' | 'neutral';
 
 export interface HeroStatProps {
+  /** English label — the only one rendered. */
   en: string;
-  ur: string;
+  /** Ignored — the dashboard renders English only. */
+  ur?: string;
   value: number;
   tone: HeroTone;
   /** Icon + word pair (§4.7) — the label word carries the meaning. */
@@ -64,15 +65,13 @@ const ICON_TONE_CLASS: Record<HeroTone, string> = {
   neutral: 'text-ink-green',
 };
 
-export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
+export function HeroStat({ en, value, tone, icon }: HeroStatProps) {
   const shown = useCountUp(value);
-  const { mode } = useT();
-  const { numerals } = useNumerals(); // schema.md §8 digit style (D5-2)
   return (
     <div className="bizro-card bizro-card-hover flex flex-col gap-2 px-4 py-4 sm:px-5 sm:py-5">
       <p className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.04em] ${ICON_TONE_CLASS[tone]}`}>
         <span className="inline-flex">{icon}</span>
-        <T en={en} ur={ur} />
+        {en}
       </p>
       {/* D4-1 hero numerals: clamp() scales 390px→~40px / desktop→72px, never
           below the 2.5rem floor. The amount line wraps (prefix drops a line)
@@ -81,15 +80,8 @@ export function HeroStat({ en, ur, value, tone, icon }: HeroStatProps) {
         className={`flex flex-wrap items-baseline gap-x-1 font-numerals font-bold leading-none tabular-nums text-[clamp(2.5rem,9.8vw,4.5rem)] ${TONE_CLASS[tone]}`}
       >
         <span className="text-[0.5em] font-semibold opacity-70">Rs</span>
-        <bdi>{toNumerals(shown.toLocaleString('en-PK'), numerals)}</bdi>
+        <bdi>{shown.toLocaleString('en-PK')}</bdi>
       </p>
-      {/* §4.7: headline amounts appear in digits AND Urdu word form (mixed/ur
-          modes; digits-only in en per the numeral ruling). */}
-      {mode !== 'en' && (
-        <p className="bizro-urdu text-xs leading-relaxed text-ink-line opacity-70" lang="ur">
-          {urduAmountWords(Math.round(value))} روپے
-        </p>
-      )}
     </div>
   );
 }

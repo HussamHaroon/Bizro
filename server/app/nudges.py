@@ -1,8 +1,12 @@
-"""Weekly Urdu financial-health nudge (design.md §7.3, PROJECT_PLAN Day 3).
+"""Weekly financial-health nudge (design.md §7.3, PROJECT_PLAN Day 3).
 
 Ships as TEXT, not voice (design.md §2 ruling): a Friday WhatsApp message —
 this week's sales vs last week, expenses, udhar outstanding. Deterministic
 computation, mock-safe send (logged to outbound_messages either way).
+
+Wording is SIMPLE ENGLISH (owner ruling 2026-09-04: all merchant-facing text
+is English) — but the response key stays `text_ur` (API/dashboard contract;
+names never change, only content).
 
 Also home of the savings-streak math (schema.md §7.3): consecutive Mon–Sun
 weeks (PKT) with net cash-flow > 0, zero-entry weeks breaking the streak.
@@ -104,13 +108,13 @@ def _sum_kind(txs: list[Transaction], kind: str) -> float:
 
 def _trend(current: float, previous: float) -> str:
     if previous <= 0:
-        return "پچھلے ہفتے کوئی فروخت ریکارڈ نہیں ہوئی" if current > 0 else ""
+        return "No sales were recorded last week" if current > 0 else ""
     pct = (current - previous) / previous * 100
     if pct >= 5:
-        return f"فروخت {pct:.0f}% بڑھی ہے"
+        return f"Sales are up {pct:.0f}% from last week"
     if pct <= -5:
-        return f"فروخت {abs(pct):.0f}% کم ہوئی ہے"
-    return "فروخت پچھلے ہفتے جیسی ہے"
+        return f"Sales are down {abs(pct):.0f}% from last week"
+    return "Sales are the same as last week"
 
 
 def compute_weekly_nudge(session: Session, merchant_id, now: datetime | None = None) -> dict:
@@ -146,21 +150,24 @@ def compute_weekly_nudge(session: Session, merchant_id, now: datetime | None = N
     streak_weeks = streak["streak_weeks"]
 
     parts = [
-        "ہفتہ وار خلاصہ:",
-        f"اس ہفتے کی فروخت PKR {sales_now:,.0f}۔",
+        "Weekly summary:",
+        f"This week's sales: PKR {sales_now:,.0f}.",
     ]
     trend = _trend(sales_now, sales_prev)
     if trend:
-        parts.append(trend + "۔")
+        parts.append(trend + ".")
     if streak_weeks >= 1:
-        parts.append(f"لگاتار {streak_weeks} ہفتے سے کمائی خرچ سے زیادہ ہے — بہت خوب!")
+        parts.append(
+            f"Your earnings have been more than your spending for {streak_weeks} weeks "
+            "in a row — very good!"
+        )
     if expenses_now:
-        parts.append(f"خرچ PKR {expenses_now:,.0f}۔")
+        parts.append(f"Expenses: PKR {expenses_now:,.0f}.")
     if udhar_new or udhar_collected:
         parts.append(
-            f"نیا اُدھار PKR {udhar_new:,.0f}، وصول PKR {udhar_collected:,.0f}۔"
+            f"New credit: PKR {udhar_new:,.0f}. Collected: PKR {udhar_collected:,.0f}."
         )
-    parts.append(f"کل بقایا اُدھار PKR {outstanding:,.0f}۔")
+    parts.append(f"Total credit outstanding: PKR {outstanding:,.0f}.")
 
     return {
         "text_ur": " ".join(parts),

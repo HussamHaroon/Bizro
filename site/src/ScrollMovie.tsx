@@ -4,7 +4,7 @@
    palette (D4-1):
 
      SCENE 1 SCATTER  — the pieces of a khata drift onto the stage
-     SCENE 2 ASSEMBLE — they fly together into a بزرو coin
+     SCENE 2 ASSEMBLE — they fly together into a Bizro coin
      SCENE 3 STAMP    — the coin slams down like a rubber trust seal
      SCENE 4 REVEAL   — it settles onto a ledger card; the three pillars rise
 
@@ -30,7 +30,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Mithu } from "./Mascot";
-import { useSiteLang } from "./site-i18n";
+import { COPY } from "./content";
 
 /* ---------- tiny easings ---------- */
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -187,7 +187,6 @@ const PIECES: PieceDef[] = [
 ];
 
 export default function ScrollMovie() {
-  const { copy, lang } = useSiteLang();
   const sectionRef = useRef<HTMLElement | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
   const coinRef = useRef<HTMLDivElement | null>(null);
@@ -413,7 +412,7 @@ export default function ScrollMovie() {
       className="movie"
       id="movie"
       ref={sectionRef}
-      aria-label={copy.movie.label}
+      aria-label={COPY.movie.label}
     >
       <div className="movie__stage">
         <div className="movie__world" ref={worldRef}>
@@ -453,19 +452,13 @@ export default function ScrollMovie() {
                   {d.id === "ring" && <CoinRing />}
                   {d.id === "half-l" && <CoinLeftHalf />}
                   {d.id === "half-r" && <CoinRightHalf />}
-                  {d.id === "word" &&
-                    (lang === "en" ? (
-                      /* English mode: the Latin mark on the coin (owner request) */
-                      <span ref={wordRef} className="movie__word movie__word--latin">
-                        <span>BI</span>
-                        <span ref={zRef}>Z</span>
-                        <span>RO</span>
-                      </span>
-                    ) : (
-                      <span className="movie__word" lang="ur">
-                        بزرو
-                      </span>
-                    ))}
+                  {d.id === "word" && (
+                    <span ref={wordRef} className="movie__word movie__word--latin">
+                      <span>BI</span>
+                      <span ref={zRef}>Z</span>
+                      <span>RO</span>
+                    </span>
+                  )}
                   {d.id === "star" && <StarSeal />}
                   {d.id === "rupee" && <RupeeChip />}
                 </div>
@@ -490,12 +483,8 @@ export default function ScrollMovie() {
 
         {/* scene captions */}
         <div className="movie__caption" aria-live="off">
-          <span
-            className="movie__caption-text"
-            key={`${lang}${scene}`}
-            lang={lang === "ur" ? "ur" : "en"}
-          >
-            {copy.movie.captions[scene]}
+          <span className="movie__caption-text" key={scene}>
+            {COPY.movie.captions[scene]}
           </span>
         </div>
 
@@ -505,7 +494,7 @@ export default function ScrollMovie() {
         </div>
 
         {/* summary for screen readers (the visuals are decorative) */}
-        <p className="sr-only">{copy.movie.sr}</p>
+        <p className="sr-only">{COPY.movie.sr}</p>
 
         {/* Mithu cameo — perches in the corner for the scatter only */}
         <div className="movie__mithu mithu--bob" ref={mithuRef} aria-hidden="true">

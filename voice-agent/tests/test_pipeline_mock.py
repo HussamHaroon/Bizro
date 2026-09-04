@@ -63,8 +63,8 @@ def test_clean_udhar(audio_file):
     assert tx["status"] == "pending"
     assert tx["source"]["type"] == "voice"
     assert tx["source"]["confidence"] == pytest.approx(0.93)
-    assert tx["confirmation_ur"].endswith("کیا یہ درست ہے؟")
-    assert "5000" in tx["confirmation_ur"] and "پانچ ہزار" in tx["confirmation_ur"]
+    assert tx["confirmation_ur"].endswith("Is this correct?")
+    assert "5000 rupees credit to" in tx["confirmation_ur"]
     assert tx["source"]["raw_output"]["transcript"]
 
 
@@ -91,7 +91,7 @@ def test_sale_with_items(audio_file):
     assert lines[0]["item"] == "چائے پتی" and lines[0]["qty"] == 2
     assert sum(li["line_total"] for li in lines) == tx["amount_pkr"]
     assert tx["flag"] == "none"  # totals agree
-    assert "1500" in tx["confirmation_ur"] and "پندرہ سو" in tx["confirmation_ur"]
+    assert "1500" in tx["confirmation_ur"] and "cash sale to" in tx["confirmation_ur"]
 
 
 def test_item_total_mismatch_flagged_not_fixed():
@@ -149,8 +149,8 @@ def test_ambiguous_amount_never_guesses(audio_file):
     assert tx["status"] == "pending"
     assert tx["source"]["confidence"] == pytest.approx(0.31)
     # confirmation is a clarification question, not a statement
-    assert "کیا یہ درست ہے؟" not in tx["confirmation_ur"]
-    assert "رقم" in tx["confirmation_ur"]
+    assert "Is this correct?" not in tx["confirmation_ur"]
+    assert "How much" in tx["confirmation_ur"]
     assert tx["counterparty"]["name"] == "احمد"  # what WAS clear is kept
     # F-2: fallback raw_output carries the mock marker too
     assert tx["source"]["raw_output"]["mock"] is True
@@ -161,7 +161,7 @@ def test_not_a_transaction_notes_query(audio_file):
     tx = _run(audio_file, scenario="unclear_kind")
     assert tx["flag"] == "low_confidence"
     assert tx["amount_pkr"] is None
-    assert "سمجھ" in tx["confirmation_ur"]  # "I didn't understand"
+    assert "did not understand" in tx["confirmation_ur"]  # "I didn't understand"
 
 
 # --- 4. mixed Urdu-English ------------------------------------------------------
@@ -300,8 +300,8 @@ def test_absurd_amount_routes_to_clarification_not_guess(audio_file):
         tx = _run(audio_file, scenario="temp_absurd")
         assert tx["flag"] == "low_confidence"
         assert tx["amount_pkr"] is None  # not 10000001, not 0.0
-        assert "کیا یہ درست ہے؟" not in tx["confirmation_ur"]
-        assert "رقم" in tx["confirmation_ur"]  # asks for the amount again
+        assert "Is this correct?" not in tx["confirmation_ur"]
+        assert "How much" in tx["confirmation_ur"]  # asks for the amount again
         assert tx["source"]["raw_output"]["mock"] is True
         assert tx["source"]["raw_output"]["mock_scenario"] == "temp_absurd"
     finally:

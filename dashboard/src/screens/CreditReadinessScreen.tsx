@@ -32,31 +32,29 @@ import {
   IconReport,
   IconVoice,
 } from '../components/icons';
-import { formatConfidence, formatMonth, formatPkr, urduMonth } from '../lib/format';
-import { T, useT } from '../i18n';
+import { formatConfidence, formatMonth, formatPkr } from '../lib/format';
 import { useMerchant } from '../merchant';
 
-const READINESS_WORDS: Record<ReadinessLevel, { en: string; ur: string }> = {
-  ready: { en: 'Loan-ready', ur: 'قرض کے لیے تیار' },
-  almost: { en: 'Almost ready', ur: 'تقریباً تیار' },
-  not_yet: { en: 'Not yet ready', ur: 'ابھی تیار نہیں' },
+const READINESS_WORDS: Record<ReadinessLevel, string> = {
+  ready: 'Loan-ready',
+  almost: 'Almost ready',
+  not_yet: 'Not yet ready',
 };
 
-const FLAG_WORDS: Record<Exclude<TransactionFlag, 'none'>, { en: string; ur: string }> = {
-  price_anomaly: { en: 'Price anomalies', ur: 'قیمت میں فرق' },
-  total_mismatch: { en: 'Total mismatches', ur: 'کل میں فرق' },
-  duplicate_suspect: { en: 'Possible duplicates', ur: 'ممکنہ نقل' },
-  low_confidence: { en: 'Low-confidence entries', ur: 'کم اعتماد انٹریاں' },
+const FLAG_WORDS: Record<Exclude<TransactionFlag, 'none'>, string> = {
+  price_anomaly: 'Price anomalies',
+  total_mismatch: 'Total mismatches',
+  duplicate_suspect: 'Possible duplicates',
+  low_confidence: 'Low-confidence entries',
 };
 
-const SOURCE_ROWS: { key: 'voice' | 'photo' | 'manual'; icon: typeof IconVoice; en: string; ur: string }[] = [
-  { key: 'voice', icon: IconVoice, en: 'Voice notes', ur: 'آواز' },
-  { key: 'photo', icon: IconPhoto, en: 'Receipt photos', ur: 'تصویریں' },
-  { key: 'manual', icon: IconManual, en: 'Manual entries', ur: 'دستی' },
+const SOURCE_ROWS: { key: 'voice' | 'photo' | 'manual'; icon: typeof IconVoice; label: string }[] = [
+  { key: 'voice', icon: IconVoice, label: 'Voice notes' },
+  { key: 'photo', icon: IconPhoto, label: 'Receipt photos' },
+  { key: 'manual', icon: IconManual, label: 'Manual entries' },
 ];
 
 export function CreditReadinessScreen() {
-  const { pick } = useT();
   const { merchants, merchantId } = useMerchant(); // re-key all data on switch (D3-2)
   const [report, setReport] = useState<CreditReportPreview | null>(null);
   const [byId, setById] = useState<Map<string, Transaction>>(new Map());
@@ -112,9 +110,7 @@ export function CreditReadinessScreen() {
         <ScreenHeader
           icon={<IconReport className="h-9 w-9 text-ink-green" />}
           title="Credit Readiness"
-          titleUr="کریڈٹ رپورٹ"
           purpose="Loan-ready proof"
-          purposeUr="قرض کے لیے ثبوت"
         />
         <p role="alert" className="bizro-card px-4 py-3 text-sm font-semibold text-ledger-red">
           {error}
@@ -129,12 +125,10 @@ export function CreditReadinessScreen() {
         <ScreenHeader
           icon={<IconReport className="h-9 w-9 text-ink-green" />}
           title="Credit Readiness"
-          titleUr="کریڈٹ رپورٹ"
           purpose="Loan-ready proof"
-          purposeUr="قرض کے لیے ثبوت"
         />
         <p className="px-1 py-6 text-center text-sm text-ink-line opacity-75">
-          <T en="Preparing the report…" ur="رپورٹ بن رہی ہے" />
+          Preparing the report…
         </p>
       </div>
     );
@@ -147,17 +141,14 @@ export function CreditReadinessScreen() {
       <ScreenHeader
         icon={<IconReport className="h-9 w-9 text-ink-green" />}
         title="Credit Readiness"
-        titleUr="کریڈٹ رپورٹ"
         purpose="Loan-ready proof"
-        purposeUr="قرض کے لیے ثبوت"
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-right text-sm text-ink-line">
               <span className="font-semibold">{report.merchant.display_name}</span>
               <br />
               <span className="opacity-75">
-                {report.period.start} → {report.period.end} ·{' '}
-                <T en="Mawakhat-style review · criteria pending" ur="مواکات اندازِ جائزہ · معیارات متوقع" />
+                {report.period.start} → {report.period.end} · Mawakhat-style review · criteria pending
               </span>
             </p>
             {/* ONE primary action per screen (§4.4): print the report as the
@@ -168,7 +159,7 @@ export function CreditReadinessScreen() {
                 icon={<IconPrint className="h-5 w-5" />}
                 onClick={() => window.print()}
               >
-                <T en="Print / PDF" ur="پرنٹ / پی ڈی ایف" />
+                Print / PDF
               </Button>
             </span>
           </div>
@@ -181,7 +172,7 @@ export function CreditReadinessScreen() {
           color. */}
       <section
         className="bizro-card bizro-card-hero bizro-card-hover flex flex-col-reverse items-center gap-x-8 gap-y-5 px-5 py-6 text-center md:flex-row md:px-6 md:text-left"
-        aria-label={pick('Readiness verdict', 'قرض کی تیاری')}
+        aria-label="Readiness verdict"
       >
         {/* Gauge + trend group (D3-3): the sparkline sits beside the seal gauge
             at every width; on phones the whole group lands below the verdict
@@ -189,10 +180,7 @@ export function CreditReadinessScreen() {
         <div className="flex shrink-0 items-center gap-4">
           <SealGauge
             score={readiness.score_0_100}
-            label={pick(
-              `Readiness score ${readiness.score_0_100} of 100 — ${levelWord.en}`,
-              `تیاری کا اسکور ${readiness.score_0_100} از 100 — ${levelWord.ur}`,
-            )}
+            label={`Readiness score ${readiness.score_0_100} of 100 — ${levelWord}`}
             className="h-[104px] w-[104px] md:h-[140px] md:w-[140px]"
           />
           {history && <TrendSparkline points={history} />}
@@ -200,18 +188,13 @@ export function CreditReadinessScreen() {
         <div className="min-w-0 flex-1 md:min-w-64">
           <h2 className="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1 md:justify-start">
             <span className="font-numerals text-[2rem] font-bold leading-tight text-ink-green md:text-4xl">
-              {levelWord.en}
-            </span>
-            <span className="bizro-urdu text-2xl font-semibold text-ink-green" lang="ur">
-              {levelWord.ur}
+              {levelWord}
             </span>
           </h2>
-          <p className="mt-2 text-sm text-ink-line">
-            <T en={readiness.summary_en} ur={readiness.summary_ur} />
-          </p>
+          <p className="mt-2 text-sm text-ink-line">{readiness.summary_en}</p>
           <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-ink-line opacity-75 md:justify-start">
             <SealMark variant={readiness.level === 'ready' ? 'verified' : 'pending'} />
-            <T en="Readiness score · Mawakhat-style review" ur="تیاری کا اسکور · مواکات اندازِ جائزہ" />
+            Readiness score · Mawakhat-style review
           </p>
         </div>
       </section>
@@ -232,13 +215,14 @@ export function CreditReadinessScreen() {
           icon={<IconPrint className="h-5 w-5" />}
           onClick={() => window.print()}
         >
-          <T en="Print / PDF" ur="پرنٹ / پی ڈی ایف" />
+          Print / PDF
         </Button>
       </div>
 
-      {/* Urdu narrative — dense text uses Noto Sans Urdu, NOT Nastaliq (design.md §4.2). */}
+      {/* Report narrative — server-provided report content (schema.md §4), kept
+          as data; the English summary above carries the same verdict. */}
       {report.narrative_ur && (
-        <section className="bizro-card px-5 py-5" aria-label={pick('Report narrative', 'رپورٹ کا خلاصہ')}>
+        <section className="bizro-card px-5 py-5" aria-label="Report narrative">
           <p className="bizro-urdu text-base text-ink-line" lang="ur">
             {report.narrative_ur}
           </p>
@@ -249,32 +233,25 @@ export function CreditReadinessScreen() {
           exact numbers preserved in the visually-hidden table for SR users. */}
       <section className="bizro-card px-5 py-5" aria-labelledby="cashflow-title">
         <h2 id="cashflow-title" className="mb-4 flex flex-wrap items-baseline gap-x-2">
-          <T
-            en="Cash-flow by month"
-            ur="ماہانہ نقد رواں"
-            className="font-numerals text-lg font-semibold text-ink-line"
-            urClassName="text-base font-semibold text-ink-line"
-          />
+          <span className="font-numerals text-lg font-semibold text-ink-line">Cash-flow by month</span>
         </h2>
         <CashflowChart months={report.monthly_cashflow} />
         <table className="sr-only w-full border-collapse text-sm">
-          <caption className="text-left">
-            <T en="Monthly cash-flow, exact figures" ur="ماہانہ نقد رواں، درست اعداد" />
-          </caption>
+          <caption className="text-left">Monthly cash-flow, exact figures</caption>
           <thead>
             <tr className="text-left">
-              <th className="py-2 pr-2 font-semibold"><T en="Month" ur="مہینہ" /></th>
-              <th className="py-2 pr-2 text-right font-semibold"><T en="In" ur="آمدنی" /></th>
-              <th className="py-2 pr-2 text-right font-semibold"><T en="Out" ur="خرچ" /></th>
-              <th className="py-2 pr-2 text-right font-semibold"><T en="Net" ur="باقی" /></th>
-              <th className="py-2 text-right font-semibold"><T en="Entries" ur="انٹریاں" /></th>
+              <th className="py-2 pr-2 font-semibold">Month</th>
+              <th className="py-2 pr-2 text-right font-semibold">In</th>
+              <th className="py-2 pr-2 text-right font-semibold">Out</th>
+              <th className="py-2 pr-2 text-right font-semibold">Net</th>
+              <th className="py-2 text-right font-semibold">Entries</th>
             </tr>
           </thead>
           <tbody>
             {report.monthly_cashflow.map((m) => (
               <tr key={m.month}>
                 <th scope="row" className="py-2.5 pr-2 text-left font-semibold text-ink-line">
-                  {formatMonth(m.month)} · {urduMonth(m.month)}
+                  {formatMonth(m.month)}
                 </th>
                 <td className="py-2.5 pr-2 text-right">{formatPkr(m.inflow_pkd)}</td>
                 <td className="py-2.5 pr-2 text-right">{formatPkr(m.outflow_pkd)}</td>
@@ -294,45 +271,32 @@ export function CreditReadinessScreen() {
       <div className="grid gap-6 sm:grid-cols-2">
         <section className="bizro-card px-5 py-5" aria-labelledby="consistency-title">
           <h2 id="consistency-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
-            <T
-              en="Record consistency"
-              ur="ریکارڈ کی تسلسل"
-              className="font-numerals text-xl font-semibold text-ink-line"
-              urClassName="text-lg font-semibold text-ink-line"
-            />
+            <span className="font-numerals text-xl font-semibold text-ink-line">Record consistency</span>
           </h2>
           <dl className="flex flex-col gap-2 text-sm text-ink-line">
-            <StatRow en="Months of records" ur="مہینوں کا ریکارڈ" value={`${report.consistency.months_active}`} />
+            <StatRow label="Months of records" value={`${report.consistency.months_active}`} />
             <StatRow
-              en="Entries per week (avg)"
-              ur="ہفتہ وار انٹریاں"
+              label="Entries per week (avg)"
               value={`${report.consistency.avg_entries_per_week}`}
             />
             <StatRow
-              en="Longest gap"
-              ur="سب سے لمبا وقفہ"
-              value={`${report.consistency.longest_gap_days} ${pick(
-                report.consistency.longest_gap_days === 1 ? 'day' : 'days',
-                report.consistency.longest_gap_days === 1 ? 'دن' : 'دن',
-              )}`}
+              label="Longest gap"
+              value={`${report.consistency.longest_gap_days} ${
+                report.consistency.longest_gap_days === 1 ? 'day' : 'days'
+              }`}
             />
           </dl>
         </section>
 
         <section className="bizro-card px-5 py-5" aria-labelledby="sourcing-title">
           <h2 id="sourcing-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
-            <T
-              en="AI sourcing"
-              ur="اے آئی ذرائع"
-              className="font-numerals text-xl font-semibold text-ink-line"
-              urClassName="text-lg font-semibold text-ink-line"
-            />
+            <span className="font-numerals text-xl font-semibold text-ink-line">AI sourcing</span>
           </h2>
           <div className="mb-3 flex items-center gap-3">
             <SealMark variant="verified" />
             <p className="text-sm text-ink-line">
               <span className="font-numerals text-2xl font-semibold">{aiSharePct}%</span>{' '}
-              <T en="of entries AI-parsed & confirmed" ur="انٹریاں اے آئی سے درج و تصدیق شدہ" />
+              of entries AI-parsed &amp; confirmed
               <br />
               <span className="text-xs opacity-75">
                 avg confidence {formatConfidence(report.sourcing.avg_confidence)} across{' '}
@@ -341,14 +305,12 @@ export function CreditReadinessScreen() {
             </p>
           </div>
           <ul className="flex flex-col gap-2 text-sm text-ink-line">
-            {SOURCE_ROWS.map(({ key, icon: Icon, en, ur }) => {
+            {SOURCE_ROWS.map(({ key, icon: Icon, label }) => {
               const s = report.sourcing.by_source[key];
               return (
                 <li key={key} className="flex items-center gap-2">
                   <Icon className="h-6 w-6 text-ink-green" />
-                  <span className="flex-1">
-                    <T en={en} ur={ur} />
-                  </span>
+                  <span className="flex-1">{label}</span>
                   <span className="font-numerals font-semibold">{s?.entries ?? 0}</span>
                   <span className="w-20 text-right text-xs opacity-75">
                     conf {formatConfidence(s?.avg_confidence ?? null)}
@@ -363,36 +325,25 @@ export function CreditReadinessScreen() {
       {/* Red flags — honest about what an officer would probe. */}
       <section className="bizro-card px-5 py-5" aria-labelledby="flags-title">
         <h2 id="flags-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
-          <T
-            en="Flags to review"
-            ur="خطرے کے نشانات"
-            className="font-numerals text-lg font-semibold text-ink-line"
-            urClassName="text-base font-semibold text-ink-line"
-          />
+          <span className="font-numerals text-lg font-semibold text-ink-line">Flags to review</span>
         </h2>
         {report.flags.length === 0 ? (
-          <p className="text-sm text-ink-line">
-            <T en="No flags in this period." ur="کوئی خطرہ نہیں" />
-          </p>
+          <p className="text-sm text-ink-line">No flags in this period.</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {report.flags.map((f) => {
-              const words = FLAG_WORDS[f.flag];
-              return (
-                <li key={f.flag} className="flex items-center gap-3 text-sm">
-                  <IconFlag className="h-7 w-7 text-ledger-red" />
-                  <span className="flex-1 text-ink-line">
-                    <span className="font-semibold">
-                      {words.en} × {f.count}
-                    </span>{' '}
-                    <span className="bizro-urdu" lang="ur">{words.ur}</span>
+            {report.flags.map((f) => (
+              <li key={f.flag} className="flex items-center gap-3 text-sm">
+                <IconFlag className="h-7 w-7 text-ledger-red" />
+                <span className="flex-1 text-ink-line">
+                  <span className="font-semibold">
+                    {FLAG_WORDS[f.flag]} × {f.count}
                   </span>
-                  <span className="font-mono text-xs text-ink-line opacity-70">
-                    {f.transaction_ids.length} refs
-                  </span>
-                </li>
-              );
-            })}
+                </span>
+                <span className="font-mono text-xs text-ink-line opacity-70">
+                  {f.transaction_ids.length} refs
+                </span>
+              </li>
+            ))}
           </ul>
         )}
       </section>
@@ -400,12 +351,9 @@ export function CreditReadinessScreen() {
       {/* Sourced line items with the audit-trail drill-down (design.md §7.2). */}
       <section aria-labelledby="lineitems-title">
         <h2 id="lineitems-title" className="mb-2 flex flex-wrap items-baseline gap-x-2 px-1">
-          <T
-            en="Sourced line items — tap for audit trail"
-            ur="تفصیل دیکھنے کے لیے ٹیپ کریں"
-            className="font-numerals text-lg font-semibold text-ink-line"
-            urClassName="text-base font-semibold text-ink-line"
-          />
+          <span className="font-numerals text-lg font-semibold text-ink-line">
+            Sourced line items — tap for audit trail
+          </span>
         </h2>
         <ul className="border-t-[1.5px] border-ink-line">
           {report.line_items.map((li) => {
@@ -425,13 +373,11 @@ export function CreditReadinessScreen() {
                 >
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="font-semibold text-ink-line">
-                        <T en={li.label} ur={li.label_ur} />
-                      </span>
+                      <span className="font-semibold text-ink-line">{li.label}</span>
                       {ai && <SealMark variant={li.audit.status === 'pending' ? 'pending' : 'verified'} />}
                     </span>
                     <span className="text-xs text-ink-line opacity-75">
-                      {formatMonth(li.month)} · {ai ? `${li.audit.model} · conf ${formatConfidence(li.audit.confidence)}` : pick('manual entry', 'دستی اندراج')}
+                      {formatMonth(li.month)} · {ai ? `${li.audit.model} · conf ${formatConfidence(li.audit.confidence)}` : 'manual entry'}
                     </span>
                   </span>
                   <AmountText
@@ -466,17 +412,14 @@ export function CreditReadinessScreen() {
       <footer className="px-1 pb-2 text-xs text-ink-line opacity-75">
         {report.mock ? (
           <p>
-            <span className="font-semibold"><T en="Demo report" ur="نمائشی رپورٹ" /></span>{' '}
-            <T
-              en="— deterministic fixture derived from demo transactions; no model was run. Live mode shows the generating model here."
-              ur="— ڈیمو لین دین سے بنائی گئی مستقل رپورٹ؛ کوئی ماڈل نہیں چلا۔ لائیو موڈ میں ماڈل کا نام یہاں نظر آئے گا۔"
-            />
+            <span className="font-semibold">Demo report</span>{' '}
+            — deterministic fixture derived from demo transactions; no model was run. Live mode shows the generating model here.
           </p>
         ) : (
           <p>
-            <T en="Generated by" ur="تیار کردہ" />{' '}
+            Generated by{' '}
             <span className="font-semibold">{report.model ?? 'the reporting model'}</span>{' '}
-            <T en="via Alibaba Cloud Model Studio" ur="علی بابا کلاؤڈ ماڈل اسٹوڈیو سے" /> · {report.generated_at}
+            via Alibaba Cloud Model Studio · {report.generated_at}
           </p>
         )}
       </footer>
@@ -489,12 +432,10 @@ function toneForTransaction(id: string, byId: Map<string, Transaction>): AmountT
   return t ? toneForKind(t.kind) : 'neutral';
 }
 
-function StatRow({ en, ur, value }: { en: string; ur: string; value: string }) {
+function StatRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="bizro-rule-h flex items-baseline justify-between gap-3 pb-1.5 last:border-b-0">
-      <dt>
-        <T en={en} ur={ur} />
-      </dt>
+      <dt>{label}</dt>
       <dd className="font-numerals text-base font-semibold">{value}</dd>
     </div>
   );

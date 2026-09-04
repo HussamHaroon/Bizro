@@ -4,14 +4,8 @@
    React) so the orchestrator can merge these strings into content.ts's
    `mithu` section and hand them to GuideMithu / SfxToggle as props.
 
-   Language law (same triad as site-i18n.tsx):
-     en    — pure English. Zero Urdu/Arabic-script characters, zero
-             roman-Urdu loan words.
-     mixed — the house voice: English copy with Urdu-script brand accents
-             (a short Urdu fragment appended after " · ").
-     ur    — full Urdu, rendered in Nastaliq by the site's ur-mode CSS.  */
-
-export type Lang = "ur" | "en" | "mixed";
+   Language law (owner directive 2026-09-04): the site is ENGLISH-ONLY.
+   Short, friendly sentences a first-time visitor reads at a glance. */
 
 export interface MithuGuideCopy {
   /** Four rotating guide tips. Each bubble-open shows the next one, cycling. */
@@ -24,38 +18,14 @@ export interface MithuGuideCopy {
   sfxOff: string;
 }
 
-export const MITHU_GUIDE_COPY: Record<Lang, MithuGuideCopy> = {
-  en: {
-    tips: [
-      "Send a voice note — I do the typing.",
-      "Receipt photo? I'll read it.",
-      "Every entry gets a stamp.",
-      "Your ledger becomes credit history.",
-    ],
-    bubbleLabel: "Mithu's guide tip",
-    sfxOn: "Sound on",
-    sfxOff: "Sound off",
-  },
-  mixed: {
-    tips: [
-      "Send a voice note — I do the typing · بولنا آپ، لکھنا میں",
-      "Receipt photo? I'll read it · رسید پڑھنا میرا کام",
-      "Every entry gets a stamp · ہر اندراج پر مہر",
-      "Your ledger becomes credit history · کھاتہ ہی ساکھ",
-    ],
-    bubbleLabel: "Mithu · مٹھو کا ٹپ",
-    sfxOn: "Sound on · آواز چالو",
-    sfxOff: "Sound off · آواز بند",
-  },
-  ur: {
-    tips: [
-      "وائس نوٹ بھیجیں — ٹائپنگ میرا کام",
-      "رسید کی تصویر؟ میں پڑھ لوں گا",
-      "ہر اندراج پر مہر لگتی ہے",
-      "آپ کا کھاتہ ہی آپ کی کریڈٹ تاریخ ہے",
-    ],
-    bubbleLabel: "مٹھو کا ٹپ",
-    sfxOn: "آواز چالو",
-    sfxOff: "آواز بند",
-  },
+export const MITHU_COPY: MithuGuideCopy = {
+  tips: [
+    "Send a voice note — I do the typing.",
+    "Got a receipt photo? I'll read it.",
+    "Every entry gets a stamp.",
+    "Your ledger becomes your credit history.",
+  ],
+  bubbleLabel: "Mithu's guide tip",
+  sfxOn: "Sound on",
+  sfxOff: "Sound off",
 };

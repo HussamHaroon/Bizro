@@ -7,7 +7,6 @@
 
 import { useSyncExternalStore } from 'react';
 import { api, clientSnapshot, subscribeClient } from '../api/client';
-import { T } from '../i18n';
 
 export function MockBanner() {
   useSyncExternalStore(subscribeClient, clientSnapshot);
@@ -17,10 +16,7 @@ export function MockBanner() {
       role="status"
       className="bizro-no-print border-b-[3px] border-ink-line bg-fill-gold px-4 py-2 text-center text-sm font-semibold text-ink-line"
     >
-      <T
-        en="Live server unreachable — showing clearly-labeled demo data"
-        ur="لائیو سرور دستیاب نہیں — نمائشی ڈیٹا دکھایا جا رہا ہے"
-      />
+      Live server unreachable — showing clearly-labeled demo data
     </p>
   );
 }

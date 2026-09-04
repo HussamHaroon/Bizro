@@ -7,11 +7,12 @@ import "@fontsource/ibm-plex-sans/600.css";
 import "@fontsource/ibm-plex-sans/700.css";
 import "@fontsource/zilla-slab/600.css";
 import "@fontsource/zilla-slab/700.css";
+/* Nastaliq stays loaded for the one real-data case: the live webhook's Urdu
+   confirmation/reply bubbles (server data, shown as-is — honesty law). */
 import "@fontsource/noto-nastaliq-urdu/400.css";
 import "@fontsource/noto-nastaliq-urdu/700.css";
 
 import "./styles.css";
-import { SiteLangProvider } from "./site-i18n";
 import { attachButtonSfx } from "./sfx";
 import App from "./App";
 
@@ -22,8 +23,6 @@ attachButtonSfx();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <SiteLangProvider>
-      <App />
-    </SiteLangProvider>
+    <App />
   </StrictMode>,
 );

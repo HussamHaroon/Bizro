@@ -1,8 +1,14 @@
-"""Urdu narrative synthesis — the ONLY place a model touches the report.
+"""Narrative synthesis — the ONLY place a model touches the report.
+
+Owner ruling (2026-09-04): the loan officer reads ENGLISH, so the narrative is
+simple English — short sentences, everyday words. The stored key stays
+`narrative_ur` (DB column + report JSON contract keep the historical name; only
+the content changed).
 
 Receives finished Aggregates + Scored (never raw rows), returns prose. Without
-DASHSCOPE_API_KEY: deterministic templated Urdu, clearly marked mock (D0-3/D0-8).
-On any API error: same labeled fallback — narrative never blocks the report.
+DASHSCOPE_API_KEY: deterministic templated English, clearly marked mock
+(D0-3/D0-8). On any API error: same labeled fallback — narrative never blocks
+the report.
 """
 
 from __future__ import annotations
@@ -14,19 +20,34 @@ from .aggregates import Aggregates
 from .rubric import Scored
 
 SystemPromptUr = (
-    "آپ مائیکرو فائنانس کے لیو آفیسر کے لیے اردو میں مختصر رپورٹ لکھتے ہیں۔ "
-    "صرف دیے گئے اعداد و شمار استعمال کریں۔ کوئی نیا عدد نہ بنائیں۔ "
-    "تین سے چار جملے لکھیں۔"
+    "You write a short credit report summary in simple English for a microfinance "
+    "loan officer. Use only the numbers given. Do not invent new numbers. "
+    "Write three to four short sentences with everyday words."
 )
+
+# rubric.py (not editable here) keeps Urdu band labels for legacy keys; the
+# narrative must be English, so map the band to simple English words locally.
+_BAND_LABELS_EN = {
+    "ready": "ready for a loan",
+    "nearly": "almost ready for a loan",
+    "not_yet": "not ready for a loan yet",
+    "insufficient_data": "not enough data to decide",
+}
+
+
+def _band_label_en(scored: Scored) -> str:
+    return _BAND_LABELS_EN.get(scored.band, scored.band)
 
 
 def _template_ur(agg: Aggregates, scored: Scored, merchant: str) -> str:
+    """Deterministic simple-English fallback (mock-marked by the caller)."""
     return (
-        f"{merchant} کے رکارڈ کا جائزہ: اس عرصے میں کل {agg.total_entries} اندراجات "
-        f"({agg.weeks_active} ہفتوں میں) درج ہوئے۔ خرچ PKR {agg.cash_out:,.0f}، "
-        f"آمدنی PKR {agg.cash_in:,.0f}۔ اُدھار ابھی PKR {agg.udhar_outstanding:,.0f} "
-        f"وصول ہونا ہے۔ درج معلومات کا میڈین اعتماد {agg.median_confidence or 0:.2f} ہے۔ "
-        f"مجموعی درجہ بندی: {scored.label_ur}۔"
+        f"Review of {merchant}'s record: {agg.total_entries} entries were logged "
+        f"in this period, across {agg.weeks_active} weeks. Spending was "
+        f"PKR {agg.cash_out:,.0f} and income was PKR {agg.cash_in:,.0f}. "
+        f"Credit of PKR {agg.udhar_outstanding:,.0f} is still to be collected. "
+        f"The median confidence of the data is {agg.median_confidence or 0:.2f}. "
+        f"Overall rating: {_band_label_en(scored)}."
     )
 
 
@@ -58,7 +79,7 @@ def _call_reasoning_model(payload: dict) -> str | None:
                     {
                         "role": "user",
                         "content": (
-                            "ان اعداد و شمار کی بنیاد پر اردو خلاصہ لکھیں "
+                            "Write a simple English summary from these numbers "
                             "(JSON):\n" + json.dumps(payload, ensure_ascii=False)
                         ),
                     },
@@ -78,7 +99,8 @@ def _call_reasoning_model(payload: dict) -> str | None:
 def build_narrative(
     agg: Aggregates, scored: Scored, merchant: str
 ) -> tuple[str, bool]:
-    """Returns (narrative_ur, is_mock)."""
+    """Returns (narrative_ur, is_mock). The key name is historical — the text
+    is simple English now."""
     payload = {
         "merchant": merchant,
         "total_entries": agg.total_entries,

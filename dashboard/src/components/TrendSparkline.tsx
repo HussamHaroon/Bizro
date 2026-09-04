@@ -9,7 +9,6 @@
    trend. */
 
 import type { ReadinessHistoryPoint } from '../types/schema';
-import { useT } from '../i18n';
 
 export interface TrendSparklineProps {
   points: ReadinessHistoryPoint[];
@@ -21,7 +20,6 @@ const H = 40;
 const PAD = 4;
 
 export function TrendSparkline({ points, className = '' }: TrendSparklineProps) {
-  const { pick } = useT();
   if (points.length < 2) return null;
   const step = (W - PAD * 2) / (points.length - 1);
   const y = (score: number): number =>
@@ -30,11 +28,7 @@ export function TrendSparkline({ points, className = '' }: TrendSparklineProps) 
   const last = points[points.length - 1];
   const first = points[0];
   const trendWord =
-    last.score > first.score
-      ? pick('rising', 'بڑھ رہا ہے')
-      : last.score < first.score
-        ? pick('falling', 'گر رہا ہے')
-        : pick('steady', 'برابر ہے');
+    last.score > first.score ? 'rising' : last.score < first.score ? 'falling' : 'steady';
 
   return (
     <svg
@@ -42,7 +36,7 @@ export function TrendSparkline({ points, className = '' }: TrendSparklineProps) 
       className={`h-10 w-24 shrink-0 ${className}`.trim()}
       role="img"
       focusable="false"
-      aria-label={pick('readiness over time', 'وقت کے ساتھ تیاری')}
+      aria-label="readiness over time"
     >
       {/* baseline rule — 1px ink at 20% (D4-1 gridline token) */}
       <line
@@ -71,7 +65,7 @@ export function TrendSparkline({ points, className = '' }: TrendSparklineProps) 
         strokeLinejoin="miter"
       >
         <title>
-          {pick('readiness over time', 'وقت کے ساتھ تیاری')} · {first.score} → {last.score} ({trendWord})
+          readiness over time · {first.score} → {last.score} ({trendWord})
         </title>
       </polyline>
       {/* latest point marker — where the seal gauge's score came from (D4-1:

@@ -36,33 +36,39 @@ logger = logging.getLogger("bizro.webhook")
 
 router = APIRouter()
 
+# Simple English for every merchant-facing reply (owner ruling 2026-09-04).
+# Constant names keep their historical *_UR suffixes — DB columns, stored
+# outbound kinds, and API consumers depend on the names, not the language.
 HELP_REPLY_UR = (
-    "bizro کو آواز یا تصویر بھیجیں — بول کر لین دین لکھیں، یا رسید کی تصویر بھیجیں۔ "
-    "تصدیق کے لیے '1' اور رد کے لیے '0' لکھیں۔"
+    "Send Bizro a voice note or a photo. Speak your sale, expense, or credit "
+    "entry, or send a picture of a receipt. "
+    "Reply '1' to confirm an entry and '0' to remove it."
 )
 
 MEDIA_INVALID_REPLY_UR = (
-    "فائل موصول نہیں ہو سکی یا بہت بڑی ہے۔ براہِ کرم دوبارہ چھوٹی فائل بھیجیں۔"
+    "We could not read that file, or it was too big. "
+    "Please send a smaller file and try again."
 )
 
 # --- onboarding (first contact) ----------------------------------------------
 # A merchant whose TEXT message is exactly one of these (case-insensitive;
 # English or Urdu) gets a short two-message onboarding sequence instead of the
-# generic help line. "help" shares the same sequence by design.
+# generic help line. "help" shares the same sequence by design. The Urdu
+# trigger words stay: inbound language is the merchant's choice.
 ONBOARDING_TRIGGER_WORDS = frozenset(
     {"hello", "hi", "start", "help", "ہیلو", "شروع"}
 )
 
 ONBOARDING_WELCOME_UR = (
-    "السلام علیکم! Bizro میں خوش آمدید۔ Bizro آپ کا آواز والا کھاتا ہے: آپ وائس نوٹ "
-    "یا رسید کی تصویر بھیجیں، ہم آپ کا لین دین لکھ دیتے ہیں — اور اسی ریکارڈ سے آپ کی "
-    "کریڈٹ ہسٹری بھی بنتی ہے۔"
+    "Welcome to Bizro! Bizro is your voice ledger. Send a voice note or a "
+    "receipt photo, and we write the entry for you. The same record also "
+    "builds your credit history."
 )
 
 ONBOARDING_HOWTO_UR = (
-    "استعمال کا طریقہ: ۱) سیل یا ادھار کے بارے میں وائس نوٹ بھیجیں۔ "
-    "۲) خریداری کی رسید کی تصویر بھیجیں۔ "
-    "۳) جب اندراج آئے تو درست ہونے پر '1' لکھ کر تصدیق کریں۔"
+    "How to use it: 1) Send a voice note about a sale or credit. "
+    "2) Send a photo of a purchase receipt. "
+    "3) When an entry comes in, reply '1' if it is correct."
 )
 
 # Sent (and stored) in this order.
@@ -309,7 +315,7 @@ def _ingest_media(
                 str(path), merchant, occurred_at, digest, history=history
             )
     except Exception as exc:
-        # §6.4/F-6: ReceiptRejected carries a polite Urdu reply — send it,
+        # §6.4/F-6: ReceiptRejected carries a polite reply — send it,
         # persist nothing, and report the message handled. Anything else
         # propagates to the webhook's per-message error handler.
         rejection_reply = dispatch.rejection_reply_from_exception(exc)

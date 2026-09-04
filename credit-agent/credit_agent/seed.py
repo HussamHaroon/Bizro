@@ -8,6 +8,8 @@ Two merchant profiles so the loan-officer picker demos RANGE (design.md §4.5):
   hovering near zero → scores "nearly"/"not_yet", never "ready".
 Deterministic: fixed RNG seed per profile (bizro-testability). Used by tests
 AND by scripts/seed_demo.py which seeds BOTH merchants.
+Entries run up to AND INCLUDING today: the newest entry is a random 1-12 hours
+before seeding time — never in the future.
 """
 
 from __future__ import annotations
@@ -128,7 +130,10 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
 
         def add_tx(day_offset, kind, amount, source, conf, flag="none", status="confirmed",
                    desc="", customer=None):
-            when = now - timedelta(days=day_offset, hours=rng.randint(0, 12))
+            # day_offset 0 = TODAY: a random 1-12h earlier than `now`, so the
+            # newest entry lands today (or late yesterday) — never in the future
+            # (owner ruling: demo history runs up to and including today).
+            when = now - timedelta(days=day_offset, hours=rng.randint(1, 12))
             media_id = None
             raw_out = None
             if source != "manual":
@@ -160,7 +165,7 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
 
 
 def _gen_healthy(rng, add_tx, days: int) -> None:
-    for day in range(days, 0, -1):
+    for day in range(days, -1, -1):  # day 0 = today (inclusive newest cap)
         # 5-6 entries/week: sales every ~1.2 days, udhar ~weekly, receipts ~weekly
         if day % 2 == 0:
             add_tx(day, "sale", rng.uniform(800, 4500), "voice",
@@ -187,7 +192,7 @@ def _gen_healthy(rng, add_tx, days: int) -> None:
 
 def _gen_contrast(rng, add_tx, days: int) -> None:
     """Bilal Ki Dukan — sparse, patchy, flagged; net cash-flow ~zero (negative)."""
-    for day in range(days, 0, -1):
+    for day in range(days, -1, -1):  # day 0 = today (inclusive newest cap)
         if CONTRAST_GAP[0] <= day <= CONTRAST_GAP[1]:
             continue  # logging lapsed ~12 days mid-period
         if day % 4 == 0:  # ~3 sales/week, middling confidence

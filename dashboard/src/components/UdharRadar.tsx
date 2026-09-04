@@ -18,8 +18,7 @@ import type { UdharOutstanding } from '../types/schema';
 import { AmountText } from './AmountText';
 import { Button } from './Button';
 import { IconCheck, IconCustomer, IconRadar, IconWhatsApp } from './icons';
-import { formatAmount, toNumerals } from '../lib/format';
-import { T, useNumerals, useT } from '../i18n';
+import { formatPkr } from '../lib/format';
 
 export interface UdharRadarProps {
   items: UdharOutstanding[];
@@ -27,8 +26,6 @@ export interface UdharRadarProps {
 }
 
 export function UdharRadar({ items, className = '' }: UdharRadarProps) {
-  const { pick } = useT();
-  const { numerals } = useNumerals(); // schema.md §8 digit style (D5-2)
   const total = items.reduce((s, u) => s + u.outstanding_pkd, 0);
   const top3 = items.slice(0, 3);
   const max = top3.length ? top3[0].outstanding_pkd : 0;
@@ -41,27 +38,20 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
         <IconRadar className="h-9 w-9 text-ledger-red" />
         <div className="min-w-0">
           <h2 id="udhar-radar-title" className="flex flex-wrap items-baseline gap-x-2">
-            <T
-              en="Udhar Radar"
-              ur="ادھار راڈار"
-              className="font-numerals text-[22px] font-semibold text-ink-line"
-              urClassName="text-[22px] font-semibold text-ink-line"
-            />
+            <span className="font-numerals text-[22px] font-semibold text-ink-line">Udhar Radar</span>
           </h2>
-          <p className="text-xs text-ink-line opacity-75">
-            <T en="Who owes you" ur="کون مقروض ہے" />
-          </p>
+          <p className="text-xs text-ink-line opacity-75">Who owes you</p>
         </div>
         {total > 0 && (
           <div className="ml-auto text-right">
-            <AmountText value={total} tone="out" size="lg" showWords />
+            <AmountText value={total} tone="out" size="lg" />
           </div>
         )}
       </header>
 
       {items.length === 0 ? (
         <p className="px-1 py-3 text-sm text-ink-line">
-          <T en="No udhar outstanding — everyone has paid up." ur="کوئی ادھار باقی نہیں" />
+          No udhar outstanding — everyone has paid up.
         </p>
       ) : (
         <ul className="flex flex-col gap-4">
@@ -75,18 +65,18 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
                 <span className="flex items-center gap-2">
                   <span className="text-right">
                     <span className="font-numerals text-lg font-semibold tabular-nums text-ledger-red">
-                      {formatAmount(u.outstanding_pkd, numerals)}
+                      {formatPkr(u.outstanding_pkd)}
                     </span>
                   </span>
                   {/* One-tap polite reminder — icon + word (§4.7), 48px touch. */}
                   <button
                     type="button"
                     onClick={() => setRemindFor(u)}
-                    aria-label={pick(`Remind ${u.name} politely`, `${u.name} کو نرم یاد دہانی`)}
+                    aria-label={`Remind ${u.name} politely`}
                     className="bizro-btn-press inline-flex min-h-touch items-center gap-1.5 rounded-chip border-[3px] border-ink-line bg-paper-raised px-3 text-sm font-semibold text-ink-line hover:bg-paper"
                   >
                     <IconWhatsApp className="h-5 w-5 shrink-0 text-ink-green" />
-                    <T en="Remind" ur="یاد دہانی" />
+                    Remind
                   </button>
                 </span>
               </div>
@@ -96,10 +86,7 @@ export function UdharRadar({ items, className = '' }: UdharRadarProps) {
               <div
                 className="h-3.5 w-full rounded-chip bg-gridline"
                 role="img"
-                aria-label={pick(
-                  `${u.name}: ${formatAmount(u.outstanding_pkd, numerals)} outstanding`,
-                  `${u.name}: ادھار ${toNumerals(u.outstanding_pkd.toLocaleString('en-PK'), numerals)} روپے`,
-                )}
+                aria-label={`${u.name}: ${formatPkr(u.outstanding_pkd)} outstanding`}
               >
                 <div
                   className="h-full rounded-chip border-2 border-ink-line bg-fill-red transition-[width] duration-200 ease-out motion-reduce:transition-none"
@@ -122,9 +109,10 @@ type ReminderPhase = 'drafting' | 'ready' | 'error';
 
 /** Draft-review modal: shows the server-drafted polite Urdu reminder with
     Copy (clipboard + "Copied ✓") and Regenerate; drafting and errors are
-    inline states — no alert(), and a 502 becomes a Retry, never fake text. */
+    inline states — no alert(), and a 502 becomes a Retry, never fake text.
+    The draft TEXT itself is server content aimed at the customer's WhatsApp,
+    so it stays Urdu; every chrome word around it is English. */
 function ReminderModal({ item, onClose }: { item: UdharOutstanding; onClose: () => void }) {
-  const { pick } = useT();
   const [phase, setPhase] = useState<ReminderPhase>('drafting');
   const [draft, setDraft] = useState<ReminderDraft | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
@@ -223,16 +211,16 @@ function ReminderModal({ item, onClose }: { item: UdharOutstanding; onClose: () 
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 id="reminder-draft-title" className="text-lg font-semibold text-ink-line">
-              <T en="Polite reminder" ur="نرم یاد دہانی" />
+              Polite reminder
             </h3>
             <p className="truncate text-xs text-ink-line opacity-75">
-              <T en={`for ${item.name}`} ur={`${item.name} کے لیے`} />
+              for {item.name}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label={pick('Close', 'بند کریں')}
+            aria-label="Close"
             className="bizro-btn-press inline-flex min-h-touch min-w-touch items-center justify-center rounded-chip border-[3px] border-ink-line bg-paper-raised pb-1 text-xl font-semibold leading-none text-ink-line hover:bg-paper"
           >
             ×
@@ -240,26 +228,23 @@ function ReminderModal({ item, onClose }: { item: UdharOutstanding; onClose: () 
         </header>
 
         {phase === 'drafting' && (
-          <p className="bizro-urdu animate-pulse py-4 text-center text-sm text-ink-line" lang="ur">
-            <T en="Drafting a polite reminder…" ur="نرم یاد دہانی لکھی جا رہی ہے…" />
+          <p className="animate-pulse py-4 text-center text-sm text-ink-line">
+            Drafting a polite reminder…
           </p>
         )}
 
         {phase === 'error' && (
           <div className="flex flex-col gap-3">
             <p role="alert" className="text-sm font-semibold text-ledger-red">
-              <T
-                en="The reminder could not be drafted — the AI service did not answer. Please try again."
-                ur="یاد دہانی تیار نہیں ہو سکی — براہِ کرم دوبارہ کوشش کریں۔"
-              />
+              The reminder could not be drafted — the AI service did not answer. Please try again.
             </p>
             {errorDetail && <p className="text-xs text-ink-line opacity-70">{errorDetail}</p>}
             <div className="flex flex-wrap gap-2.5">
               <Button variant="primary" icon={<IconRadar className="h-5 w-5" />} onClick={() => void run()}>
-                <T en="Retry" ur="دوبارہ" />
+                Retry
               </Button>
               <Button variant="secondary" onClick={onClose}>
-                <T en="Close" ur="بند کریں" />
+                Close
               </Button>
             </div>
           </div>
@@ -278,14 +263,11 @@ function ReminderModal({ item, onClose }: { item: UdharOutstanding; onClose: () 
             </p>
             {draft.mock && (
               <p className="text-xs text-ink-line opacity-70">
-                <T
-                  en="Sample template (offline demo) — not an AI draft."
-                  ur="نمونہ ٹیمپلیٹ (آف لائن ڈیمو) — اے آئی کا مسودہ نہیں۔"
-                />
+                Sample template (offline demo) — not an AI draft.
               </p>
             )}
             <p className="text-xs text-ink-line opacity-75">
-              <T en="Copy it into WhatsApp and send it yourself." ur="اسے کاپی کر کے واٹس ایپ پر خود بھیجیں۔" />
+              Copy it into WhatsApp and send it yourself.
             </p>
             <div className="flex flex-wrap items-center gap-2.5">
               <Button
@@ -293,10 +275,10 @@ function ReminderModal({ item, onClose }: { item: UdharOutstanding; onClose: () 
                 icon={copied ? <IconCheck className="h-5 w-5" /> : undefined}
                 onClick={() => void copyDraft()}
               >
-                {copied ? <T en="Copied ✓" ur="نقل ہو گئی ✓" /> : <T en="Copy" ur="کاپی" />}
+                {copied ? 'Copied ✓' : 'Copy'}
               </Button>
               <Button variant="secondary" icon={<IconRadar className="h-5 w-5" />} onClick={() => void run()}>
-                <T en="Regenerate" ur="دوبارہ لکھیں" />
+                Regenerate
               </Button>
             </div>
           </>

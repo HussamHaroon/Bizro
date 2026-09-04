@@ -212,7 +212,7 @@ def test_f1_unknown_amount_sends_clarification_persists_nothing(client, monkeypa
     assert out["ok"] is True, "§6.9: message handled successfully, not internal error"
     assert out.get("rejected") is True and out.get("persisted") is False
     assert len(_txs_for_wa(wa)) == 0
-    assert any("رقم" in b for b in _outbound_for_wa(wa)), "clarification must be sent"
+    assert any("How much" in b for b in _outbound_for_wa(wa)), "clarification must be sent"
 
 
 def test_f1_pipeline_null_amount_result_is_rejected(client, monkeypatch):
@@ -231,7 +231,7 @@ def test_f1_pipeline_null_amount_result_is_rejected(client, monkeypatch):
                        "confidence": 0.2, "raw_output": {}},
             "flag": "low_confidence",
             "status": "pending",
-            "confirmation_ur": "رقم کتنی تھی؟",
+            "confirmation_ur": "How much was the amount?",
         }
 
     monkeypatch.setitem(disp._pipeline_cache, "voice_agent.pipeline.process_voice_note",
@@ -239,7 +239,7 @@ def test_f1_pipeline_null_amount_result_is_rejected(client, monkeypatch):
     r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
     out = r.json()["results"][0]
     assert out["ok"] is True and out["persisted"] is False
-    assert out["reply_ur"] == "رقم کتنی تھی؟"
+    assert out["reply_ur"] == "How much was the amount?"
     assert len(_txs_for_wa(wa)) == 0
 
 
@@ -249,14 +249,14 @@ def test_f1_rejected_payload_dict_sends_reply_ur(client, monkeypatch):
     wa = _wa("92378")
 
     def rejects(path, merchant, occurred_at):
-        return {"rejected": True, "reply_ur": "یہ رسید نہیں لگتی۔"}
+        return {"rejected": True, "reply_ur": "This does not look like a receipt."}
 
     monkeypatch.setitem(disp._pipeline_cache, "vision_agent.pipeline.process_receipt_image",
                         rejects)
     r = client.post("/webhook/whatsapp", json=_image_payload(wa))
     out = r.json()["results"][0]
     assert out["ok"] is True and out["persisted"] is False
-    assert out["reply_ur"] == "یہ رسید نہیں لگتی۔"
+    assert out["reply_ur"] == "This does not look like a receipt."
     assert len(_txs_for_wa(wa)) == 0
 
 

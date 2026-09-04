@@ -104,7 +104,7 @@ def test_export_csv_content_type_disposition_bom(client):
     mid = _new_merchant(_wa("92500"))
     _seed_tx(mid, "sale", 1500.5, "2026-08-20T10:00:00+00:00",
              desc="cash sale", counterparty="Walk-in",
-             confirmation_ur="فروخت 1500 روپے۔")
+             confirmation_ur="Cash sale: 1500 rupees.")
 
     r = client.get(f"/api/merchants/{mid}/transactions/export.csv")
     assert r.status_code == 200, r.text
@@ -126,7 +126,7 @@ def test_export_csv_row_values_and_quoting_roundtrip(client):
     desc = 'chai, patti ("premium")\nsecond line — رات کی فروخت'
     _seed_tx(mid, "udhar_given", 5000, "2026-08-21T19:03:00+00:00",
              desc=desc, counterparty="Ahmad", confidence=0.87,
-             confirmation_ur="احمد کو 5000 روپے ادھر دیے۔ کیا یہ درست ہے؟")
+             confirmation_ur="Got it. 5000 rupees credit to Ahmad. Is this correct?")
 
     r = client.get(f"/api/merchants/{mid}/transactions/export.csv")
     assert r.status_code == 200
@@ -143,7 +143,7 @@ def test_export_csv_row_values_and_quoting_roundtrip(client):
     assert row["source_model"] == "qwen3.5-omni-plus"
     assert row["confidence"] == "0.870"
     assert row["status"] == "confirmed"
-    assert row["confirmation_ur"] == "احمد کو 5000 روپے ادھر دیے۔ کیا یہ درست ہے؟"
+    assert row["confirmation_ur"] == "Got it. 5000 rupees credit to Ahmad. Is this correct?"
     uuid.UUID(row["transaction_id"])  # parseable id → audit drill-down works
     with db_session() as s:
         assert s.get(Transaction, uuid.UUID(row["transaction_id"])) is not None
@@ -249,7 +249,7 @@ def test_demo_flow_local_full_run_ok(capsys):
     mid = _new_merchant(wa, name="Demo Flow Store")
     _seed_tx(mid, "sale", 2500, "2026-08-28T10:00:00+00:00", desc="cash sale")
     _seed_tx(mid, "expense", 600, "2026-08-27T10:00:00+00:00", desc="restock",
-             source="photo", confirmation_ur="خرچ 600 روپے۔")
+             source="photo", confirmation_ur="Expense: 600 rupees.")
 
     rc = demo_flow.main(["--local", "--merchant", str(mid), "--wa-id", wa])
     out = capsys.readouterr().out
@@ -260,7 +260,7 @@ def test_demo_flow_local_full_run_ok(capsys):
     assert "MOCK MODE timings; live timings need DASHSCOPE_API_KEY" in out
     assert "ms (" in out, "per-step wall-clock timing missing"
     assert "JUDGE SEES (phone)" in out and "JUDGE SEES (dashboard)" in out
-    assert "درست ہے" in out, "one-tap buttons must be shown for step 1"
+    assert "It's correct" in out, "one-tap buttons must be shown for step 1"
     assert str(mid) in out, "--merchant must be echoed in the timeline header"
 
 
@@ -351,6 +351,6 @@ def test_nudge_from_wire_rows_uses_real_nudge_math():
          "occurred_at": now.isoformat(), "status": "pending", "source": {"type": "voice"}},
     ]
     nudge = demo_flow._nudge_from_wire_rows(str(mid), rows)
-    assert nudge["text_ur"].startswith("ہفتہ وار خلاصہ")
+    assert nudge["text_ur"].startswith("Weekly summary")  # English content, historical key
     assert nudge["stats"]["sales_this_week"] == 6000.0  # pending counts too (not rejected)
     assert nudge["stats"]["streak_weeks"] >= 1

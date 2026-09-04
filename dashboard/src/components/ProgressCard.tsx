@@ -10,9 +10,7 @@
    measurement, no layout reads — the image renders identically anywhere. */
 
 import { useEffect, useRef } from 'react';
-import { useNumerals, useT } from '../i18n';
-import { formatAmount } from '../lib/format';
-import type { NumeralStyle } from '../types/schema';
+import { formatPkr } from '../lib/format';
 
 /** Full-size backing store of the share image (16:9 social card). */
 export const CARD_WIDTH = 1200;
@@ -43,13 +41,9 @@ function setTracking(ctx: CanvasRenderingContext2D, px: string): void {
   if ('letterSpacing' in ctx) ctx.letterSpacing = px;
 }
 
-/** Pure draw: stats (+ numeral style) in, painted 1200×675 card out. Same
-    inputs always produce the same image — no reads beyond the canvas itself. */
-export function drawProgressCard(
-  ctx: CanvasRenderingContext2D,
-  stats: WeekCardStats,
-  numerals: NumeralStyle = 'western',
-): void {
+/** Pure draw: stats in, painted 1200×675 card out. Same inputs always produce
+    the same image — no reads beyond the canvas itself. */
+export function drawProgressCard(ctx: CanvasRenderingContext2D, stats: WeekCardStats): void {
   ctx.save();
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
@@ -87,8 +81,8 @@ export function drawProgressCard(
   // Four stat blocks, 2×2 — gold accent square + word label + big slab numerals.
   const blocks: { x: number; y: number; label: string; value: string }[] = [
     { x: LEFT, y: 316, label: 'SALES', value: stats.salesCount.toLocaleString('en-PK') },
-    { x: 640, y: 316, label: 'MONEY IN', value: formatAmount(stats.moneyIn, numerals) },
-    { x: LEFT, y: 464, label: 'COLLECTED', value: formatAmount(stats.collected, numerals) },
+    { x: 640, y: 316, label: 'MONEY IN', value: formatPkr(stats.moneyIn) },
+    { x: LEFT, y: 464, label: 'COLLECTED', value: formatPkr(stats.collected) },
     { x: 640, y: 464, label: 'STREAK WEEKS', value: String(stats.streakWeeks) },
   ];
   for (const b of blocks) {
@@ -112,7 +106,7 @@ export function drawProgressCard(
 }
 
 /** The card at display size: fixed 1200×675 backing store, CSS-scaled to its
-    container. Redraws on stats/numeral changes and once webfonts settle. */
+    container. Redraws on stats changes and once webfonts settle. */
 export function ProgressCard({
   stats,
   className = '',
@@ -120,25 +114,23 @@ export function ProgressCard({
   stats: WeekCardStats;
   className?: string;
 }) {
-  const { pick } = useT();
-  const { numerals } = useNumerals();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
-    drawProgressCard(ctx, stats, numerals);
+    drawProgressCard(ctx, stats);
     // Webfonts settle after first paint — redraw once so the preview carries
     // the real IBM Plex Sans / Zilla Slab instead of the fallback stack.
     let alive = true;
     void document.fonts.ready.then(() => {
-      if (alive) drawProgressCard(ctx, stats, numerals);
+      if (alive) drawProgressCard(ctx, stats);
     });
     return () => {
       alive = false;
     };
-  }, [stats, numerals]);
+  }, [stats]);
 
   return (
     <canvas
@@ -146,10 +138,7 @@ export function ProgressCard({
       width={CARD_WIDTH}
       height={CARD_HEIGHT}
       role="img"
-      aria-label={pick(
-        'Weekly progress card: sales, money in, collected, streak weeks',
-        'ہفتہ کارڈ: فروخت، آمدنی، وصولی، ہفتوں کا سلسلہ',
-      )}
+      aria-label="Weekly progress card: sales, money in, collected, streak weeks"
       className={className}
     />
   );
