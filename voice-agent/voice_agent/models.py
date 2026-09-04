@@ -46,7 +46,9 @@ class RawOutput(BaseModel):
 class SourceBlock(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["voice", "photo", "manual"] = "voice"
+    # "text": typed WhatsApp message parsed by process_transcript (the DB
+    # CHECK ck_tx_source_type already accepts it — server/app/db.py migration).
+    type: Literal["voice", "photo", "manual", "text"] = "voice"
     media_id: str | None = None
     model: str | None = None
     confidence: float = Field(ge=0.0, le=1.0)  # required for AI-parsed entries (§7.2 audit)

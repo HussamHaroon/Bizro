@@ -131,7 +131,8 @@ class Transaction(Base):
         ),
         CheckConstraint("amount_pkd > 0", name="ck_tx_amount_positive"),
         CheckConstraint(
-            "source_type IN ('voice','photo','manual')", name="ck_tx_source_type"
+            "source_type IN ('voice','photo','manual','text')",
+            name="ck_tx_source_type",
         ),
         # schema.md §2: (merchant_id, occurred_at DESC)
         Index(
@@ -242,6 +243,10 @@ def _database_url() -> str:
 engine = create_engine(
     _database_url(),
     connect_args={"check_same_thread": False} if _database_url().startswith("sqlite") else {},
+    # pool_pre_ping: a Neon connection left idle across lambda freezes arrives
+    # with the SSL socket already closed; pinging on checkout swaps in a fresh
+    # connection instead of raising OperationalError mid-request.
+    pool_pre_ping=True,
 )
 
 if _database_url().startswith("sqlite"):
@@ -261,6 +266,65 @@ def init_db() -> None:
     get_settings().media_dir.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     _ensure_additive_columns()
+    _ensure_source_type_constraint()
+
+
+_SOURCE_TYPE_CHECK = "source_type IN ('voice','photo','manual','text')"
+
+
+def _ensure_source_type_constraint() -> None:
+    """Migrate ck_tx_source_type to accept 'text' (text-message parse pipeline).
+
+    Databases created before the text source type still carry the 3-value
+    CHECK, which rejects 'text' inserts. Postgres drops/re-adds the named
+    constraint; SQLite cannot alter constraints, so the table is rebuilt once
+    (rename → recreate from metadata → copy rows → drop old).
+    """
+    from sqlalchemy import inspect, text as sa_text
+
+    inspector = inspect(engine)
+    if not inspector.has_table("transactions"):
+        return
+
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as conn:
+            definition = conn.execute(
+                sa_text(
+                    "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                    "WHERE conname = 'ck_tx_source_type' "
+                    "AND conrelid = 'transactions'::regclass"
+                )
+            ).scalar()
+            if definition and "'text'" in str(definition):
+                return
+            conn.execute(
+                sa_text("ALTER TABLE transactions DROP CONSTRAINT IF EXISTS ck_tx_source_type")
+            )
+            conn.execute(
+                sa_text(
+                    f"ALTER TABLE transactions ADD CONSTRAINT ck_tx_source_type "
+                    f"CHECK ({_SOURCE_TYPE_CHECK})"
+                )
+            )
+        return
+
+    if engine.dialect.name == "sqlite":
+        with engine.begin() as conn:
+            ddl = conn.execute(
+                sa_text("SELECT sql FROM sqlite_master WHERE name = 'transactions'")
+            ).scalar()
+            if ddl and "'text'" in str(ddl):
+                return
+            conn.execute(sa_text("PRAGMA foreign_keys=OFF"))
+            conn.execute(
+                sa_text("ALTER TABLE transactions RENAME TO transactions_pre_text_source")
+            )
+            Base.metadata.tables["transactions"].create(bind=conn)
+            conn.execute(
+                sa_text("INSERT INTO transactions SELECT * FROM transactions_pre_text_source")
+            )
+            conn.execute(sa_text("DROP TABLE transactions_pre_text_source"))
+            conn.execute(sa_text("PRAGMA foreign_keys=ON"))
 
 
 def _ensure_additive_columns() -> None:

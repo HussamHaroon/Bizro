@@ -62,6 +62,7 @@ def pipeline_status() -> dict[str, str]:
     """For /health: which pipelines are real packages vs server fallbacks."""
     return {
         "voice_agent": "imported" if _load_pipeline_fn("voice-agent", "voice_agent.pipeline", "process_voice_note") else "server_fallback_mock",
+        "voice_agent_text": "imported" if _load_pipeline_fn("voice-agent", "voice_agent.pipeline", "process_transcript") else "server_fallback_mock",
         "vision_agent": "imported" if _load_pipeline_fn("vision-agent", "vision_agent.pipeline", "process_receipt_image") else "server_fallback_mock",
         "credit_agent": "imported" if _load_pipeline_fn("credit-agent", "credit_agent.report", "generate_report") else "server_fallback_mock",
     }
@@ -89,6 +90,41 @@ def process_voice_note(
     if fn is not None:
         return _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
     return _fallback_voice(audio_path, merchant, occurred_at, media_sha256)
+
+
+def process_transcript(
+    text: str, merchant: Merchant, occurred_at: datetime
+) -> dict[str, Any]:
+    """Typed WhatsApp text → schema.md §1 transaction dict (source.type "text").
+
+    Mirrors process_voice_note: lazy import of the voice-agent package, same
+    merchant_ctx shape, clearly-labeled server fallback when the package is
+    missing. Model-call exceptions (timeout/outage) propagate — the webhook
+    answers those with the busy reply, never with the parse-miss copy."""
+    fn = _load_pipeline_fn("voice-agent", "voice_agent.pipeline", "process_transcript")
+    merchant_ctx = {
+        "id": str(merchant.id),
+        "wa_id": merchant.wa_id,
+        "display_name": merchant.display_name,
+    }
+    if fn is not None:
+        return _call_text_pipeline(fn, text, merchant_ctx, occurred_at)
+    return _fallback_text(text, merchant, occurred_at)
+
+
+def _call_text_pipeline(
+    fn: PipelineFn, text: str, merchant_ctx: dict, occurred_at: datetime
+) -> dict:
+    """Call the text pipeline per its documented signature; retry once with an
+    ISO-string occurred_at on a call-boundary TypeError (same tolerance as
+    _call_with_occurred_at, but a TypeError raised INSIDE the pipeline body is
+    a real bug and propagates)."""
+    try:
+        return fn(text, merchant_ctx, occurred_at)
+    except TypeError as exc:
+        if exc.__traceback__ is None or exc.__traceback__.tb_next is not None:
+            raise
+    return fn(text, merchant_ctx, occurred_at.isoformat())
 
 
 def process_receipt_image(
@@ -230,6 +266,45 @@ def _fallback_voice(
                 ),
                 "audio_path": str(audio_path),
                 "audio_sha256": media_sha256,
+            },
+        },
+        "flag": "low_confidence",
+        "status": "pending",
+        "confirmation_ur": (
+            f"Got it. {amount} rupees credit to Ahmad. Is this correct? "
+            "[mock — voice_agent not merged]"
+        ),
+    }
+
+
+def _fallback_text(
+    text: str, merchant: Merchant, occurred_at: datetime
+) -> dict[str, Any]:
+    digest = sha256_bytes(text.encode("utf-8"))
+    amount = _synth_amount(digest, 1500, 9000)
+    return {
+        "kind": "udhar_given",
+        "amount_pkr": float(amount),
+        "currency": "PKR",
+        "counterparty": {"name": "Ahmad", "phone": None},
+        "description": "Udhar given to Ahmad (typed message)",
+        "item_lines": [],
+        "occurred_at": occurred_at,
+        "source": {
+            "type": "text",
+            "media_id": None,  # typed messages have no media row
+            "model": None,  # null: NOT a real model parse
+            "confidence": 0.55,  # below CONFIDENCE_CONFIRM_THRESHOLD → stays pending
+            "raw_output": {
+                "mock": True,
+                "generator": "server_fallback",
+                "note": (
+                    "SYNTHETIC server fallback — voice_agent package not merged yet; "
+                    "no model ran on this typed message."
+                ),
+                "transcript": text,
+                "typed_text": text,
+                "text_sha256": digest,
             },
         },
         "flag": "low_confidence",
@@ -448,14 +523,25 @@ def rejection_reply_from_exception(exc: Exception) -> str | None:
 
 
 def send_reply(
-    session: Session, merchant: Merchant, body: str, kind: str = "clarification"
+    session: Session,
+    merchant: Merchant,
+    body: str,
+    kind: str = "clarification",
+    transaction_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     """§6.9 clarification/rejection delivery: send via WhatsApp (or mock-log)
     AND persist the outbound_messages row. No transaction is persisted — the
-    caller never has one for this path."""
+    caller never has one for this path. `transaction_id` links the row to an
+    acted-on transaction when the reply answers one (confirm/reject replies);
+    the dashboard simulator renders replies from these rows."""
     sent = whatsapp_client.send_text(merchant.wa_id, body)
     session.add(
-        OutboundMessage(merchant_id=merchant.id, transaction_id=None, kind=kind, body=body)
+        OutboundMessage(
+            merchant_id=merchant.id,
+            transaction_id=transaction_id,
+            kind=kind,
+            body=body,
+        )
     )
     session.commit()
     return sent
@@ -573,9 +659,16 @@ _CONFIRM_WORDS = {"1", "haan", "han", "ji", "yes", "y", "درست", "ہاں", "�
 _REJECT_WORDS = {"0", "nahi", "na", "no", "n", "غلط", "نہیں", "نہیں"}
 
 
-def handle_text_reply(session: Session, merchant: Merchant, text: str) -> str | None:
-    """Minimal confirm/reject-by-reply. Returns the simple English reply to send,
-    or None if the text isn't a confirmation/rejection."""
+def handle_text_reply(
+    session: Session, merchant: Merchant, text: str
+) -> tuple[str | None, Transaction | None]:
+    """Minimal confirm/reject-by-reply. Returns (reply, acted_on_tx):
+    `reply` is the simple English answer to send, or None when the text isn't
+    a confirmation/rejection (caller then treats it as free text).
+
+    This function ONLY transitions the transaction; delivery AND the
+    outbound_messages audit row go through send_reply in the webhook — no
+    reply may ever reach the merchant without an outbound row."""
     normalized = text.strip().lower()
     # normalize Urdu punctuation variants
     normalized = normalized.replace("؟", "").replace("۔", "")
@@ -583,7 +676,7 @@ def handle_text_reply(session: Session, merchant: Merchant, text: str) -> str | 
     wants_confirm = any(normalized == w or normalized.startswith(w + " ") for w in _CONFIRM_WORDS)
     wants_reject = any(normalized == w or normalized.startswith(w + " ") for w in _REJECT_WORDS)
     if not (wants_confirm or wants_reject):
-        return None
+        return None, None
 
     tx = session.scalar(
         select(Transaction)
@@ -592,7 +685,7 @@ def handle_text_reply(session: Session, merchant: Merchant, text: str) -> str | 
         .limit(1)
     )
     if tx is None:
-        return NO_PENDING_REPLY_UR
+        return NO_PENDING_REPLY_UR, None
 
     if wants_confirm:
         tx.status = "confirmed"
@@ -601,16 +694,8 @@ def handle_text_reply(session: Session, merchant: Merchant, text: str) -> str | 
         tx.status = "rejected"
         reply = "Okay, the entry was removed."
     session.add(tx)
-    session.add(
-        OutboundMessage(
-            merchant_id=merchant.id,
-            transaction_id=tx.id,
-            kind="confirmation_text",
-            body=reply,
-        )
-    )
     session.commit()
-    return reply
+    return reply, tx
 
 
 # --- credit report preview (credit_agent boundary) ---------------------------
@@ -667,7 +752,7 @@ def generate_report_preview(session: Session, merchant_id: uuid.UUID) -> dict[st
             totals[t.kind] = totals.get(t.kind, 0.0) + float(t.amount_pkr)
     confirmed = sum(1 for t in txs if t.status in ("confirmed", "edited"))
     pending = sum(1 for t in txs if t.status == "pending")
-    ai_parsed = [t for t in txs if t.source_type in ("voice", "photo")]
+    ai_parsed = [t for t in txs if t.source_type in ("voice", "photo", "text")]
     avg_conf = (
         sum(float(t.confidence or 0.0) for t in ai_parsed) / len(ai_parsed) if ai_parsed else None
     )

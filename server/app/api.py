@@ -410,8 +410,8 @@ def _ensure_invoice_media(session, merchant: Merchant, row: OutboundMessage) -> 
         tx = session.get(Transaction, row.transaction_id)
         if tx is None or tx.status == "rejected" or tx.kind not in _INVOICE_TX_KINDS:
             return None
-        if tx.source_type not in ("voice", "photo"):
-            return None  # manual/API entries have no voice-note invoice flow
+        if tx.source_type not in ("voice", "photo", "text"):
+            return None  # manual/API entries have no parsed-note invoice flow
 
         # One invoice per transaction: another confirmation row may already
         # carry it (e.g. the "correct"-reply row after the original).
