@@ -350,8 +350,10 @@ function DemoFrame({ hero }: { hero: Copy["hero"] }) {
           <span>{invoiceName}</span>
           <span className="flow-invoice__amount">{invoiceAmount}</span>
         </div>
-        {result?.mock && (
-          <span className="chip chip--gold hero-demo__mock">{hero.mockNote}</span>
+        {result && (result.mock || !result.delivered) && (
+          <span className="chip chip--gold hero-demo__mock">
+            {result.mock ? hero.mockNote : hero.notDeliveredNote}
+          </span>
         )}
         <span className="stamp">{confirmed ? hero.stamp : result ? hero.stampPending : hero.stamp}</span>
       </div>

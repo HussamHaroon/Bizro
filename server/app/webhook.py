@@ -227,7 +227,7 @@ def _handle_message(
             reply = outcome["reply"]
             if reply is None:
                 reply = HELP_REPLY_UR  # unknown press — help, never silence
-            send_result = whatsapp_client.send_text(merchant.wa_id, reply)
+            send_result = dispatch.deliver(merchant.wa_id, reply)
             return {
                 "message_id": msg.get("id"),
                 "ok": True,
@@ -476,17 +476,25 @@ def _rejection_outcome(
 def _get_media_bytes(
     media_meta: dict[str, Any], sim_envelope: dict[str, Any], mime_type: str, kind: str
 ) -> tuple[bytes, str]:
-    """Live: two-step Graph API download. Mock: decode the simulator envelope
-    (clearly-labeled synthetic bytes)."""
-    if whatsapp_client.is_live() and media_meta.get("id"):
-        data, _ = whatsapp_client.download_media(media_meta["id"])
-        return data, "whatsapp_graph_api"
+    """Simulator envelope first (clearly-labeled synthetic bytes), else the
+    two-step Graph API download.
 
+    Order matters: the demo surfaces (site hero frame, dashboard simulator) send
+    synthetic `SIM_MEDIA_*` ids. In live-WhatsApp mode a real download of one of
+    those 400s, so checking the live path first threw the note away before any
+    model ran. A genuine Meta webhook never carries `bizro_sim`, and never sends
+    an id the Graph API does not know, so real traffic is unaffected.
+    """
     if sim_envelope.get("media_b64"):
         data = base64.b64decode(sim_envelope["media_b64"])
         return data, "simulator_envelope"
 
+    if whatsapp_client.is_live() and media_meta.get("id"):
+        data, _ = whatsapp_client.download_media(media_meta["id"])
+        return data, "whatsapp_graph_api"
+
     raise RuntimeError(
-        f"Cannot obtain {kind} media: WhatsApp not live and no bizro_sim envelope. "
-        "Use scripts/simulate_inbound.py or configure WhatsApp credentials (HANDOFF.md ②)."
+        f"Cannot obtain {kind} media: no bizro_sim envelope, and WhatsApp is not "
+        "live with a downloadable media id. Use scripts/simulate_inbound.py or "
+        "configure WhatsApp credentials (HANDOFF.md ②)."
     )
