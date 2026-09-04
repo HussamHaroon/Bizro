@@ -134,21 +134,21 @@ export const COPY = {
         h3: "Send a voice note",
         p:
           "He records a short voice note on WhatsApp — the way he'd tell a helper. Bizro turns it into a ledger entry and sends a stamped invoice right back.",
-        badges: ["Whisper STT + MiniMax M3", "WhatsApp in / out"],
+        badges: ["Whisper STT + Qwen", "WhatsApp in / out"],
       },
       {
         chip: "Step 2 · Vision",
         h3: "Photograph the receipt",
         p:
           "One photo of the handwritten supplier receipt. The expense is logged, and obvious price mistakes get flagged before they hide in the notebook.",
-        badges: ["DOTS OCR", "Price-error flags"],
+        badges: ["Qwen-VL-OCR", "Price-error flags"],
       },
       {
         chip: "Step 3 · Report",
         h3: "One tap, months later",
         p:
           "One tap turns months of saved notes and photos into a Mawakhat-style Credit Readiness Report. Every number links back to its source, so a loan officer can check it.",
-        badges: ["MiniMax M3", "Mawakhat-style format"],
+        badges: ["Qwen", "Mawakhat-style format"],
       },
     ],
   },
@@ -208,7 +208,7 @@ export const COPY = {
     credits1:
       "Bizro · Bano Qabil × Alibaba Cloud AI Hackathon Pakistan 2026.",
     credits2:
-      "Running today on free-tier demo models: MiniMax M3 · DOTS OCR · Groq Whisper. Provider-agnostic: Qwen on Alibaba Cloud Model Studio is the production path — one environment variable.",
+      "Running on Qwen (Alibaba Cloud Model Studio) with Groq Whisper for speech. Provider-agnostic by design — one environment variable swaps any model.",
     linkLedger: "Live ledger",
     linkReport: "Credit Readiness Report",
     honesty:

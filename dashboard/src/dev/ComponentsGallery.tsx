@@ -172,7 +172,7 @@ export function ComponentsGallery() {
         <div className="bizro-card flex flex-col gap-4 px-4 py-4">
           <TrustSealBadge
             key={`v-${stampKey}`}
-            model="qwen3.5-omni-plus"
+            model="qwen-flash"
             confidence={0.88}
             stampIn
             onEdit={() => setStampKey((k) => k + 1)}
@@ -180,7 +180,7 @@ export function ComponentsGallery() {
           <TrustSealBadge
             key={`p-${stampKey}`}
             variant="pending"
-            model="qwen3.5-ocr"
+            model="qwen-vl-ocr"
             confidence={0.68}
             onEdit={() => setStampKey((k) => k + 1)}
           />

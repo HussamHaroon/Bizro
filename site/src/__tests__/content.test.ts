@@ -123,9 +123,9 @@ describe("content — brand facts survive the plain-wording pass", () => {
     expect(blob).toContain("96%");
   });
 
-  it("names the RUNNING demo stack, not a production wish-list", () => {
-    expect(blob).toContain("MiniMax M3");
-    expect(blob).toContain("DOTS OCR");
+  it("names the RUNNING stack, not a production wish-list", () => {
+    expect(blob).toContain("Qwen");
+    expect(blob).toContain("Qwen-VL-OCR");
     expect(blob).toContain("Groq Whisper");
   });
 
