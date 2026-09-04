@@ -125,9 +125,9 @@ def test_health_returns_integration_payload(client):
 # --- M-1: media 410 when the blob row exists but the file is gone ----------------
 
 
-def test_media_410_when_file_missing_on_disk(client):
-    """The audit trail keeps blob rows forever; a missing file must 410 (Gone),
-    not 500 or a blank 200 — SourceMedia treats any !ok as 'unavailable'."""
+def test_media_survives_missing_disk_via_durable_bytes(client):
+    """The audit trail's contract on serverless: disk is ephemeral, so a blob
+    with durable bytes serves 200 from the database even when the file is gone."""
     with db_session() as s:
         m = s.query(MediaBlob).first()
         if m is None:  # no blobs in this test DB yet — seed one via webhook
@@ -135,6 +135,33 @@ def test_media_410_when_file_missing_on_disk(client):
             m = s.query(MediaBlob).first()
     real_path = m.storage_path
     m.storage_path = str(uuid.uuid4()) + "-definitely-missing.ogg"
+    s.add(m)
+    s.commit()
+    moved_id = str(m.id)
+    try:
+        r = client.get(f"/api/media/{moved_id}")
+        assert r.status_code == 200, f"expected 200 from durable bytes, got {r.status_code}: {r.text[:120]}"
+        assert r.content, "durable-bytes response must have a body"
+    finally:
+        with db_session() as s2:
+            row = s2.get(MediaBlob, uuid.UUID(moved_id))
+            if row is not None:
+                row.storage_path = real_path
+                s2.add(row)
+                s2.commit()
+
+
+def test_media_410_when_file_missing_and_no_durable_bytes(client):
+    """A blob with neither a file on disk nor durable bytes is honestly Gone
+    (410), not 500 or a blank 200 — SourceMedia treats any !ok as 'unavailable'."""
+    with db_session() as s:
+        m = s.query(MediaBlob).first()
+        if m is None:
+            client.post("/webhook/whatsapp", json=_audio_payload("923603333333"))
+            m = s.query(MediaBlob).first()
+    real_path, real_data = m.storage_path, m.data
+    m.storage_path = str(uuid.uuid4()) + "-definitely-missing.ogg"
+    m.data = None
     s.add(m)
     s.commit()
     missing_id = str(m.id)
@@ -146,6 +173,7 @@ def test_media_410_when_file_missing_on_disk(client):
             row = s2.get(MediaBlob, uuid.UUID(missing_id))
             if row is not None:
                 row.storage_path = real_path
+                row.data = real_data
                 s2.add(row)
                 s2.commit()
 
