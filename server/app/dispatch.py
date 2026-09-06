@@ -685,8 +685,15 @@ def _confirmation_ur_for_tx(session: Session, transaction_id: uuid.UUID) -> str 
 # --- text replies (merchant confirms/rejects by WhatsApp text) ---------------
 # Inbound words stay multilingual (Urdu incl.) — only OUTBOUND text is English.
 
-_CONFIRM_WORDS = {"1", "haan", "han", "ji", "yes", "y", "درست", "ہاں", "جی ہاں", "ٹھیک"}
-_REJECT_WORDS = {"0", "nahi", "na", "no", "n", "غلط", "نہیں", "نہیں"}
+_CONFIRM_WORDS = {
+    "1", "haan", "han", "ji", "yes", "y", "درست", "ہاں", "جی ہاں", "ٹھیک",
+    # typed button labels — merchants type what the button said
+    "correct", "ok", "confirm",
+}
+_REJECT_WORDS = {
+    "0", "nahi", "na", "no", "n", "غلط", "نہیں", "نہیں",
+    "edit", "wrong", "incorrect",
+}
 
 
 def handle_text_reply(

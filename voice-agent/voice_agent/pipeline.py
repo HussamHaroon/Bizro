@@ -51,9 +51,13 @@ merchant reads (description, item names when you can) is written as a short,
 simple confirmation in English — short sentences, everyday words.
 
 Kind semantics (direction is implied by kind; amount is always positive):
-- "sale": customer bought and PAID now (cash in).
+- "sale": customer bought and PAID now (cash in) — goods must have been bought.
+  Money received with NO goods mentioned is NOT a sale; it is udhar_settlement.
 - "udhar_given": merchant extended credit — customer owes the merchant (the classic khata entry).
-- "udhar_settlement": customer repaid part or all of an earlier udhar.
+- "udhar_settlement": customer repaid part or all of an earlier udhar — AND every
+  "money received" phrasing: "Usman se 5000 rupay liye", "Bilal ne 3000 wapas kar diye",
+  "Usman ne mujhe paise diye", "main ne Ahmad se paise wasool kiye",
+  "I took 2000 rupees from Bilal", "Bilal paid me back" — all udhar_settlement.
 - "expense": merchant bought stock/paid a supplier (receipt photos also land here).
 
 HARD RULES:
@@ -126,6 +130,13 @@ def process_voice_note(
                     ),
                 ).text
             except Exception as exc:  # noqa: BLE001 — webhook path never crashes
+                # A structuring-call outage (quota/5xx) must surface as the
+                # busy reply, not masquerade as "didn't understand" — let
+                # DashScopeError propagate; the webhook maps it to
+                # MODEL_OUTAGE_REPLY_UR. Everything else (corrupt audio, STT
+                # failure) → ask again; never crash the webhook.
+                if isinstance(exc, DashScopeError):
+                    raise
                 # Corrupt audio or STT failure → ask again; never crash the webhook.
                 return _low_confidence_fallback(
                     transcript="", when=when, media_id=media_id, confidence=0.0,

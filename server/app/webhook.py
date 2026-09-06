@@ -242,6 +242,19 @@ def _handle_message(
             outcome = _ingest_free_text(msg, session, merchant, body, occurred_at)
             outcome["merchant_id"] = str(merchant.id)
             return outcome
+        if msg_type == "interactive":
+            # Real WhatsApp taps on our interactive buttons arrive as
+            # interactive.button_reply (id + title); the legacy type:"button"
+            # shape is only ever produced by our own simulators. Normalize so
+            # both shapes share one handler.
+            inter = msg.get("interactive") or {}
+            reply_btn = inter.get("button_reply") or inter.get("list_reply") or {}
+            msg = {
+                **msg,
+                "type": "button",
+                "button": {"payload": reply_btn.get("id"), "text": reply_btn.get("title")},
+            }
+            msg_type = "button"
         if msg_type == "button":
             # §7.1: one-tap reply to our interactive confirm/correct buttons.
             # Graph API carries button.payload; older versions only button.text.
@@ -331,8 +344,9 @@ def _ingest_free_text(
         }
 
     # §6.9: no-amount / rejected / non-transaction result → clarify, persist nothing.
-    if dispatch.pipeline_rejection(tx_data) is not None:
-        return _text_miss_outcome(msg, session, merchant)
+    rejection = dispatch.pipeline_rejection(tx_data)
+    if rejection is not None:
+        return _text_miss_outcome(msg, session, merchant, clarification=rejection)
 
     try:
         tx = dispatch.persist_transaction(session, merchant, tx_data, None)
@@ -359,15 +373,20 @@ def _ingest_free_text(
     }
 
 
-def _text_miss_outcome(msg: dict[str, Any], session, merchant: Merchant) -> dict[str, Any]:
-    sent = dispatch.send_reply(session, merchant, TEXT_PARSE_MISS_REPLY_UR)
+def _text_miss_outcome(
+    msg: dict[str, Any], session, merchant: Merchant, *, clarification: str | None = None
+) -> dict[str, Any]:
+    # Prefer the pipeline's own clarification (same copy the voice path
+    # sends); the generic miss line is only the last resort.
+    reply = (clarification or "").strip() or TEXT_PARSE_MISS_REPLY_UR
+    sent = dispatch.send_reply(session, merchant, reply)
     return {
         "message_id": msg.get("id"),
         "ok": True,
         "type": "text",
         "rejected": True,
         "persisted": False,
-        "reply": TEXT_PARSE_MISS_REPLY_UR,
+        "reply": reply,
         "sent": sent,
     }
 
