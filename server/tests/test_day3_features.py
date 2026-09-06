@@ -281,6 +281,30 @@ def test_button_confirm_payload_confirms_most_recent_pending(client):
         assert ack.body == out["reply"]
 
 
+def test_interactive_button_reply_tap_confirms_most_recent_pending(client):
+    """Real WhatsApp taps arrive as type=interactive/button_reply (id+title) —
+    NOT the legacy type=button shape the simulators send. Regression guard for
+    the silently-dropped-tap bug."""
+    wa = _wa("92413")
+    tx_id = _seed_pending_tx(client, wa)
+
+    env = _button_payload(wa, payload="confirm")
+    msg = env["entry"][0]["changes"][0]["value"]["messages"][0]
+    msg["type"] = "interactive"
+    msg.pop("button", None)
+    msg["interactive"] = {
+        "type": "button_reply",
+        "button_reply": {"id": "confirm", "title": "Correct"},
+    }
+    r = client.post("/webhook/whatsapp", json=env)
+    assert r.status_code == 200, r.text
+    out = r.json()["results"][0]
+    assert out["ok"] is True and out["type"] == "button"
+    assert out["action"] == "confirm"
+    assert out["transaction"]["id"] == tx_id
+    assert out["transaction"]["status"] == "confirmed"
+
+
 def test_button_correct_keeps_pending_and_asks_for_voice_note(client):
     wa = _wa("92404")
     tx_id = _seed_pending_tx(client, wa)

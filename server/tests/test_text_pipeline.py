@@ -166,11 +166,13 @@ def test_garbage_text_stores_clarify_row_and_creates_no_transaction(client, monk
     out = r.json()["results"][0]
     assert out["ok"] is True, out
     assert out.get("rejected") is True and out.get("persisted") is False
-    assert out["reply"] == TEXT_PARSE_MISS_REPLY_UR
+    # copy converged with the voice path: the pipeline's own clarification is
+    # sent (generic miss line only as a last resort) — never the busy copy.
+    assert out["reply"] and out["reply"] != MODEL_OUTAGE_REPLY_UR
     assert _transactions(wa) == [], "a parse miss must persist NOTHING"
     rows = _outbound_rows(wa)
     assert len(rows) == 1
-    assert rows[0].body == TEXT_PARSE_MISS_REPLY_UR
+    assert rows[0].body == out["reply"]
     assert rows[0].kind == "clarification"
     assert rows[0].transaction_id is None
 
@@ -185,8 +187,7 @@ def test_non_transaction_text_gets_clarify_not_busy_copy(client, monkeypatch):
     )
     out = r.json()["results"][0]
     assert out["ok"] is True and out.get("persisted") is False
-    assert out["reply"] == TEXT_PARSE_MISS_REPLY_UR
-    assert out["reply"] != MODEL_OUTAGE_REPLY_UR
+    assert out["reply"] and out["reply"] != MODEL_OUTAGE_REPLY_UR
     assert _transactions(wa) == []
 
 

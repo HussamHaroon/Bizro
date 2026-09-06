@@ -42,6 +42,14 @@ _QWEN_MIME = {
     ".m4a": "audio/mp4",
 }
 
+# Omni-audio chat models need this alongside the audio; dedicated ASR tasks
+# tolerate it (documented vocab/context slot).
+_ASR_INSTRUCTION = (
+    "This audio is a shopkeeper's voice note for a ledger. Transcribe it "
+    "VERBATIM in its original language (usually Urdu). Output ONLY the "
+    "transcript text — no explanations, no translation, no commentary."
+)
+
 
 def transcribe(audio_bytes: bytes, *, filename: str = "voice.wav", settings: Settings) -> str:
     """Transcribe one voice note → transcript text (verbatim)."""
@@ -57,7 +65,12 @@ def transcribe(audio_bytes: bytes, *, filename: str = "voice.wav", settings: Set
 
 
 def _qwen_asr(audio_bytes: bytes, *, filename: str, settings: Settings) -> str:
-    """qwen3-asr-flash — chat-completions with an inline base64 data URI."""
+    """Qwen ASR — chat-completions with an inline base64 data URI.
+
+    Works with the dedicated qwen3-asr task and with omni-audio chat models
+    (qwen3.8-omni-flash); the latter require an explicit verbatim instruction,
+    otherwise they explain the audio instead of transcribing it.
+    """
     import llm_guard  # free-tier budget guard (repo root; D6-2)
 
     llm_guard.allow(f"stt:{settings.stt_qwen_model}")
@@ -72,6 +85,7 @@ def _qwen_asr(audio_bytes: bytes, *, filename: str, settings: Settings) -> str:
             "messages": [
                 {"role": "user", "content": [
                     {"type": "input_audio", "input_audio": {"data": data_uri}},
+                    {"type": "text", "text": _ASR_INSTRUCTION},
                 ]},
             ],
         },
