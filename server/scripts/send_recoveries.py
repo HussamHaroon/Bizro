@@ -43,7 +43,10 @@ def main() -> None:
             merchant_ids = [uuid.UUID(args.merchant)]
         else:
             merchant_ids = [
-                m.id for m in session.scalars(select(Merchant)).order_by(Merchant.created_at)
+                m.id
+                for m in session.scalars(
+                    select(Merchant).order_by(Merchant.created_at)
+                ).all()
             ]
 
         if args.dry_run:
