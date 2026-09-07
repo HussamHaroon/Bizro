@@ -31,6 +31,7 @@ from sqlalchemy.exc import IntegrityError
 
 from . import dispatch, whatsapp_client
 from .config import get_settings
+from . import lang as lang_mod
 from .db import MediaBlob, Merchant, ProcessedMessage, db_session
 from .media import MediaValidationError, store_blob, validate_media
 
@@ -218,6 +219,10 @@ def _handle_message(
             return outcome
         if msg_type == "text":
             body = ((msg.get("text") or {}).get("body") or "").strip()
+            lang_mod.set_merchant_lang(
+                session, merchant, lang_mod.detect_language(body)
+            )
+            _lang = lang_mod.get_merchant_lang(session, merchant)
             if _is_onboarding_trigger(body):
                 outcome = _onboarding_outcome(msg, session, merchant)
                 outcome["merchant_id"] = str(merchant.id)
@@ -264,7 +269,9 @@ def _handle_message(
             )
             reply = outcome["reply"]
             if reply is None:
-                reply = HELP_REPLY_UR  # unknown press — help, never silence
+                reply = lang_mod.pick(  # unknown press — help, never silence
+                    lang_mod.get_merchant_lang(session, merchant), lang_mod.HELP_PAIR
+                )
             send_result = dispatch.deliver(merchant.wa_id, reply)
             return {
                 "message_id": msg.get("id"),
@@ -291,19 +298,22 @@ def _onboarding_outcome(
     (whatsapp_client delivery + an outbound_messages audit row). The bodies
     themselves are plain onboarding text: the only mock marker anywhere is the
     one whatsapp_client already adds to its send result in mock mode."""
+    seq = lang_mod.onboarding_sequence(
+        lang_mod.get_merchant_lang(session, merchant)
+    )
     sent = [
         dispatch.send_reply(session, merchant, body, kind="onboarding")
-        for body in ONBOARDING_SEQUENCE_UR
+        for body in seq
     ]
     return {
         "message_id": msg.get("id"),
         "ok": True,
         "type": "text",
         "onboarding": True,
-        "replies": list(ONBOARDING_SEQUENCE_UR),
+        "replies": list(seq),
         # last body kept in `reply` so existing consumers of the text outcome
         # shape keep working
-        "reply": ONBOARDING_SEQUENCE_UR[-1],
+        "reply": seq[-1],
         "sent": sent,
     }
 
@@ -327,20 +337,26 @@ def _ingest_free_text(
       MODEL_OUTAGE_REPLY_UR (busy), nothing persisted.
     """
     if not body:
-        sent = dispatch.send_reply(session, merchant, HELP_REPLY_UR, kind="help")
+        _h = lang_mod.pick(
+            lang_mod.get_merchant_lang(session, merchant), lang_mod.HELP_PAIR
+        )
+        sent = dispatch.send_reply(session, merchant, _h, kind="help")
         return {
             "message_id": msg.get("id"), "ok": True, "type": "text",
-            "reply": HELP_REPLY_UR, "sent": sent,
+            "reply": _h, "sent": sent,
         }
 
     try:
         tx_data = dispatch.process_transcript(body, merchant, occurred_at)
     except Exception:
         logger.exception("Text pipeline failed (wamid=%s)", msg.get("id"))
-        sent = dispatch.send_reply(session, merchant, MODEL_OUTAGE_REPLY_UR)
+        _o = lang_mod.pick(
+            lang_mod.get_merchant_lang(session, merchant), lang_mod.MODEL_OUTAGE_PAIR
+        )
+        sent = dispatch.send_reply(session, merchant, _o)
         return {
             "message_id": msg.get("id"), "ok": False, "type": "text",
-            "error": "model_outage", "reply": MODEL_OUTAGE_REPLY_UR, "sent": sent,
+            "error": "model_outage", "reply": _o, "sent": sent,
         }
 
     # §6.9: no-amount / rejected / non-transaction result → clarify, persist nothing.
@@ -378,7 +394,9 @@ def _text_miss_outcome(
 ) -> dict[str, Any]:
     # Prefer the pipeline's own clarification (same copy the voice path
     # sends); the generic miss line is only the last resort.
-    reply = (clarification or "").strip() or TEXT_PARSE_MISS_REPLY_UR
+    reply = (clarification or "").strip() or lang_mod.pick(
+        lang_mod.get_merchant_lang(session, merchant), lang_mod.TEXT_MISS_PAIR
+    )
     sent = dispatch.send_reply(session, merchant, reply)
     return {
         "message_id": msg.get("id"),
@@ -423,8 +441,8 @@ def _ingest_media(
         validate_media(data, kind)
     except MediaValidationError as exc:
         logger.warning("Rejected inbound %s media from %s: %s", kind, merchant.wa_id, exc)
-        sent = dispatch.send_reply(session, merchant, MEDIA_INVALID_REPLY_UR)
-        return _rejection_outcome(msg, MEDIA_INVALID_REPLY_UR, sent, reason=str(exc))
+        sent = dispatch.send_reply(session, merchant, lang_mod.pick(lang_mod.get_merchant_lang(session, merchant), lang_mod.MEDIA_INVALID_PAIR))
+        return _rejection_outcome(msg, lang_mod.pick(lang_mod.get_merchant_lang(session, merchant), lang_mod.MEDIA_INVALID_PAIR), sent, reason=str(exc))
 
     path, digest = store_blob(data, mime_type, kind)
 
@@ -466,7 +484,10 @@ def _ingest_media(
         # propagates to the webhook's per-message error handler.
         rejection_reply = dispatch.rejection_reply_from_exception(exc)
         if rejection_reply is None and dispatch.is_model_outage_exception(exc):
-            rejection_reply = MODEL_OUTAGE_REPLY_UR
+            rejection_reply = lang_mod.pick(
+                lang_mod.get_merchant_lang(session, merchant),
+                lang_mod.MODEL_OUTAGE_PAIR,
+            )
         if rejection_reply is None:
             raise
         tx_data = None
@@ -479,6 +500,13 @@ def _ingest_media(
         sent = dispatch.send_reply(session, merchant, rejection_reply)
         return _rejection_outcome(msg, rejection_reply, sent, media=media_block)
 
+    _src = (tx_data or {}).get("source") or {}
+    lang_mod.set_merchant_lang(
+        session, merchant,
+        lang_mod.detect_language(
+            ((_src.get("raw_output") or {}).get("transcript")) or ""
+        ),
+    )
     # Link the pipeline output to the stored blob before validation/persist.
     src = tx_data.get("source") or {}
     src.setdefault("media_id", str(blob.id))

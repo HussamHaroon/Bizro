@@ -22,7 +22,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from voice_agent.config import Settings, load_settings
-from voice_agent.confirmation import UNCLEAR_KIND_MARKER, build_confirmation
+from voice_agent.confirmation import UNCLEAR_KIND_MARKER, build_confirmation, detect_language
 from voice_agent.dashscope_client import DashScopeClient, DashScopeError
 from voice_agent.decode import DecodeError, decode_audio
 from voice_agent.mock_data import SCENARIOS, infer_scenario, mock_response_text
@@ -328,7 +328,8 @@ def _assemble(
 
     # -- derived flags -------------------------------------------------------
     _apply_derived_flags(tx, settings)
-    tx.confirmation_ur = build_confirmation(tx, settings.numeral_style)
+    _lang = detect_language(_extract_transcript(model_text) or "")
+    tx.confirmation_ur = build_confirmation(tx, settings.numeral_style, _lang)
     return tx.model_dump(mode="json"), []
 
 
@@ -395,7 +396,8 @@ def _low_confidence_fallback(
         status="pending",
         mock=mock,
     )
-    tx.confirmation_ur = build_confirmation(tx, settings.numeral_style)
+    _lang = detect_language(transcript or "")
+    tx.confirmation_ur = build_confirmation(tx, settings.numeral_style, _lang)
     return tx.model_dump(mode="json")
 
 

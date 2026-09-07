@@ -212,7 +212,7 @@ def test_f1_unknown_amount_sends_clarification_persists_nothing(client, monkeypa
     assert out["ok"] is True, "§6.9: message handled successfully, not internal error"
     assert out.get("rejected") is True and out.get("persisted") is False
     assert len(_txs_for_wa(wa)) == 0
-    assert any("How much" in b for b in _outbound_for_wa(wa)), "clarification must be sent"
+    assert any(("How much" in b) or ("کتنے پیسے" in b) for b in _outbound_for_wa(wa)), "clarification must be sent"
 
 
 def test_f1_pipeline_null_amount_result_is_rejected(client, monkeypatch):

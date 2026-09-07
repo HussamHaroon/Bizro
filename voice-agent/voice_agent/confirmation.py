@@ -184,14 +184,32 @@ def amount_in_urdu_words(amount: float) -> str:
 # ---------------------------------------------------------------------------
 
 QUESTION = "Is this correct?"  # one-tap / 1-or-0 reply yes/no
+QUESTION_UR = "کیا یہ درست ہے؟"
+
+
+def detect_language(text: str) -> str:
+    """"ur" when the text is materially Arabic-script (Urdu), else "en".
+    Language mirroring (owner ruling 2026-10-02): reply language mirrors the
+    inbound message. Roman Urdu, digits, emoji → "en" (simple English reads
+    fine for both)."""
+    s = text or ""
+    letters = [ch for ch in s if ch.isalpha()]
+    if not letters:
+        return "en"
+    arabic = sum(
+        1 for ch in letters if "\u0600" <= ch <= "\u06ff" or "\u0750" <= ch <= "\u077f"
+    )
+    return "ur" if arabic / len(letters) >= 0.10 else "en"
 
 # Transaction descriptions starting with this marker mean "kind itself was unclear"
 # (pipeline sets it when the model could not tell what kind of entry this was).
 UNCLEAR_KIND_MARKER = "UNCLEAR_KIND"
 
 
-def _amount_phrase(amount: float, numeral_style: str) -> str:
-    """'5000 rupees' — digits per NUMERAL_STYLE, everyday wording."""
+def _amount_phrase(amount: float, numeral_style: str, lang: str = "en") -> str:
+    """'5000 rupees' / '5000 روپے' — digits per NUMERAL_STYLE."""
+    if lang == "ur":
+        return f"{to_numeral_digits(amount, numeral_style)} روپے"
     return f"{to_numeral_digits(amount, numeral_style)} rupees"
 
 
@@ -203,29 +221,42 @@ _KIND_TEMPLATES = {
     "udhar_settlement": "{name} paid back {amount}.",
 }
 
+_KIND_TEMPLATES_UR = {
+    "sale": "{name} کو {amount} کی نقد فروخت۔",
+    "expense": "آپ نے {amount} خرچ کیے۔{supplier}",
+    "udhar_given": "{name} کو {amount} کا ادھار دیا۔",
+    "udhar_settlement": "{name} نے {amount} واپس کیے۔",
+}
 
-def _name_or_fallback(counterparty) -> str:
+
+def _name_or_fallback(counterparty, lang: str = "en") -> str:
     name = (getattr(counterparty, "name", None) or "").strip()
-    return name if name else "a customer"  # only when the model found no name
+    if name:
+        return name
+    return "ایک گاہک" if lang == "ur" else "a customer"  # model found no name
 
 
-def build_confirmation(tx: Transaction, numeral_style: str = "western") -> str:
+def build_confirmation(tx: Transaction, numeral_style: str = "western", lang: str = "en") -> str:
     """Build the WhatsApp text confirmation in SIMPLE ENGLISH. For flag=low_confidence
     this returns a CLARIFICATION QUESTION, never a statement (schema.md §1: never
     guess). NOTE: callers store it in the `confirmation_ur` field/DB column — the
     name is historical, the content is English (owner ruling, 2026-09-04)."""
     if tx.flag == "low_confidence":
-        return _build_clarification(tx, numeral_style)
+        return _build_clarification(tx, numeral_style, lang)
 
-    amount = _amount_phrase(tx.amount_pkr, numeral_style)
-    tpl = _KIND_TEMPLATES[tx.kind]
+    amount = _amount_phrase(tx.amount_pkr, numeral_style, lang)
+    ur = lang == "ur"
+    tpl = (_KIND_TEMPLATES_UR if ur else _KIND_TEMPLATES)[tx.kind]
     if tx.kind == "expense":
         supplier = (tx.counterparty.name or "").strip() if tx.counterparty else ""
-        suffix = f" Bought from {supplier}." if supplier else ""
+        suffix = (f" {supplier} سے خریدا۔" if ur else f" Bought from {supplier}.") if supplier else ""
         sentence = tpl.format(amount=amount, supplier=suffix)
     else:
-        sentence = tpl.format(name=_name_or_fallback(tx.counterparty), amount=amount)
-    return f"Got it. {sentence} {QUESTION}"
+        name = _name_or_fallback(tx.counterparty, lang)
+        sentence = tpl.format(name=name, amount=amount)
+    lead = "سمجھ گیا۔" if ur else "Got it."
+    q = QUESTION_UR if ur else QUESTION
+    return f"{lead} {sentence} {q}"
 
 
 # Historical name kept: voice_agent/__init__.py (and older callers) import
@@ -237,29 +268,39 @@ build_confirmation_ur = build_confirmation
 _CLARIFY_AMOUNT = "How much was it? Please type the amount or say it again."
 _CLARIFY_KIND = "Was this credit, a cash sale, or an expense?"
 _CLARIFY_NAME = "What is the customer's name?"
+_CLARIFY_AMOUNT_UR = "کتنے پیسے تھے؟ رقم لکھ کر بھیجیں یا دوبارہ بتائیں۔"
+_CLARIFY_KIND_UR = "کیا یہ ادھار تھا، نقد فروخت، یا خرچ؟"
+_CLARIFY_NAME_UR = "گاہک کا نام کیا ہے؟"
 
 
-def _build_clarification(tx: Transaction, numeral_style: str) -> str:
+def _build_clarification(tx: Transaction, numeral_style: str, lang: str = "en") -> str:
     # §6.2/§6.9: unknown amount travels as None (never 0.0); <= 0 kept as a
     # defensive legacy guard.
     unknown_amount = tx.amount_pkr is None or tx.amount_pkr <= 0
     unknown_kind = tx.description.startswith(UNCLEAR_KIND_MARKER)
     known_name = (tx.counterparty.name or "").strip() if tx.counterparty else ""
 
-    lead = "Sorry, we could not confirm this entry."
+    ur = lang == "ur"
+    lead = "معذرت، یہ اندراج درست نہیں ہو سکا۔"
     if known_name and not unknown_kind:
-        lead = f"Sorry, we could not confirm {known_name}'s entry."
+        lead = f"معذرت، {known_name} کا اندراج درست نہیں ہو سکا۔"
     if unknown_kind:
-        lead = "Sorry, we did not understand your note."  # "I could not understand."
+        lead = "معذرت، آپ کی بات سمجھ نہیں آئی۔"
+    if not ur:
+        lead = "Sorry, we could not confirm this entry."
+        if known_name and not unknown_kind:
+            lead = f"Sorry, we could not confirm {known_name}'s entry."
+        if unknown_kind:
+            lead = "Sorry, we did not understand your note."
 
     asks: list[str] = []
     if unknown_amount:
-        asks.append(_CLARIFY_AMOUNT)
+        asks.append(_CLARIFY_AMOUNT_UR if ur else _CLARIFY_AMOUNT)
     if unknown_kind:
-        asks.append(_CLARIFY_KIND)
+        asks.append(_CLARIFY_KIND_UR if ur else _CLARIFY_KIND)
     elif not known_name and tx.kind in ("sale", "udhar_given", "udhar_settlement"):
-        asks.append(_CLARIFY_NAME)
+        asks.append(_CLARIFY_NAME_UR if ur else _CLARIFY_NAME)
     if not asks:
-        asks.append("Please say it again.")
+        asks.append("دوبارہ بتائیں۔" if ur else "Please say it again.")
 
     return f"{lead} {' '.join(asks)}"
