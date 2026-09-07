@@ -29,37 +29,34 @@ One repo, one origin. A FastAPI app serves the WhatsApp webhook, the REST API,
 and the built frontend assets; the model work lives in three agent packages
 the server calls into.
 
-```
-WhatsApp Cloud API
-        |
-        v  POST /webhook/whatsapp  (X-Hub-Signature-256 enforced)
-+---------------------------------------------------------------+
-| server/  (FastAPI, Vercel serverless via api/index.py)        |
-|                                                               |
-|  webhook.py ... ingest, dedup, signature, media download      |
-|  media.py ..... size caps + magic sniff + blob storage        |
-|  dispatch.py ... lazy imports into the agent packages         |
-|  api.py ....... /api/* REST surface, CSV export, TTS          |
-|  middleware_security.py ... CSP + per-IP rate limits         |
-+---------------+--------------------------+--------------------+
-                |                          |
-     voice-agent/                  vision-agent/
-     STT: qwen3-asr-flash          OCR: qwen-vl-ocr
-     (Groq Whisper fallback)       (qwen3.5-ocr bake-off adapter)
-     parse: qwen-flash             price-sanity flags vs history
-                |                          |
-                v  structured transaction dicts (audited)
-        credit-agent/ ... aggregates -> deterministic rubric score
-                        -> qwen-flash narrative -> credit_reports
-                |
-                v
-        Neon Postgres (ledger, media bytes, outbound log, reports)
-                |
-        +---------------+------------------+
-        |               |                  |
-   dashboard/        site/            scripts/deploy.sh
-   React SPA         landing page     one-command prod deploy
-   (Khata Modern)    + live hero mic
+```mermaid
+flowchart TD
+    WA["WhatsApp Cloud API<br/>Urdu voice note · receipt photo"]
+    WA -->|"POST /webhook/whatsapp — X-Hub-Signature-256 enforced"| SRV
+
+    subgraph SRV["server/ — FastAPI (Vercel serverless via api/index.py)"]
+        direction TB
+        MW["middleware_security.py<br/>CSP + per-IP rate limits"]
+        WH["webhook.py<br/>ingest · dedup · signature · media download"]
+        MED["media.py<br/>size caps + magic sniff + blob storage"]
+        DSP["dispatch.py<br/>lazy imports into agent packages"]
+        API["api.py<br/>/api/* REST · CSV export · TTS"]
+        MW --> WH --> MED
+        WH --> DSP
+    end
+
+    DSP -->|"structured transaction dicts (audited)"| VA["voice-agent/<br/>STT qwen3-asr-flash<br/>(Groq Whisper fallback)<br/>parse qwen-flash"]
+    DSP -->|"structured transaction dicts (audited)"| VI["vision-agent/<br/>OCR qwen-vl-ocr<br/>(qwen3.5-ocr bake-off adapter)<br/>price-sanity flags vs history"]
+
+    VA --> CA
+    VI --> CA
+    subgraph CA["credit-agent/"]
+        AG["aggregates"] --> RB["deterministic rubric score"] --> NA["qwen-flash narrative"]
+    end
+
+    CA --> DB[("Neon Postgres<br/>ledger · media bytes<br/>outbound log · reports")]
+    DB --> DASH["dashboard/<br/>React SPA (Khata Modern)"]
+    DB --> SITE["site/<br/>landing page + live hero mic"]
 ```
 
 All model calls run on Alibaba Cloud Model Studio (DashScope
@@ -79,8 +76,8 @@ the model stack and its fallbacks, and the security posture.
 - `credit-agent/` — Credit Readiness report: aggregates, rubric, narrative.
 - `qa/` — read-only QA suite: contract tests against the shared schema and
   dashboard contract tests.
-- `presentation/` — pitch deck: `build_pitch.py` builds `Bizro_Pitch.pptx`
-  (python-pptx); `verify_pitch.py` checks it.
+- `docs/` — the shipped documentation: `Bizro_Guide.pdf` (deep guide) and
+  `Bizro_Pitch.pptx` (pitch deck).
 - `scripts/` — `deploy.sh` (prod deploy) and `run_demo.sh` (one-command local
   demo).
 - `.agents/` — the multi-agent build system used during the hackathon
@@ -188,8 +185,10 @@ commented OpenRouter free-tier fallback (OpenAI-compatible swap for the
 
 ## Documentation
 
+Both deliverables live in `docs/`:
+
 - `docs/Bizro_Guide.pdf` — the deep guide as a print-ready PDF: local setup,
   the webhook flow, the Qwen model stack and fallbacks, the demo walkthrough,
-  security posture, ops, and troubleshooting. The full content lives in the
-  tracked build script `docs/build_guide_pdf.py` — run
-  `python docs/build_guide_pdf.py` to rebuild the PDF.
+  security posture, ops, and troubleshooting.
+- `docs/Bizro_Pitch.pptx` — the 11-slide pitch deck (problem, product,
+  architecture, demo, traction, ask).
