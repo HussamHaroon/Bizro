@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # signature validation is DISABLED (logged + surfaced in /health) so the
     # zero-credential simulator path works (SKILL.md hard rule).
     whatsapp_app_secret: str = ""
+    env: str = "dev"  # dev | production (production fail-closed, §11)
+    # §11 hardening: async mode acks the webhook immediately and processes in
+    # the background (WhatsApp retries on slow 200s). sync keeps deterministic
+    # test/simulator behavior; async is the production setting.
+    webhook_processing: str = "sync"  # sync | async
+    # fs = files under MEDIA_DIR (default); db = bytes stored in media_blobs
+    # (serverless-safe — /tmp does not survive Vercel invocations).
+    media_backend: str = "fs"  # fs | db
 
     # --- Storage / behavior ---
     database_url: str = "sqlite:///./bizro.db"
@@ -82,7 +90,29 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    _enforce_production_baseline(settings)
+    return settings
+
+
+def _enforce_production_baseline(s: Settings) -> None:
+    """Fail-closed production boot (§11 hardening): a prod deployment with
+    default/empty credentials refuses to start — silent fail-open webhook
+    auth is how demo settings leak into real money handling."""
+    if getattr(s, "env", "dev").lower() != "production":
+        return
+    missing: list[str] = []
+    if not s.whatsapp_app_secret:
+        missing.append("WHATSAPP_APP_SECRET (webhook signature validation)")
+    if s.whatsapp_verify_token == "bizro-verify":
+        missing.append("WHATSAPP_VERIFY_TOKEN (still the default)")
+    if not s.dashscope_api_key:
+        missing.append("DASHSCOPE_API_KEY")
+    if missing:
+        raise RuntimeError(
+            "ENV=production requires real credentials — refusing to start: "
+            + "; ".join(missing)
+        )
 
 
 def ensure_repo_root_on_path() -> None:

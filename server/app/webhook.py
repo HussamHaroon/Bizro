@@ -24,7 +24,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import BackgroundTasks, APIRouter, Query, Request, Response
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -112,7 +112,7 @@ def webhook_verify(
 
 
 @router.post("/webhook/whatsapp")
-async def webhook_ingest(request: Request):
+async def webhook_ingest(request: Request, background_tasks: BackgroundTasks):
     raw = await request.body()
 
     try:
@@ -151,6 +151,23 @@ async def webhook_ingest(request: Request):
         return Response(content="invalid signature", status_code=403)
 
     sim_envelope = payload.get("bizro_sim") or {}
+
+    # §11 hardening: WhatsApp retries webhooks that don't ack within ~60s, and
+    # a model call can legitimately take that long. ASYNC mode acks 200
+    # immediately and processes in the background (the per-message wamid claim
+    # still dedupes Meta's retries). sync (default) keeps the deterministic
+    # behavior tests and the simulator rely on.
+    if get_settings().webhook_processing == "async":
+        background_tasks.add_task(_process_payload, payload, sim_envelope)
+        return {"received": True}
+
+    results = _process_payload(payload, sim_envelope)
+    return {"processed": len(results), "results": results}
+
+
+def _process_payload(
+    payload: dict[str, Any], sim_envelope: dict[str, Any]
+) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
 
     for entry in payload.get("entry", []) or []:
