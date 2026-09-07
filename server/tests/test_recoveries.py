@@ -33,6 +33,16 @@ NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=timezone.utc)
 SHOP_NAME = "Al-Madina Kiryana Store"
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _db_ready():
+    """Tables must exist even when tests are picked individually (the client
+    fixture's lifespan is what usually runs init_db)."""
+    from server.app.db import init_db
+
+    init_db()
+    yield
+
+
 @pytest.fixture(autouse=True)
 def deliver_calls(monkeypatch):
     """Mock-safe by construction: recoveries.deliver is a recorder in EVERY
