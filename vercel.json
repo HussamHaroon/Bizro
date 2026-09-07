@@ -25,7 +25,7 @@
     { "src": "/robots.txt", "dest": "/site/dist/robots.txt", "check": true },
     { "src": "/sitemap.xml", "dest": "/site/dist/sitemap.xml", "check": true },
     { "src": "/favicon.ico", "dest": "/site/dist/icon-64.png", "check": true },
-    { "src": "/(ledger|credit|settings|simulator)", "dest": "api/index.py" },
+    { "src": "/(ledger|credit|settings)", "dest": "api/index.py" },
     { "src": "/(api|webhook|health|media)/(.*)", "dest": "api/index.py" },
     { "src": "/(.*\\.(js|css|woff2?|png|jpg|svg))", "dest": "/site/dist/$1", "check": true },
     { "src": "/(.*)", "dest": "api/index.py" }
