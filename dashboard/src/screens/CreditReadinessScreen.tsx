@@ -385,8 +385,10 @@ export function CreditReadinessScreen() {
             below its min-content width, so sr-only's width:1px was ignored and the
             nowrap cells gave this clipped table a real 473px box — enough to scroll
             the whole page sideways at a 390px viewport. A block wrapper does honour
-            1px + overflow:hidden, and the table's text stays exposed to AT. */}
-        <div className="sr-only">
+            1px + overflow:hidden, and the table's text stays exposed to AT.
+            PRINT: the table becomes visible — paper has no hover chips, so the
+            printed report must carry the exact figures next to the chart. */}
+        <div className="sr-only print:not-sr-only print:static print:overflow-visible">
           <table className="w-full border-collapse text-sm">
             <caption className="text-left">Monthly cash-flow, exact figures</caption>
             <thead>
