@@ -4,6 +4,7 @@
 - GET   /api/merchants/{id}/outbound?limit=      (outbound_messages, newest-first — simulator chat + audit)
 - GET   /api/merchants/{id}/transactions/export.csv   (loan-officer ledger export)
 - GET   /api/merchants/{id}/udhar                     (derived view, schema.md §3)
+- GET   /api/merchants/{id}/inventory                 (derived view — stock from item_lines, no new tables)
 - POST  /api/transactions/{id}/confirm
 - PATCH /api/transactions/{id}                        (audit-preserving correction)
 - DELETE /api/transactions/{id}                       (true erase: row + media + audit rows)
@@ -49,6 +50,7 @@ from sqlalchemy import func, select
 from . import dispatch
 from .config import ensure_repo_root_on_path, get_settings
 from .db import CreditReport, Customer, Merchant, MerchantSettings, MediaBlob, OutboundMessage, Transaction, db_session
+from .inventory import compute_inventory
 from .media import store_blob
 from .nudges import compute_streak
 from .schemas import MerchantSettingsPut, TransactionPatch, transaction_to_wire
@@ -1182,3 +1184,20 @@ def _refresh_report(session, mid: uuid.UUID) -> dict:
         session.add(row)
     session.commit()
     return {"cached": False, "report": report, "created_at": row.created_at.isoformat()}
+
+
+# --- derived inventory (no new tables) ----------------------------------------
+# GET /api/merchants/{merchant_id}/inventory
+#
+# Per-item stock DERIVED from existing transactions (zero migrations — the
+# udhar-radar pattern): in_stock = Σ qty over expense item_lines (goods IN)
+# − Σ qty over sale + udhar_given item_lines (goods OUT; udhar_settlement is
+# money-only per schema.md §1). Names merge via the credit agent's _norm_item
+# (same rule as the §9 stock_coherence indicator). A negative in_stock is
+# surfaced as a "negative" flag — data-quality disclosure, never hidden (§9
+# framing; details in server/app/INVENTORY_FINDINGS.md).
+@router.get("/merchants/{merchant_id}/inventory")
+def merchant_inventory(merchant_id: str):
+    with db_session() as session:
+        merchant = _get_merchant(session, merchant_id)
+        return compute_inventory(session, merchant.id)
