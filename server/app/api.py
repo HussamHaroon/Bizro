@@ -6,6 +6,7 @@
 - GET   /api/merchants/{id}/udhar                     (derived view, schema.md §3)
 - POST  /api/transactions/{id}/confirm
 - PATCH /api/transactions/{id}                        (audit-preserving correction)
+- DELETE /api/transactions/{id}                       (true erase: row + media + audit rows)
 - GET   /api/merchants/{id}/report/preview
 - GET   /api/merchants/{id}/settings              (§8; missing row → implied defaults)
 - PUT   /api/merchants/{id}/settings              (§8; partial upsert, unknown keys 422)
@@ -37,6 +38,7 @@ import json
 import logging
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -833,6 +835,100 @@ def patch_transaction(transaction_id: str, patch: TransactionPatch):
         # along inside the row per transaction_to_wire) — no {ok, transaction}
         # wrapper; the dashboard maps rows by body.id.
         return _tx_to_wire(session, tx, customer)
+
+
+# --- true erase (owner request 2026-10-02: delete-entry, media included) ------
+#
+# The audit trail's old "media is never deleted" law yields here BY DESIGN:
+# deleting an entry is a data-deletion action, so the transaction row AND every
+# stored artifact that hangs off it go together —
+#   - transactions row (the entry itself),
+#   - media_blobs rows: the source voice note / receipt photo (source_media_id)
+#     plus any lazily-rendered invoice image pinned into an outbound row's
+#     payload.media_id (see _ensure_invoice_media),
+#   - the disk fast-path files those blobs point at, and the invoice renderer's
+#     per-transaction cache under MEDIA_DIR/invoices,
+#   - outbound_messages audit rows referencing the transaction (deleted, not
+#     nulled — a half-kept audit row for an erased entry would claim a
+#     confirmation we can no longer produce the entry or media for).
+# There are no ORM relationships (schema.md keeps plain FK columns), so the
+# deletes are explicit and FK-safe in order: audit rows → transaction → blobs.
+
+
+def _unlink_media_artifacts(paths: list[Path], tx_id: uuid.UUID) -> None:
+    """Best-effort disk erase AFTER the DB commit: the stored blob bytes plus
+    the invoice renderer's per-transaction cache. Serverless disks are
+    ephemeral (the blob's durable bytes already died with its row), so a
+    missing file is success here; a real unlink failure is logged, never a 500
+    — the rows, the source of truth, are already gone."""
+    invoice_cache = get_settings().media_dir / "invoices"
+    candidates = [
+        *paths,
+        *(invoice_cache / f"invoice_{tx_id}{suffix}" for suffix in (".png", ".txt", "")),
+    ]
+    for path in candidates:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError as exc:  # read-only FS, permissions — log and move on
+            logger.warning("could not unlink media artifact %s: %s", path, exc)
+
+
+@router.delete("/transactions/{transaction_id}")
+def delete_transaction(transaction_id: str):
+    """Erase a transaction and everything stored for it. 404 for an unknown id
+    (400 for a malformed one — same idioms as every /transactions/{id} route).
+    Returns {"deleted": true, "transaction_id", "media_removed": n} where n is
+    the number of media_blobs rows (voice note / receipt / invoice image) that
+    went with it."""
+    with db_session() as session:
+        tx = _get_transaction(session, transaction_id)
+
+        audit_rows = session.scalars(
+            select(OutboundMessage).where(OutboundMessage.transaction_id == tx.id)
+        ).all()
+
+        # Media to erase: the source blob plus invoice images pinned in the
+        # audit rows' payloads (one invoice per transaction — _ensure_invoice_media
+        # never shares a blob across transactions).
+        media_ids: set[uuid.UUID] = set()
+        if tx.source_media_id is not None:
+            media_ids.add(tx.source_media_id)
+        for row in audit_rows:
+            payload = row.payload if isinstance(row.payload, dict) else {}
+            raw_media_id = payload.get("media_id")
+            if raw_media_id:
+                try:
+                    media_ids.add(uuid.UUID(str(raw_media_id)))
+                except ValueError:
+                    logger.warning(
+                        "skipping non-UUID payload media_id %r on outbound row %s",
+                        raw_media_id,
+                        row.id,
+                    )
+        blobs = [
+            b
+            for b in (session.get(MediaBlob, m) for m in sorted(media_ids))
+            if b is not None
+        ]
+        disk_paths = [Path(b.storage_path) for b in blobs]
+
+        for row in audit_rows:
+            session.delete(row)
+        session.flush()  # audit rows first — outbound_messages FKs the transaction
+        session.delete(tx)
+        session.flush()  # entry before its blobs — source_media_id FKs media_blobs
+        for blob in blobs:
+            session.delete(blob)
+        session.commit()
+
+        # Rows are gone; now the disk copies too (best-effort, post-commit).
+        _unlink_media_artifacts(disk_paths, tx.id)
+
+        return {
+            "deleted": True,
+            "transaction_id": str(tx.id),
+            "media_removed": len(blobs),
+        }
 
 
 @router.get("/merchants/{merchant_id}/report/preview")

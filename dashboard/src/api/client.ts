@@ -1,8 +1,9 @@
 /* Typed API client — hits the REST surface in server/schema.md §4:
      GET  /api/merchants/{id}/transactions?from=&to=&kind=
      GET  /api/merchants/{id}/udhar
-     POST /api/transactions/{id}/confirm
+     POST  /api/transactions/{id}/confirm
      PATCH /api/transactions/{id}          (correction; server keeps original for audit)
+     DELETE /api/transactions/{id}         (true erase: row + stored voice note / photo + audit rows)
      GET  /api/merchants/{id}/report/preview
      GET  /api/media/{id}                  (audit drill-down: original voice note / photo)
      GET  /api/merchants/{id}/settings     (schema.md §8 — getSettings/putSettings below)
@@ -58,6 +59,15 @@ export type TransactionPatch = Partial<
   Pick<Transaction, 'amount_pkr' | 'description' | 'kind' | 'counterparty' | 'status' | 'flag'>
 >;
 
+/** DELETE /api/transactions/{id} summary — media_removed counts the media_blobs
+    rows (voice note / receipt photo / rendered invoice image) erased with the
+    entry, disk copies included. */
+export interface DeleteSummary {
+  deleted: true;
+  transaction_id: string;
+  media_removed: number;
+}
+
 export interface ApiClient {
   readonly mock: boolean;
   readonly merchantId: string;
@@ -65,6 +75,7 @@ export interface ApiClient {
   listUdhar(): Promise<Labeled<UdharOutstanding[]>>;
   confirmTransaction(id: string): Promise<Labeled<Transaction>>;
   patchTransaction(id: string, patch: TransactionPatch): Promise<Labeled<Transaction>>;
+  deleteTransaction(id: string): Promise<Labeled<DeleteSummary>>;
   reportPreview(): Promise<Labeled<CreditReportPreview>>;
 }
 
@@ -138,6 +149,11 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
         body: JSON.stringify(patch),
       }).then((data): Labeled<Transaction> => ({ mock: false, data }));
     },
+    deleteTransaction(id) {
+      return req<DeleteSummary>(`/api/transactions/${id}`, { method: 'DELETE' }).then(
+        (data): Labeled<DeleteSummary> => ({ mock: false, data }),
+      );
+    },
     async reportPreview() {
       const payload = await req<unknown>(`/api/merchants/${merchantId}/report/preview`);
       // Server wraps as {cached, report}; the report itself is canonical §6.5.
@@ -198,6 +214,13 @@ function mockClient(): ApiClient {
       };
       state.set(id, next);
       return delay(next);
+    },
+    async deleteTransaction(id) {
+      const t = state.get(id);
+      if (!t) throw new Error(`mock: no transaction ${id}`);
+      state.delete(id);
+      // Mock rows carry no real media bytes — an honest 0 (no fake storage).
+      return delay({ deleted: true as const, transaction_id: id, media_removed: 0 });
     },
     async reportPreview() {
       return delay(deriveReportPreview([...state.values()]));
@@ -502,6 +525,7 @@ export const api: ApiClient = {
   listUdhar: () => attempt((c) => c.listUdhar()),
   confirmTransaction: (id) => attempt((c) => c.confirmTransaction(id)),
   patchTransaction: (id, patch) => attempt((c) => c.patchTransaction(id, patch)),
+  deleteTransaction: (id) => attempt((c) => c.deleteTransaction(id)),
   reportPreview: () => attempt((c) => c.reportPreview()),
 };
 
