@@ -134,3 +134,49 @@ class TestParseWithRepair:
 
         with pytest.raises(ExtractionParseError):
             parse_with_repair(call, repair_retries=1)
+
+
+# --- pipeline-security F5 (2026-09-07): string caps on the OCR surface --------
+
+
+def test_extraction_string_caps_keep_output_bounded():
+    """OCR-extracted strings are capped at the contract (bizro-security): a
+    garbled/hostile receipt can neither push confirmation_ur past the WhatsApp
+    4096-char send limit nor land megabytes in raw_model_output. Over-long
+    items degrade per-line (dropped to unclear_parts); over-long supplier
+    fails the whole extraction (routed to the unreadable reject upstream);
+    the verbatim model echo is capped at 8000 chars in the audit trail."""
+    from pydantic import ValidationError
+
+    from vision_agent.pipeline import process_receipt_image
+    from vision_agent.adapters import OcrResult
+    from vision_agent.config import Settings
+
+    # over-long item line → dropped to unclear_parts, extraction still valid
+    hostile_item = VALID.replace("chai patti", "i" * 5000)
+    extraction = parse_extraction(hostile_item)
+    assert extraction.items == []
+    assert any("unreadable item line dropped" in note for note in extraction.unclear_parts)
+
+    # model-written unclear notes are capped per entry
+    capped = ReceiptExtraction(unclear_parts=["n" * 5000])
+    assert capped.unclear_parts == ["n" * 200]
+
+    # over-long supplier name fails validation (graceful unreadable path upstream)
+    with pytest.raises(ValidationError):
+        ReceiptExtraction(supplier_name="s" * 201)
+    ReceiptExtraction(supplier_name="s" * 200)  # boundary accepted
+
+    # the verbatim model echo stored in raw_output is capped
+    class _StubAdapter:
+        model, name = "stub", "stub"
+
+        def extract(self, image_path):
+            return OcrResult(
+                model="stub",
+                extraction=parse_extraction(VALID),
+                raw_text="A" * 20_000,
+            )
+
+    tx = process_receipt_image("unused.png", settings=Settings(), adapter=_StubAdapter())
+    assert len(tx["source"]["raw_output"]["model_response_text"]) == 8000

@@ -30,10 +30,15 @@ def _clean_number(value: Any) -> Any:
 class ExtractedItem(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    item: str = Field(min_length=1)
+    # Length caps per bizro-security: OCR-extracted strings are capped at the
+    # contract so a garbled/hostile receipt can neither push confirmation_ur
+    # past the WhatsApp 4096-char send limit nor flood the stored row. An
+    # over-long item fails THIS model's validation → _drop_unreadable_items
+    # moves it to unclear_parts (existing graceful per-line path).
+    item: str = Field(min_length=1, max_length=120)
     qty: float = Field(gt=0)
     unit_price: float = Field(gt=0)
-    unit: str | None = None
+    unit: str | None = Field(default=None, max_length=24)
     line_total: float | None = None
 
     @field_validator("item", mode="before")
@@ -60,13 +65,15 @@ class ReceiptExtraction(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     is_receipt: bool = True
-    supplier_name: str | None = None
+    # Length caps (bizro-security): these strings echo printed/model text into
+    # confirmation_ur and the transaction row — bounded at the contract.
+    supplier_name: str | None = Field(default=None, max_length=200)
     # Provenance anchors (forensics, schema.md §10): the PRINTED bill number
     # and supplier phone come from the DISTRIBUTOR's bill book — data the
     # merchant does not control. Fabricated paper tends to lack them, reuse
     # them, or break per-supplier sequences.
-    bill_number: str | None = None
-    supplier_phone: str | None = None
+    bill_number: str | None = Field(default=None, max_length=64)
+    supplier_phone: str | None = Field(default=None, max_length=32)
     items: list[ExtractedItem] = Field(default_factory=list)
     stated_total: float | None = Field(default=None, gt=0)
     unclear_parts: list[str] = Field(default_factory=list)
@@ -91,7 +98,10 @@ class ReceiptExtraction(BaseModel):
         if value is None:
             return []
         if isinstance(value, str):
-            return [value] if value.strip() else []
+            value = [value] if value.strip() else []
+        if isinstance(value, list):
+            # model-written notes ride into raw_output and flags — cap each one
+            return [str(v)[:200] for v in value if str(v).strip()]
         return value
 
     @model_validator(mode="before")
@@ -117,7 +127,7 @@ class ReceiptExtraction(BaseModel):
                 kept.append(entry)
             except ValidationError:
                 summary = entry.get("item") if isinstance(entry, dict) else str(entry)
-                unclear.append(f"unreadable item line dropped: {summary!r}")
+                unclear.append(f"unreadable item line dropped: {str(summary)[:120]!r}")
         data["items"] = kept
         data["unclear_parts"] = unclear
         return data

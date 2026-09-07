@@ -185,6 +185,14 @@ def render_committee_summary_html(report: dict, db_url: str | None = None) -> st
     )
     period_label = period.get("label") or format_range_fallback(period)
 
+    # §6.3: a report layer must surface the mock marker wherever it is present —
+    # the committee one-pager is a report layer, same rule the full report
+    # (render.py mock banner) already follows.
+    mock_banner = (
+        "<div class='mockband'>MOCK DATA — synthesized without live model calls</div>"
+        if report.get("mock") else ""
+    )
+
     css = f"""
   * {{ box-sizing:border-box; }}
   body {{ margin:0; background:{PAPER}; color:{INK};
@@ -210,6 +218,10 @@ def render_committee_summary_html(report: dict, db_url: str | None = None) -> st
                 text-transform:uppercase; font-weight:700; }}
   .note {{ font-size:10.5px; font-style:italic; }}
   .ur {{ direction:rtl; unicode-bidi:isolate; }}
+  .mockband {{ background:{RED}; color:#FFFFFF; text-align:center;
+               font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+               padding:8px; border:{BORDER}; border-radius:2px;
+               box-shadow:4px 4px 0 {INK}; margin-bottom:14px; }}
   ul {{ margin:4px 0; padding-left:18px; }}
   li {{ margin:2px 0; }}
   .chain {{ font-size:11px; }}
@@ -231,6 +243,7 @@ def render_committee_summary_html(report: dict, db_url: str | None = None) -> st
 <title>Bizro Committee Summary — {_esc(mname)}</title>
 <style>{css}</style></head><body>
 <div class="sheet">
+{mock_banner}
 <div class="card">
   <div class="headrow"><h1>Committee Summary</h1>
     <span class="ur">کمیٹی کے لیے خلاصہ</span></div>

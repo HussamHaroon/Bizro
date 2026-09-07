@@ -207,13 +207,17 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         if is_mock:
             report["mock"] = True
 
+        # §6.3/§6.11: the mock marker MUST survive persistence — any consumer
+        # loading this row (dashboard cached preview, committee tools) must be
+        # able to see the report ran without a live model. (The strip here used
+        # to hide mock runs stored outside the API's adopt-and-rewrite path.)
         row = CreditReport(
             id=uuid.uuid4(),
             merchant_id=mid,
             period_start=agg.period_start.date() if agg.period_start else start.date(),
             period_end=agg.period_end.date() if agg.period_end else end.date(),
             model=report["model"],
-            report_json={k: v for k, v in report.items() if k not in ("mock",)},
+            report_json=report,
             narrative_ur=narrative_ur,
             created_at=datetime.now(timezone.utc),
         )

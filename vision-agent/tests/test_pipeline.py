@@ -145,3 +145,25 @@ class TestSelectionFollowsOcrModelEnv:
             images["clean"], occurred_at=OCCURRED, settings=Settings(ocr_model="new"),
         )
         assert tx["source"]["model"] == "mock:qwen3.5-ocr"
+
+
+class TestUnreadableImage:
+    def test_unreadable_image_gets_polite_reject_not_silence(self, tmp_path):
+        """F6 (§6.9 'clarification, never silence'): an unreadable/missing/
+        empty image is a CONTENT failure like a blur — it must ride the blessed
+        ReceiptRejected path (polite resend reply) instead of escaping as an
+        unhandled ImageError the webhook can only swallow silently."""
+        from vision_agent.adapters import QwenVlOcrAdapter
+        from vision_agent.dashscope_client import ImageError
+
+        empty = tmp_path / "corrupt.png"
+        empty.write_bytes(b"")  # zero-byte upload
+
+        for bad in (tmp_path / "missing.png", empty):
+            with pytest.raises(ReceiptRejected) as ei:
+                process_receipt_image(
+                    bad, settings=Settings(), adapter=QwenVlOcrAdapter(Settings())
+                )
+            assert ei.value.reason == "unreadable"
+            assert "دوبارہ" in ei.value.reply_ur  # polite "please resend" copy
+            assert not isinstance(ei.value, ImageError)

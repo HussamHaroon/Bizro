@@ -23,16 +23,21 @@ Status = Literal["pending", "confirmed", "edited", "rejected"]
 class Counterparty(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: str | None = None
-    phone: str | None = None
+    # Length caps per bizro-security: model-extracted strings are capped at the
+    # contract so a garbled/hostile note can neither push confirmation_ur past
+    # the WhatsApp 4096-char send limit nor flood the stored row. Over-long
+    # values fail validation → the pipeline's EXISTING low-confidence
+    # clarification path handles them (never a guess, never a crash).
+    name: str | None = Field(default=None, max_length=120)
+    phone: str | None = Field(default=None, max_length=32)
 
 
 class ItemLine(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    item: str
+    item: str = Field(min_length=1, max_length=120)
     qty: float = Field(ge=0)
-    unit: str | None = None
+    unit: str | None = Field(default=None, max_length=24)
     unit_price: float = Field(ge=0)
     line_total: float = Field(ge=0)
 
@@ -41,6 +46,14 @@ class RawOutput(BaseModel):
     model_config = ConfigDict(extra="allow")  # keep whatever the model said (audit trail)
 
     transcript: str = ""
+
+    @field_validator("transcript")
+    @classmethod
+    def _cap_transcript(cls, v: str) -> str:
+        # The transcript is an audit echo (the original audio lives with Meta),
+        # so a hard cap with truncation is honest — and stops a runaway model
+        # reply from landing megabytes in transactions.raw_model_output.
+        return v[:4000]
 
 
 class SourceBlock(BaseModel):
@@ -64,7 +77,7 @@ class Transaction(BaseModel):
     amount_pkr: float | None = Field(default=None, gt=0, le=10_000_000)
     currency: str = "PKR"
     counterparty: Counterparty = Field(default_factory=Counterparty)
-    description: str = ""
+    description: str = Field(default="", max_length=500)
     item_lines: list[ItemLine] = Field(default_factory=list)
     occurred_at: datetime
     source: SourceBlock
