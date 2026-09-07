@@ -88,6 +88,20 @@ def customer_ping_text(
     )
 
 
+def _send_succeeded(sent: Any) -> bool:
+    """True when a send actually went out. Three shapes reach us: the mock
+    marker (simulated send — the demo's two-factor loop works offline, with
+    the marker preserved on the audit row), a live Graph API success (Meta
+    answers with messages[0].id), or an explicit delivered/error key from the
+    best-effort wrapper. Anything else (or any error) counts as NOT pinged —
+    the flag never overstates delivery."""
+    if not isinstance(sent, dict) or sent.get("error"):
+        return False
+    if sent.get("delivered") is not None:
+        return bool(sent.get("delivered"))
+    return bool(sent.get("mock") or sent.get("messages"))
+
+
 def ping_customers_for_entries(
     session: Session,
     merchant: Any,
@@ -124,7 +138,12 @@ def ping_customers_for_entries(
                 transaction_id=tx.id,
                 kind="customer_confirmation_request",
                 body=body,
-                payload={"to": cust.phone, "delivered": sent.get("delivered")},
+                payload={
+                    "to": cust.phone,
+                    "delivered": _send_succeeded(sent),
+                    # §6.3: the mock marker survives onto the audit row
+                    "mock": bool(isinstance(sent, dict) and sent.get("mock")),
+                },
             )
         )
         results.append(
@@ -132,7 +151,7 @@ def ping_customers_for_entries(
                 "transaction_id": str(tx.id),
                 "customer": cust.name,
                 "to": cust.phone,
-                "pinged": bool(sent.get("delivered")),
+                "pinged": _send_succeeded(sent),
                 "body": body,
             }
         )
@@ -159,7 +178,7 @@ def apply_customer_reply(
         sent = deliver_fn(customer.phone, body)
         session.add(OutboundMessage(
             merchant_id=merchant.id, kind="customer_reply", body=body,
-            payload={"to": customer.phone, "delivered": sent.get("delivered")}))
+            payload={"to": customer.phone, "delivered": _send_succeeded(sent)}))
         return {"ok": True, "type": "text", "customer_reply": verdict,
                 "applied": False, "reply": body, "sent": sent}
 
@@ -190,7 +209,7 @@ def apply_customer_reply(
     session.add(OutboundMessage(
         merchant_id=merchant.id, transaction_id=tx.id,
         kind="customer_reply", body=body,
-        payload={"to": customer.phone, "delivered": sent.get("delivered")}))
+        payload={"to": customer.phone, "delivered": _send_succeeded(sent)}))
     out.update({"ok": True, "type": "text", "customer_reply": verdict,
                 "transaction_id": str(tx.id), "reply": body, "sent": sent})
     return out

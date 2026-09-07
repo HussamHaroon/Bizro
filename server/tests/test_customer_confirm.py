@@ -91,26 +91,55 @@ def _txs(mid):
 
 
 def test_customer_ping_sent_when_phone_on_file(client):
-    # merchant (with phone recorded) sends a udhar note via the text path
-    mid, _, phone = _mk_merchant_with_customer("923001112233")
+    # merchant sends a udhar note via the text path. The mock pipeline returns
+    # counterparty احمد carrying the phone the merchant "spoke" — persist
+    # creates a NEW customer row from that counterparty (the spoken Urdu name
+    # never ilike-matches the seeded Latin "Ahmad" row), and THE NEW ROW gets
+    # the ping: whoever the merchant named is pinged at the number they spoke.
+    mid, _, _ = _mk_merchant_with_customer("923001112233")
     r = client.post("/webhook/whatsapp", json=_text_payload(_wa("97m"), "Ahmad ko panch hazar ka udhar diya"))
     assert r.status_code == 200
     out = r.json()["results"][0]
     assert out["ok"] is True
     pings = [p for p in out.get("customer_pings", []) if p.get("pinged")]
     assert pings, "customer with phone must be pinged"
-    assert "PKR 5,000" in pings[0]["body"] or "PKR 5,000" in pings[0]["body"].replace(",", ",")
-    assert "Reply YES" in pings[0]["body"]
+    ping = pings[0]
+    assert "PKR 5,000" in ping["body"]
+    assert "Reply YES" in ping["body"]
+    # evidence: WHICH customer row received the ping
+    assert ping["customer"] == "احمد"
+    assert ping["to"] == "923001112233"
+    with db_session() as s:
+        # the text came from a fresh wa_id → the webhook upserted a NEW merchant;
+        # the counterparty row (and the ping) belong to THAT merchant
+        rows = (
+            s.query(Customer)
+            .filter(Customer.merchant_id == uuid.UUID(out["merchant_id"]))
+            .all()
+        )
+        by_name = {c.name: c.phone for c in rows}
+        # exactly one row: created from the spoken counterparty + spoken phone
+        assert by_name == {"احمد": "923001112233"}
+        tx = s.get(Transaction, uuid.UUID(ping["transaction_id"]))
+        cust = s.get(Customer, tx.customer_id)
+        assert (cust.name, cust.phone) == ("احمد", "923001112233"), (
+            "the ping targets the counterparty row built from the spoken phone, "
+            "not any pre-seeded ledger customer"
+        )
 
 
-def test_no_ping_without_phone(client):
-    # merchant whose customer has NO phone: flow completes, zero pings
+def test_no_ping_without_phone(client, monkeypatch):
+    # counterparty WITHOUT a phone: the sale_with_items mock returns Bilal with
+    # phone=None — a pingeable kind (sale), skipped exactly at the phone check
+    # → zero pings. (clean_udhar now carries a spoken phone by design — it is
+    # the §13 demo scenario — so the no-phone case pins its own scenario.)
+    monkeypatch.setenv("MOCK_SCENARIO", "sale_with_items")
     mid, _, _ = _mk_merchant_with_customer(None)
     # text from the merchant's own wa_id is needed — use a fresh merchant text flow
     with db_session() as s:
         m = s.get(Merchant, uuid.UUID(mid))
         wa = m.wa_id
-    r = client.post("/webhook/whatsapp", json=_text_payload(wa, "Bilal ko do hazar ka udhar diya"))
+    r = client.post("/webhook/whatsapp", json=_text_payload(wa, "Bilal ne pandrah sau ka saman cash liya"))
     assert r.status_code == 200
     assert r.json()["results"][0].get("customer_pings", []) == []
 
@@ -124,6 +153,16 @@ def test_customer_yes_confirms_and_upgrades_tier(client):
     rows = _txs(mid)
     assert rows[0][1] == "confirmed"
     assert rows[0][2] == "customer_confirmed"
+    # §12 integration: the report/corroboration path consumes the upgraded
+    # customer_confirmed tier without error (demo proof: YES → report still runs).
+    rp = client.get(f"/api/merchants/{mid}/report/preview")
+    assert rp.status_code == 200, rp.text
+    report = rp.json().get("report")
+    assert isinstance(report, dict)
+    assert isinstance(report.get("trust"), dict), (
+        "the corroboration block must run over the ledger that now carries a "
+        "customer_confirmed entry"
+    )
 
 
 def test_customer_no_flags_and_alerts_shopkeeper(client):
