@@ -117,9 +117,14 @@ def compute_aggregates(
         agg.median_confidence = round(statistics.median(confidences), 3)
     total = agg.total_entries
     for src in ("voice", "photo", "manual"):
-        agg.provenance[src] = round(
-            sum(1 for t in txs if t.source_type == src) / total * 100, 1
+        # "text" (typed WhatsApp messages) buckets under "manual" — the SAME
+        # definition data_quality.provenance uses, so the metrics row and the
+        # data-quality card can never show contradictory percentages.
+        count = sum(
+            1 for t in txs
+            if t.source_type == src or (src == "manual" and t.source_type == "text")
         )
+        agg.provenance[src] = round(count / total * 100, 1)
     return agg
 
 

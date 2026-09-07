@@ -170,3 +170,49 @@ def test_rendered_html_escapes_hostile_strings(tmp_path):
     out = render_report_html(report)
     assert "<script>alert" not in out  # escaped, not executed
     assert "&lt;script&gt;" in out
+
+
+# --- pipeline-security fixes (2026-09-07) -------------------------------------
+
+
+def test_persisted_report_json_keeps_mock_marker(tmp_path):
+    """F1 (§6.3/§6.11): the mock marker MUST survive persistence — the DB row is
+    what every later consumer (dashboard cached preview, committee tools) loads,
+    so a mock report stored WITHOUT the marker presents as a real model run."""
+    from credit_agent.db_view import CreditReport
+
+    url = _db(tmp_path / "t.db")
+    Session = get_sessionmaker(url)
+    with Session() as s:
+        mid = _mk_merchant(s)
+    report = generate_report(mid, db_url=url)  # offline -> templated narrative
+    assert report["mock"] is True
+    with Session() as s:
+        row = s.query(CreditReport).order_by(CreditReport.created_at.desc()).first()
+        assert row is not None
+        assert row.report_json.get("mock") is True  # was stripped before the fix
+
+
+def test_typed_entries_count_as_manual_in_metrics_provenance(tmp_path):
+    """F3: source_type='text' (typed messages) buckets under 'manual' in the
+    metrics provenance — the SAME definition data_quality uses, so the metrics
+    row and the data-quality card can never show contradictory percentages."""
+    url = _db(tmp_path / "t.db")
+    Session = get_sessionmaker(url)
+    with Session() as s:
+        mid = _mk_merchant(s)
+        now = datetime.now(timezone.utc)
+        for i, src in enumerate(("voice", "text")):
+            s.add(Transaction(
+                id=uuid.uuid4(), merchant_id=mid, kind="sale", amount_pkr=100 + i,
+                description="cash sale", occurred_at=now - timedelta(days=i),
+                source_type=src, source_model="qwen-flash", confidence=0.9,
+                status="confirmed", created_at=now, updated_at=now,
+            ))
+        s.commit()
+    report = generate_report(mid, db_url=url)
+    prov = report["metrics"][0]["provenance"]
+    dq = report["data_quality"]["provenance"]
+    assert prov["manual_pct"] == 50.0  # was 0.0 before the fix
+    assert prov["manual_pct"] == dq["manual_pct"]
+    assert abs(sum(prov[k] for k in ("voice_pct", "photo_pct", "manual_pct")) - 100.0) < 0.1

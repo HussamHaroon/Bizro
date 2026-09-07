@@ -21,6 +21,7 @@ from typing import Any
 
 from vision_agent.adapters import OcrAdapter, get_adapter
 from vision_agent.config import Settings, default_settings
+from vision_agent.dashscope_client import ImageError
 from vision_agent.sanity import FlagDetail, evaluate_flags
 from vision_agent.schemas import ReceiptExtraction, TransactionResult
 from vision_agent.urdu import confirmation_ur, reject_reply_ur
@@ -84,7 +85,14 @@ def process_receipt_image(
     history = history or []
     occurred_at = occurred_at or _now_iso()
 
-    result = adapter.extract(Path(image_path))
+    try:
+        result = adapter.extract(Path(image_path))
+    except ImageError as exc:
+        # Unreadable/oversized/unsupported image = CONTENT failure, same class
+        # as a blur: the merchant must get the polite resend reply (§6.4/§6.9 —
+        # "clarification, never silence"), never an unhandled error that the
+        # webhook can only swallow silently.
+        raise ReceiptRejected("unreadable", reject_reply_ur("unreadable")) from exc
     extraction = result.extraction
 
     # --- polite rejects (never persist a non-transaction; D-V5) --------------
@@ -153,7 +161,10 @@ def process_receipt_image(
         **extract_exif(image_path),
     }
     raw_output: dict[str, Any] = {
-        "model_response_text": result.raw_text,
+        # Verbatim model answer, audit-capped: a runaway OCR reply must not land
+        # whole in transactions.raw_model_output (extraction came from the
+        # validated pydantic model, not from this echo).
+        "model_response_text": (result.raw_text or "")[:8000],
         "extraction": extraction.model_dump(),
         "receipt_meta": receipt_meta,
         "sanity": [_detail_json(detail) for detail in details],

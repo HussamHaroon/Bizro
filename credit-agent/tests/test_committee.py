@@ -138,3 +138,16 @@ def test_sealed_chain_on_plain_full_report_payload(seeded_report):
     assert "corroboration not yet measured" in html
     assert "no outstanding udhar" in html
     assert "—" in html  # missing metrics shown as dashes, never invented
+
+
+def test_mock_report_carries_banner_real_report_does_not(seeded_report):
+    """F2 (§6.3): the committee one-pager is a report layer — it must surface
+    the mock marker wherever the payload carries it (the full report already
+    does; this surface used to render a mock report with no disclosure)."""
+    report, url, _ = seeded_report
+    assert report.get("mock") is True  # offline fixture: templated narrative
+    html = render_committee_summary_html(report, db_url=url)
+    assert "MOCK DATA" in html
+
+    real = {k: v for k, v in report.items() if k != "mock"}
+    assert "MOCK DATA" not in render_committee_summary_html(real, db_url=url)

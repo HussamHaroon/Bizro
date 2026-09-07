@@ -576,6 +576,9 @@ def _low_confidence_fallback(
 ) -> dict:
     """Schema-conformant 'ask again' payload. amount None = unknown, never a guess
     (§6.2/§6.9: the server must persist NOTHING and send the clarification instead)."""
+    # note rides inside description (max_length=500 on the contract model) — cap
+    # it here so the fallback itself can never trip its own ValidationError.
+    note = note[:300]
     # kind is required by the contract enum; carry what was determinable, else mark
     # the description with UNCLEAR_KIND so the confirmation builder asks about kind.
     final_kind = kind if kind in ("sale", "expense", "udhar_given", "udhar_settlement") else "udhar_given"
