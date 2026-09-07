@@ -1,10 +1,17 @@
 """Voice Khata pipeline: one WhatsApp voice note → schema.md §1 transaction dict.
 
-Single-prompt design: the omni model transcribes AND structures in ONE call (no
-separate ASR step — that's the point of omni). Pydantic validates the model's JSON
-against the contract with one repair-retry; anything still failing, ambiguous, or
-low-confidence becomes flag=low_confidence + a clarification question — the pipeline
-NEVER guesses an amount (schema.md §1 rule).
+Two model routes, same assembly:
+  - STT branch (default when STT_API_KEY is set): a dedicated ASR provider
+    transcribes (STT_PROVIDER=auto → Qwen ASR first with a DashScope key,
+    Groq Whisper free-tier fallback — see stt_client), then the PLAIN-TEXT
+    model structures the transcript.
+  - Omni single-call: one audio-input call transcribes AND structures (used
+    when no STT key is present — the original design).
+
+Both routes share the identical assembly path: Pydantic validates the model's
+JSON against the contract with one repair-retry; anything still failing,
+ambiguous, or low-confidence becomes flag=low_confidence + a clarification
+question — the pipeline NEVER guesses an amount (schema.md §1 rule).
 
 Text-only confirmation is the MVP (design.md §2). Mock mode shares the exact same
 assembly code; only the network call is faked.
@@ -180,7 +187,9 @@ def process_voice_note_multi(
                 cross = dual.get("cross")
                 # plain text call — generic hosts reject the omni field set.
                 # Number aid: bracketed digit hints after spoken number words
-                # cut digit-conversion errors (the #1 association killer).
+                # are INTENDED to cut digit-conversion errors (hypothesis;
+                # end-to-end benefit unmeasured — benchmarks/RESULTS.md covers
+                # the deterministic hint layer only).
                 aid = normalize_spoken_numbers(transcript)
                 model_text = client.chat_text(
                     system=SYSTEM_PROMPT,
