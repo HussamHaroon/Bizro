@@ -60,9 +60,13 @@ class Settings:
     stt_base_url: str = "https://api.groq.com/openai/v1"
     stt_model: str = "whisper-large-v3-turbo"
     stt_language: str = "ur"  # empty = auto-detect
-    # --- Qwen ASR primary (STT_PROVIDER=qwen): qwen3-asr-flash via DashScope
-    # chat-completions; any failure falls back to the whisper provider above ---
-    stt_provider: str = "groq"  # groq | qwen
+    # --- STT provider selection (STT_PROVIDER=auto | qwen | groq).
+    # auto (default) = the documented architecture, made true: Qwen ASR
+    # (qwen3-asr-flash via DashScope chat-completions) runs FIRST whenever a
+    # DASHSCOPE_API_KEY is present; without a key the free-tier Groq Whisper
+    # path is used. Any Qwen failure falls back to Groq so a voice note is
+    # never lost to one transcriber's hiccup. ---
+    stt_provider: str = "auto"
     stt_qwen_model: str = "qwen3-asr-flash"
     # --- Cross-check (dual-engine agreement): OpenAI Whisper as an INDEPENDENT
     # second opinion. When both engines agree, transcription confidence is
@@ -116,7 +120,7 @@ def load_settings(env: dict[str, str] | None = None) -> Settings:
         stt_base_url=get("STT_BASE_URL", Settings.stt_base_url),
         stt_model=get("STT_MODEL", Settings.stt_model),
         stt_language=get("STT_LANGUAGE", "ur"),
-        stt_provider=get("STT_PROVIDER", "groq").lower(),
+        stt_provider=get("STT_PROVIDER", "auto").lower(),
         stt_qwen_model=get("STT_QWEN_MODEL", Settings.stt_qwen_model),
         openai_api_key=get("OPENAI_API_KEY"),
         openai_base_url=get("OPENAI_BASE_URL", Settings.openai_base_url),
