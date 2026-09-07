@@ -56,6 +56,42 @@ CORRECT_ACK_PAIR = (
 )
 NO_PENDING_PAIR = ("کوئی زیرِ التوا اندراج نہیں ملا۔", "No pending entry was found.")
 REMOVED_ACK_PAIR = ("ٹھیک ہے، اندراج ہٹا دیا گیا۔", "Okay, the entry was removed.")
+SWITCH_ACK_PAIR = (
+    "ٹھیک ہے — اب بزرو اردو میں جواب دے گا۔",
+    "English it is — Bizro will reply in English from now on.",
+)
+
+# A language-switch command is recognized only when the WHOLE message is one —
+# a message that merely contains the word ("english book sold for 500") must
+# still parse as a transaction.
+_SWITCH_LANGS = {"english": "en", "urdu": "ur", "انگریزی": "en", "اردو": "ur"}
+
+
+def language_switch_request(text: str) -> str | None:
+    """Return "en"/"ur" when the message is a whole-message language command
+    ("tell me in english", "urdu me batao", "english please", "انگریزی میں"),
+    else None. Strict by design: full-string match after punctuation
+    normalization, verb-first or language-first phrasings only."""
+    import re
+
+    s = (text or "").strip().casefold()
+    for ch in ".,?!؛:;۔؟":
+        s = s.replace(ch, " ")
+    s = " ".join(s.split())
+    if not s:
+        return None
+    if s in _SWITCH_LANGS:
+        return _SWITCH_LANGS[s]
+    verb = r"(?:tell|reply|speak|talk|answer|write|batao|bata|likho)"
+    for name, key in (("en", "english"), ("ur", "urdu"), ("en", "انگریزی"), ("ur", "اردو")):
+        if re.fullmatch(
+            rf"(?:(?:{verb})\s+)?(?:me\s+)?(?:in\s+|میں\s+)?{re.escape(key)}(?:\s+(?:please|مہربانی))?",
+            s,
+        ) or re.fullmatch(
+            rf"{re.escape(key)}(?:\s+(?:me|mein|میں))?(?:\s+(?:batao|bata|likho|reply))?", s
+        ):
+            return name
+    return None
 
 
 def pick(lang: str | None, pair: tuple[str, str]) -> str:

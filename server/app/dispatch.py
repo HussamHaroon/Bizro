@@ -758,6 +758,65 @@ def handle_text_reply(
     return reply, tx
 
 
+def resend_pending_confirmation(
+    session: Session, merchant: Merchant, lang: str
+) -> tuple[str, Transaction | None, dict[str, Any] | None]:
+    """A language-switch command with a live draft: re-render the latest
+    pending entry's confirmation in the requested language and deliver it with
+    the one-tap buttons (delivery + outbound audit row here, mirroring
+    send_reply's contract). Without a pending entry, return the plain switch
+    acknowledgement. The voice-agent import is defensive like every other
+    dispatch boundary — a missing package degrades to the acknowledgement."""
+    tx = session.scalar(
+        select(Transaction)
+        .where(Transaction.merchant_id == merchant.id, Transaction.status == "pending")
+        .order_by(Transaction.created_at.desc())
+        .limit(1)
+    )
+    if tx is None:
+        return lang_mod.pick(lang, lang_mod.SWITCH_ACK_PAIR), None, None
+    text = ""
+    try:
+        from voice_agent.confirmation import build_confirmation
+        from voice_agent.models import Transaction as TxModel
+
+        src = {
+            "type": tx.source_type,
+            "media_id": tx.source_media_id,
+            "model": tx.source_model,
+            "confidence": tx.confidence,
+            "raw_output": tx.raw_model_output or {},
+        }
+        cust = session.get(Customer, tx.customer_id) if tx.customer_id else None
+        counterparty = {"name": cust.name, "phone": cust.phone} if cust else {}
+        tx_pyd = TxModel(
+            kind=tx.kind,
+            amount_pkr=float(tx.amount_pkr),
+            counterparty=counterparty,
+            description=tx.description or "",
+            item_lines=tx.item_lines or [],
+            occurred_at=tx.occurred_at,
+            source=src,
+        )
+        text = build_confirmation(tx_pyd, "western", lang)
+    except Exception as exc:  # degraded: ack only, entry untouched
+        logger.warning("Confirmation re-render for language switch failed: %s", exc)
+    if not (text or "").strip():
+        return lang_mod.pick(lang, lang_mod.SWITCH_ACK_PAIR), None, None
+    sent = deliver(merchant.wa_id, text, buttons=CONFIRM_BUTTONS)
+    session.add(
+        OutboundMessage(
+            merchant_id=merchant.id,
+            transaction_id=tx.id,
+            kind="confirmation_text",
+            body=text,
+            payload={"buttons": CONFIRM_BUTTONS},
+        )
+    )
+    session.commit()
+    return text, tx, sent
+
+
 # --- credit report preview (credit_agent boundary) ---------------------------
 
 

@@ -227,6 +227,25 @@ def _handle_message(
                 outcome = _onboarding_outcome(msg, session, merchant)
                 outcome["merchant_id"] = str(merchant.id)
                 return outcome
+            switch = lang_mod.language_switch_request(body)
+            if switch:
+                # "tell me in english" / "urdu me batao": persist the choice and
+                # re-render the live draft's confirmation in the requested
+                # language — never parse a meta request as a transaction.
+                # resend_pending_confirmation owns delivery + the audit row.
+                lang_mod.set_merchant_lang(session, merchant, switch)
+                reply, acted_tx, sent = dispatch.resend_pending_confirmation(
+                    session, merchant, switch
+                )
+                return {
+                    "message_id": msg.get("id"),
+                    "ok": True,
+                    "type": "text",
+                    "merchant_id": str(merchant.id),
+                    "reply": reply,
+                    "sent": sent,
+                    "language_switch": switch,
+                }
             reply, acted_tx = dispatch.handle_text_reply(session, merchant, body)
             if reply is not None:
                 # Confirm/reject by typed word: send_reply delivers AND writes
