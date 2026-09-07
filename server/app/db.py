@@ -372,35 +372,34 @@ def _backfill_ledger_chain(url: str | None = None) -> None:
     `url` targets a SPECIFIC database (scripts/seeding pass their own SQLite so
     the seed can never write to whatever DATABASE_URL the environment points
     at — production isolation)."""
-    from sqlalchemy import select
+    from sqlalchemy import create_engine as _ce, select
 
     from .ledger import seal_transaction
 
     if url is not None:
-        from sqlalchemy import create_engine as _ce
-
-        session = SessionLocal(bind=_ce(url, connect_args={"check_same_thread": False}
-                                         if url.startswith("sqlite") else {}))
+        _engine = _ce(url, connect_args={"check_same_thread": False}
+                      if url.startswith("sqlite") else {})
+        session = SessionLocal(bind=_engine)
     else:
         session = db_session()
+    try:
         rows = session.scalars(
             select(Transaction)
             .where(Transaction.entry_hash.is_(None))
             .order_by(Transaction.merchant_id, Transaction.created_at, Transaction.id)
         ).all()
-        try:
-            if not rows:
-                return
-            tails: dict[uuid.UUID, str | None] = {}
-            for tx in rows:
-                prev = tails.get(tx.merchant_id)
-                if prev is None and tx.merchant_id not in tails:
-                    prev = _sealed_tail(session, tx.merchant_id)
-                seal_transaction(tx, prev)
-                tails[tx.merchant_id] = tx.entry_hash
-            session.commit()
-        finally:
-            session.close()
+        if not rows:
+            return
+        tails: dict[uuid.UUID, str | None] = {}
+        for tx in rows:
+            prev = tails.get(tx.merchant_id)
+            if prev is None and tx.merchant_id not in tails:
+                prev = _sealed_tail(session, tx.merchant_id)
+            seal_transaction(tx, prev)
+            tails[tx.merchant_id] = tx.entry_hash
+        session.commit()
+    finally:
+        session.close()
 
 
 def _sealed_tail(session: Session, merchant_id: uuid.UUID) -> str | None:
