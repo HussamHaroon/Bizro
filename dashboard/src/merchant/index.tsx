@@ -31,7 +31,7 @@ const MerchantContext = createContext<MerchantState>({
 function readSavedId(): string {
   try {
     const saved = localStorage.getItem(MERCHANT_STORAGE_KEY);
-    if (saved) return saved;
+    if (saved) return saved && saved.trim() ? saved : DEFAULT_MERCHANT_ID;
   } catch {
     /* private mode / storage disabled — default below */
   }

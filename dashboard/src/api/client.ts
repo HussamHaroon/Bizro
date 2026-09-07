@@ -104,7 +104,14 @@ function liveClient(baseUrl: string, merchantId: string): ApiClient {
       ...init,
     });
     if (!res.ok) throw new Error(`API ${res.status} ${res.statusText} — ${path}`);
-    return (await res.json()) as T;
+    // A redirect or server error can return HTML — parse defensively so the
+    // screen shows an error state instead of a raw SyntaxError crash.
+    const text = await res.text();
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new Error(`API returned non-JSON for ${path} — is the server up?`);
+    }
   }
   /* In-flight GET dedupe: /credit mounts listTransactions() and reportPreview()
      together, and reportPreview needs the SAME rows to adapt the canonical
