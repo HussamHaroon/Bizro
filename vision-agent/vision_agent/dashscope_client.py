@@ -111,6 +111,11 @@ class DashScopeOcrClient:
         url = self._settings.dashscope_base_url.rstrip("/") + "/chat/completions"
         body = {
             "model": model,
+            # thinking mode burns 45s+ on vision calls (vs ~2s off) and blows the
+            # 60s serverless cap; extraction never wants it. Token cap keeps a
+            # long receipt's JSON inside one response.
+            "enable_thinking": False,
+            "max_tokens": 1200,
             "messages": [
                 {
                     "role": "user",
