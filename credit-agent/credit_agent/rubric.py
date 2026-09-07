@@ -20,6 +20,23 @@ W_CONFIDENCE = 0.25
 W_CASHFLOW = 0.20
 W_CLEANLINESS = 0.15
 
+# Two-way toggle (owner ruling 2026-09-07): when the OFFICER requires customer
+# confirmation for a merchant, corroboration joins the rubric as a scored
+# pillar and the four standing weights scale by 0.85 to renormalize
+# (0.34 + 0.2125 + 0.17 + 0.1275 + 0.15 = 1.0). Default OFF = the four
+# original weights, byte-identical scoring.
+W_CORROBORATION = 0.15
+_PILLAR_SCALE = 1.0 - W_CORROBORATION  # 0.85
+
+# The ONE clause the ON readiness note appends (demo-eve constraint: short,
+# no banner — the flag's only payload exposure is readiness.two_way_required).
+TWO_WAY_NOTE_CLAUSE = (
+    " · two-way confirmation required: unconfirmed revenue lowers this score"
+)
+TWO_WAY_NOTE_CLAUSE_UR = (
+    " · دو طرفہ تصدیق لازمی ہے: بغیر تصدیق آمدنی اس سکور کو کم کرتی ہے"
+)
+
 BAND_READY = 75
 BAND_NEARLY = 50
 
@@ -34,6 +51,8 @@ BAND_LABELS_UR = {
 # renders this. The weights above are documented judgment, not validated
 # against repayment outcomes — the label says so wherever the number appears.
 INDICATOR_NOTE = "readiness indicator (not a validated repayment predictor)"
+# Urdu alongside the English note (report readiness.note_ur, two-way ON only).
+INDICATOR_NOTE_UR = "قرض کے لیے تیاری کا اشارہ (تصدیق شدہ ادائیگی کے رجحان کا پیمانہ نہیں)"
 
 # The four limitations every consumer of a Bizro report must see (§12):
 # self-reported inputs, no outcome validation, Urdu-centric parsing,
@@ -99,7 +118,19 @@ def _pillar_cleanliness(agg: Aggregates) -> tuple[float, str]:
     return max(0.0, min(1.0, raw)), note
 
 
-def score(agg: Aggregates) -> Scored:
+def score(
+    agg: Aggregates,
+    corroboration_pct: float | None = None,
+    two_way_required: bool = False,
+) -> Scored:
+    """Readiness score. Default args keep every pre-toggle caller
+    byte-identical: OFF (or no pct passed) is exactly the four-pillar rubric.
+
+    When two_way_required and corroboration_pct is not None, a CORROBORATION
+    pillar joins at weight 0.15 (raw = corroboration share of disbursement-
+    eligible revenue, clamped 0..1) and the standing pillars scale by 0.85 —
+    an unconfirmed ledger scores lower until customers confirm. Bands and the
+    insufficient-data gate are unchanged."""
     if (
         agg.total_entries < MIN_ENTRIES
         or agg.weeks_active < MIN_WEEKS
@@ -124,6 +155,16 @@ def score(agg: Aggregates) -> Scored:
         "cashflow": W_CASHFLOW,
         "cleanliness": W_CLEANLINESS,
     }
+    if two_way_required and corroboration_pct is not None:
+        raw = max(0.0, min(1.0, corroboration_pct / 100.0))
+        pillars_raw["corroboration"] = (
+            raw,
+            f"corroborated revenue share {max(0.0, min(100.0, corroboration_pct)):.0f}%",
+        )
+        weights = {
+            **{k: w * _PILLAR_SCALE for k, w in weights.items()},
+            "corroboration": W_CORROBORATION,
+        }
     total = sum(pillars_raw[k][0] * weights[k] for k in weights)
     sc = round(total * 100)
     band = "ready" if sc >= BAND_READY else "nearly" if sc >= BAND_NEARLY else "not_yet"

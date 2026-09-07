@@ -98,7 +98,7 @@ class TransactionPatch(BaseModel):
 
 
 class MerchantSettingsPut(BaseModel):
-    """PUT /api/merchants/{id}/settings body — any subset of the two settings
+    """PUT /api/merchants/{id}/settings body — any subset of the settings
     (schema.md §8). Unknown keys are a 422 (extra="forbid"): the dashboard
     write-through must never silently drop a typo'd field name."""
 
@@ -106,6 +106,9 @@ class MerchantSettingsPut(BaseModel):
 
     language: Literal["ur", "en", "mixed"] | None = None
     numeral_style: Literal["western", "urdu"] | None = None
+    # Two-way toggle (owner ruling 2026-09-07): the OFFICER flips this; False
+    # (the implied default) is a valid save so the flag can be turned back off.
+    two_way_confirmation_required: bool | None = None
 
 
 def transaction_to_wire(

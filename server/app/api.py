@@ -1088,6 +1088,9 @@ def _settings_to_wire(row: MerchantSettings) -> dict[str, Any]:
     return {
         "language": row.language,
         "numeral_style": row.numeral_style,
+        # Two-way toggle (owner ruling 2026-09-07): officer-flipped flag that
+        # turns customer corroboration into a scored readiness pillar.
+        "two_way_confirmation_required": bool(row.two_way_confirmation_required),
         "updated_at": row.updated_at.isoformat(),
     }
 
@@ -1104,6 +1107,7 @@ def get_merchant_settings(merchant_id: str):
         return {
             "language": "mixed",
             "numeral_style": _default_numeral_style(),
+            "two_way_confirmation_required": False,
             "updated_at": None,
         }
 
@@ -1131,6 +1135,9 @@ def put_merchant_settings(merchant_id: str, body: MerchantSettingsPut):
                 merchant_id=merchant.id,
                 language=updates.get("language", "mixed"),
                 numeral_style=updates.get("numeral_style", _default_numeral_style()),
+                two_way_confirmation_required=updates.get(
+                    "two_way_confirmation_required", False
+                ),
                 updated_at=now,
             )
             session.add(row)

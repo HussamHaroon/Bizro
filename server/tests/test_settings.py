@@ -53,11 +53,16 @@ def _new_merchant(prefix: str, name: str = "Settings Ctx") -> uuid.UUID:
 
 def test_get_missing_row_returns_implied_defaults(client):
     """No settings saved yet → 200 with language 'mixed', numeral_style
-    'western' (NUMERAL_STYLE unset in tests), updated_at null — not 404."""
+    'western', two-way OFF, updated_at null — not 404."""
     mid = _new_merchant("92550")
     r = client.get(f"/api/merchants/{mid}/settings")
     assert r.status_code == 200, r.text
-    assert r.json() == {"language": "mixed", "numeral_style": "western", "updated_at": None}
+    assert r.json() == {
+        "language": "mixed",
+        "numeral_style": "western",
+        "two_way_confirmation_required": False,
+        "updated_at": None,
+    }
 
 
 def test_get_default_numeral_style_mirrors_env(client, monkeypatch):
@@ -195,7 +200,12 @@ def test_second_merchant_settings_independent(client):
 
     # B still reads its own implied defaults (updated_at null)
     got_b = client.get(f"/api/merchants/{b}/settings").json()
-    assert got_b == {"language": "mixed", "numeral_style": "western", "updated_at": None}
+    assert got_b == {
+        "language": "mixed",
+        "numeral_style": "western",
+        "two_way_confirmation_required": False,
+        "updated_at": None,
+    }
 
     r = client.put(f"/api/merchants/{b}/settings", json={"language": "en", "numeral_style": "urdu"})
     assert r.status_code == 200, r.text
