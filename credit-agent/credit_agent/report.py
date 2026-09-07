@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from .aggregates import Aggregates, compute_aggregates
+from .data_quality import compute_data_quality
 from .db_view import CreditReport, Customer, Merchant, Transaction, get_sessionmaker
 from .formatting import (
     DEFAULT_BASE_URL,
@@ -82,6 +83,7 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         agg = compute_aggregates(list(txs), customers, now=end)
         scored = score(agg)
         narrative_ur, is_mock = build_narrative(agg, scored, mname)
+        data_quality = compute_data_quality(list(txs), now=end)
 
         # Attribution (defect 4): the model id ACTUALLY configured, and the
         # provider derived AT RUNTIME from the host the model calls really go
@@ -169,6 +171,9 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
             "merchant": {"id": str(mid), "name": mname},
             "narrative_ur": narrative_ur,
             "pillars": scored.pillars,
+            # Data-quality & consistency disclosures (schema.md §9 local ruling):
+            # ledger-internals evidence for the loan officer — never a trust score.
+            "data_quality": data_quality,
         }
         if is_mock:
             report["mock"] = True

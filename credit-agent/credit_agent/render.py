@@ -246,6 +246,54 @@ def render_report_html(report: dict) -> str:
 
     flags_html = "".join(_flag_li(f) for f in report.get("red_flags", [])) or "<li>None</li>"
 
+    # Data-quality & consistency card (schema.md §9): ledger-internals evidence
+    # for the loan officer — disclosures, never accusations.
+    dq = report.get("data_quality") or {}
+    dq_rows: list[str] = []
+    if dq:
+        prov = dq.get("provenance") or {}
+        dq_rows.append(
+            f"<tr><td>Provenance mix</td><td class='num'>photo {_esc(prov.get('photo_pct', 0))}% · "
+            f"voice {_esc(prov.get('voice_pct', 0))}% · manual {_esc(prov.get('manual_pct', 0))}%</td></tr>"
+        )
+        bf = dq.get("backfill") or {}
+        dq_rows.append(
+            f"<tr><td>Entries recorded &gt;{_esc(bf.get('lag_days_threshold', 7))} days after their claimed date</td>"
+            f"<td class='num'>{_esc(bf.get('count', 0))} ({_esc(bf.get('ratio', 0))})</td></tr>"
+        )
+        bu = dq.get("burst_insertion") or {}
+        dq_rows.append(
+            f"<tr><td>History inserted in bursts (≥{_esc(bu.get('min_entries', 8))} in {_esc(bu.get('window_hours', 24))}h)</td>"
+            f"<td class='num'>{_esc(bu.get('count', 0))}</td></tr>"
+        )
+        sc = dq.get("stock_coherence") or {}
+        viol = sc.get("violations") or []
+        viol_txt = "; ".join(
+            f"{_esc(v_.get('item'))}: sold {_esc(v_.get('sold'))} vs bought {_esc(v_.get('bought'))}"
+            for v_ in viol
+        ) or "none"
+        dq_rows.append(
+            f"<tr><td>Sold-exceeds-purchased inconsistencies (of {_esc(sc.get('checked_items', 0))} checkable items)</td>"
+            f"<td class='num'>{_esc(len(viol))} — {viol_txt}</td></tr>"
+        )
+        ws = dq.get("window_spike") or {}
+        if ws.get("ratio") is not None:
+            dq_rows.append(
+                f"<tr><td>Trailing {_esc(ws.get('window_days', 14))}-day sales vs baseline</td>"
+                f"<td class='num'>{_esc(ws.get('ratio'))}×</td></tr>"
+            )
+    data_quality_card = ""
+    if dq_rows:
+        basis = _esc((dq.get("basis_note") or "").strip())
+        data_quality_card = (
+            "<div class='card'><div class='cardhead'><strong>Data quality &amp; consistency</strong></div>"
+            "<table><tr><th>Indicator</th><th style='text-align:right'>Value</th></tr>"
+            + "".join(dq_rows)
+            + "</table>"
+            + (f"<div class='foot'>{basis}</div>" if basis else "")
+            + "</div>"
+        )
+
     mock_banner = (
         f"<div class='mock'>MOCK DATA — synthesized without live model calls</div>"
         if mock else ""
@@ -281,6 +329,7 @@ def render_report_html(report: dict) -> str:
   <table><tr><th>Metric</th><th class="num">Value</th><th>Provenance</th></tr>
   {metrics_rows}</table></div>
 <div class="card"><div class="cardhead"><strong>Red flags</strong></div><ul class="flags">{flags_html}</ul></div>
+{data_quality_card}
 <div class="card"><div class="cardhead"><strong>Line items (audit trail)</strong>{_stamp()}</div>
   <table><tr><th>Item</th><th class="num">Amount</th><th>Source</th>
   <th class="num">Conf.</th></tr>{line_rows}</table>
