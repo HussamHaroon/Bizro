@@ -822,9 +822,9 @@ export function SimulatorScreen() {
           self-center (not stretch) lets the ratio own the width; min-w floors
           it at 18rem on narrow screens so the chat stays readable (ratio
           degrades gracefully there), max-w-full guarantees no overflow. */}
-      <div className="bizro-card bizro-card-hero flex aspect-[9/19.5] h-[max(min(76dvh,720px),30rem)] w-auto min-w-[min(100%,18rem)] max-w-full self-center flex-col overflow-hidden">
+      <div className="bizro-card bizro-card-hero flex aspect-[9/19.5] h-[min(70dvh,640px)] w-auto min-h-[26rem] min-w-[min(100%,18rem)] max-w-full self-center flex-col overflow-hidden">
         {/* -- WhatsApp-evoking header (Bizro's stamped version) ------------------ */}
-        <div className="flex items-center gap-3 border-b-[3px] border-ink-line bg-fill-green px-3 py-2.5 text-paper">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b-[3px] border-ink-line bg-fill-green px-3 py-2.5 text-paper">
           {/* Avatar: initial-letter square (Mithu SVG lives in site/, out of scope) */}
           <span
             aria-hidden="true"
@@ -832,7 +832,7 @@ export function SimulatorScreen() {
           >
             B
           </span>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-[10rem] flex-1">
             <p className="truncate font-numerals text-base font-bold leading-tight">Bizro</p>
             <p className="flex items-center gap-1.5 text-xs leading-tight opacity-90">
               {recording ? (
@@ -1082,7 +1082,7 @@ export function SimulatorScreen() {
               }}
               placeholder="Type a message…"
               aria-label="Message Bizro"
-              className="min-h-touch min-w-[9rem] flex-1 rounded-button border-[3px] border-ink-line bg-paper px-3 text-sm text-ink-line placeholder:text-ink-line placeholder:opacity-50"
+              className="min-h-touch min-w-[9rem] flex-1 basis-full rounded-button border-[3px] border-ink-line bg-paper px-3 text-sm text-ink-line placeholder:text-ink-line placeholder:opacity-50"
             />
             <button
               type="button"
