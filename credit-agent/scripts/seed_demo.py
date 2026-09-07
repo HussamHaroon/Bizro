@@ -80,6 +80,22 @@ def _ensure_mirror_columns(engine) -> None:
         conn.commit()
 
 
+def _existing_merchant_id(db: str, name: str) -> str | None:
+    """Idempotency guard (demo-morning reliability): the server's merchants.wa_id
+    is UNIQUE and the seeder inserts fixed wa_ids, so a second seed run against
+    the same DB crashed with IntegrityError right before the demo. If a merchant
+    with this display_name already exists, reuse it — skip reseeding AND skip
+    re-adding the mock trend rows (duplicates would double the sparkline)."""
+    from sqlalchemy import select
+
+    from credit_agent.db_view import Merchant
+
+    Session = get_sessionmaker(db)
+    with Session() as s:
+        row = s.scalars(select(Merchant).where(Merchant.display_name == name)).first()
+        return str(row.id) if row else None
+
+
 def main() -> None:
     db = sys.argv[1] if len(sys.argv) > 1 else os.environ.get(
         "DATABASE_URL", "sqlite:///./bizro.db"
@@ -103,9 +119,17 @@ def main() -> None:
 
     ids, reports = [], {}
     for name, kwargs, _hist in MERCHANTS:
-        mid = seed_demo(db, merchant_name=name, create_tables=False, **kwargs)
-        ids.append((name, mid, _hist))
-        reports[name] = generate_report(mid, period="last_90_days")
+        mid = _existing_merchant_id(db, name)
+        if mid:
+            # Already seeded (rerun) — keep the existing ledger + trend history.
+            ids.append((name, mid, _hist, True))
+        else:
+            mid = seed_demo(db, merchant_name=name, create_tables=False, **kwargs)
+            ids.append((name, mid, _hist, False))
+        # db_url is PASSED: generate_report must score the SAME database the
+        # seeder wrote (it otherwise resolves DATABASE_URL/./bizro.db on its
+        # own and — with an explicit argv db — reads a different file).
+        reports[name] = generate_report(mid, period="last_90_days", db_url=db)
 
     # DA-UI fix: demo trend tells the PRODUCT story — readiness rising as history
     # accumulates (Al-Madina 58 → 77 → latest; Bilal 41 → 55 → latest), all rows
@@ -115,7 +139,9 @@ def main() -> None:
 
     Session = get_sessionmaker(db)
     with Session() as s:
-        for name, mid, hist in ids:
+        for name, mid, hist, reused in ids:
+            if reused:
+                continue  # trend rows already in credit_reports — no duplicates
             base_json = {k: v for k, v in reports[name].items() if k != "mock"}
             for days_ago, score in hist:
                 s.add(_hist_row(base_json, mid, score, days_ago))
@@ -136,7 +162,7 @@ def main() -> None:
                 "readiness": reports[name]["readiness"],
                 "mock": reports[name].get("mock", False),
             }
-            for name, mid, _hist in ids
+            for name, mid, _hist, _reused in ids
         ],
         "html": str(out),
         "committee_html": str(committee_out),

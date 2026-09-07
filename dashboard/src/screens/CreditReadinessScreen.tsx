@@ -211,6 +211,16 @@ export function CreditReadinessScreen() {
     return map;
   }, [byId]);
 
+  /** qa 2026-09-07 P1: the sourcing headline derives from raw numbers with no
+      demo-markedness check — on the seeded path it claimed "100% of entries
+      AI-parsed & confirmed" directly above line items the same screen stamps
+      "demo — no model ran". When every loaded row is a seeded example, the
+      card says so instead of asserting parses that never happened. */
+  const allRowsDemo = useMemo(() => {
+    const active = [...byId.values()].filter((t) => t.status !== 'rejected');
+    return active.length > 0 && active.every(isDemoRow);
+  }, [byId]);
+
   if (error) {
     return (
       <div className="flex flex-col gap-7 sm:gap-9 md:gap-8">
@@ -448,18 +458,30 @@ export function CreditReadinessScreen() {
           <h2 id="sourcing-title" className="mb-3 flex flex-wrap items-baseline gap-x-2">
             <span className="font-numerals text-xl font-semibold text-ink-line">AI sourcing</span>
           </h2>
-          <div className="mb-3 flex items-center gap-3">
-            <SealMark variant="verified" />
-            <p className="text-sm text-ink-line">
-              <span className="font-numerals text-2xl font-semibold">{aiSharePct}%</span>{' '}
-              of entries AI-parsed &amp; confirmed
-              <br />
-              <span className="text-xs opacity-75">
-                avg confidence {formatConfidence(report.sourcing.avg_confidence)} across{' '}
-                {report.sourcing.ai_entries}/{report.sourcing.total_entries} entries
+          {allRowsDemo ? (
+            /* Seeded ledger (the demo path): the "100% AI-parsed & confirmed"
+               claim would sit directly above line items this screen stamps
+               "demo — no model ran". Say what the data IS instead. */
+            <p className="mb-3 flex items-center gap-2 text-sm text-ink-line">
+              <span className="inline-flex items-center rounded-chip border-2 border-dashed border-ink-line bg-fill-gold px-1.5 text-xs font-bold uppercase tracking-wide text-ink-line">
+                demo
               </span>
+              Demo data — seeded example entries. Not stamped from real voice notes or photos.
             </p>
-          </div>
+          ) : (
+            <div className="mb-3 flex items-center gap-3">
+              <SealMark variant="verified" />
+              <p className="text-sm text-ink-line">
+                <span className="font-numerals text-2xl font-semibold">{aiSharePct}%</span>{' '}
+                of entries AI-parsed &amp; confirmed
+                <br />
+                <span className="text-xs opacity-75">
+                  avg confidence {formatConfidence(report.sourcing.avg_confidence)} across{' '}
+                  {report.sourcing.ai_entries}/{report.sourcing.total_entries} entries
+                </span>
+              </p>
+            </div>
+          )}
           <ul className="flex flex-col gap-2 text-sm text-ink-line">
             {SOURCE_ROWS.map(({ key, icon: Icon, label }) => {
               const s = report.sourcing.by_source[key];

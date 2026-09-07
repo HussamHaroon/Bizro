@@ -30,7 +30,11 @@ outbound, media/{id}), numeric cross-checks derived in Python from those payload
   Fix: in scripts/seed_demo.py (only), look up an existing merchant by
   display_name and reuse it (skip reseed + skip duplicate history rows), and pass
   `db_url=db` to generate_report. Verified: two consecutive runs, then a third —
-  exit 0, same merchant ids, one set of trend rows.
+  exit 0, same merchant ids, one set of trend rows. Note: each rerun still
+  appends one flat report-cache row per merchant to /report/history (that is
+  generate_report's own persistence, credit-agent territory) — the seeded trend
+  story (58 → 77 → 96) stays the first three points and the sparkline stays
+  truthful; demo morning should still seed a FRESH db once.
 
 ## P1 — wrong / contradictory user-visible results on the demo path
 
@@ -122,6 +126,10 @@ outbound, media/{id}), numeric cross-checks derived in Python from those payload
 - [P2] `client.ts:296` (fetchReportHistory) — history `generated_at` values are
   naive ISO (no timezone); `new Date()` parses them as local time. Correct in PKT
   demo machines, fragile elsewhere. Roadmap: server should emit offsets.
+- [P2] Seed reruns append one flat report-cache row per merchant to
+  /report/history (generate_report persists its output by design). The demo
+  trend story stays intact; a dedupe (skip caching when the score/period are
+  unchanged) would be a credit-agent-side nicety.
 
 ## ROADMAP
 

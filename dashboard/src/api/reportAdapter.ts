@@ -4,10 +4,56 @@
    canonical. Skeleton stats are derived from transactions (same logic as the
    mock), then authoritative fields from the live payload win. */
 
-import type { CreditReportPreview, CreditReportLineItem, Transaction } from '../types/schema';
+import type { CreditReportPreview, CreditReportLineItem, OfficerPackBlock, Transaction } from '../types/schema';
 import { deriveReportPreview } from './mockData';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** Canonical credit-agent officer block → the screen's OfficerPackBlock.
+    The wire uses GROUPED OBJECTS (`officer.aging = {buckets: [...]}`,
+    `officer.collection = {rate}`, `officer.concentration = {top_share}`,
+    `officer.activity = {weeks}`) while the renderers accept the flat screen
+    shape; without this mapping the whole officer pack silently hid on the live
+    path (qa 2026-09-07 P1). Legacy flat shapes pass through untouched, so
+    hand-built fixtures keep working. Absent pieces stay absent — honest
+    absence, never a fabricated number. */
+export function normalizeCanonicalOfficer(o: any): OfficerPackBlock | null {
+  if (!o || typeof o !== 'object') return null;
+  // aging: {buckets:[{bucket, total, customers?}]} | [{bucket, amount_pkr, count?}]
+  let aging: OfficerPackBlock['aging'] = null;
+  if (Array.isArray(o.aging)) {
+    aging = o.aging;
+  } else if (o.aging && typeof o.aging === 'object' && Array.isArray(o.aging.buckets)) {
+    aging = o.aging.buckets
+      .filter((b: any) => !!b && typeof b.bucket === 'string' && typeof b.total === 'number')
+      .map((b: any) => ({
+        bucket: b.bucket,
+        amount_pkr: b.total,
+        count: Array.isArray(b.customers) ? b.customers.length : (b.count ?? null),
+      }));
+  }
+  const collection = o.collection_rate_pct ?? o.collection_rate ?? o.collection?.rate;
+  const concentration = o.top_debtor_concentration_pct ?? o.concentration?.top_share;
+  // weekly: activity.weeks[].count | weekly_activity number[] | {entries}
+  let weekly: OfficerPackBlock['weekly_activity'] = null;
+  if (o.weekly_activity !== undefined && o.weekly_activity !== null) {
+    weekly = o.weekly_activity;
+  } else if (Array.isArray(o.activity?.weeks)) {
+    weekly = o.activity.weeks
+      .filter((w: any) => !!w && typeof w.count === 'number')
+      .map((w: any) => ({ week: typeof w.start === 'string' ? w.start : null, entries: w.count }));
+  }
+  const block: OfficerPackBlock = {
+    aging,
+    collection_rate: typeof collection === 'number' && Number.isFinite(collection) ? collection : null,
+    top_debtor_concentration_pct:
+      typeof concentration === 'number' && Number.isFinite(concentration) ? concentration : null,
+    weekly_activity: weekly,
+    activity_drop_pct: typeof o.activity_drop_pct === 'number' && Number.isFinite(o.activity_drop_pct) ? o.activity_drop_pct : null,
+  };
+  return block;
+}
+
 export function adaptCanonicalReport(
   canonical: any,
   transactions: Transaction[],
@@ -34,6 +80,14 @@ export function adaptCanonicalReport(
       },
     };
   });
+
+  // v0.7 trust evidence rides along (qa 2026-09-07 P1: the adapter previously
+  // DROPPED trust/officer/limitations, hiding corroboration, the officer pack,
+  // aging/collection/concentration and the payload's own limitations on the
+  // live demo path).
+  const trust = canonical?.trust ?? null;
+  const limitations = Array.isArray(canonical?.limitations) ? canonical.limitations : null;
+  const officer = normalizeCanonicalOfficer(canonical?.officer);
 
   return {
     ...derived,
@@ -66,6 +120,9 @@ export function adaptCanonicalReport(
     })),
     narrative_ur: canonical?.narrative_ur ?? derived.narrative_ur,
     line_items,
+    trust,
+    officer,
+    limitations,
   };
 }
 

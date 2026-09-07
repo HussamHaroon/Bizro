@@ -26,6 +26,10 @@
                 text-transform:uppercase; font-weight:700; }
   .note { font-size:10.5px; font-style:italic; }
   .ur { direction:rtl; unicode-bidi:isolate; }
+  .mockband { background:#A6332B; color:#FFFFFF; text-align:center;
+               font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+               padding:8px; border:3px solid #1F1B16; border-radius:2px;
+               box-shadow:4px 4px 0 #1F1B16; margin-bottom:14px; }
   ul { margin:4px 0; padding-left:18px; }
   li { margin:2px 0; }
   .chain { font-size:11px; }
@@ -42,6 +46,7 @@
   }
 </style></head><body>
 <div class="sheet">
+<div class='mockband'>MOCK DATA — synthesized without live model calls</div>
 <div class="card">
   <div class="headrow"><h1>Committee Summary</h1>
     <span class="ur">کمیٹی کے لیے خلاصہ</span></div>
@@ -51,7 +56,7 @@
         <th>City</th><td>capture on visit</td></tr>
     <tr><th>CNIC</th><td>capture on visit</td>
         <th>Years trading</th><td>capture on visit</td></tr>
-    <tr><th>Period reviewed</th><td colspan="3">Jul 26, 2026 - Oct 23, 2026</td></tr>
+    <tr><th>Period reviewed</th><td colspan="3">Jul 26, 2026 - Oct 24, 2026</td></tr>
   </table>
   <div class="band"><div class="score" style="background:#0B5D3B;color:#FFFFFF">96</div>
     <div><div class="bandlabel">ready</div>
@@ -80,14 +85,14 @@
 
 <div class="card chain">
   <h2>Ledger chain</h2>
-  <div class="headrow"><p class="chain" style="flex:1">Ledger chain: not yet sealed — entries not yet hash-sealed by the server</p><img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAG8AAABvAQAAAADKvqPNAAABpElEQVR4nLWVPW7cMBCFHyUBdBMRLlIEkJcL+ATutEAApcxxyBxgJXWpohMYPkc6uqK7vQIT5gDcrWSA0gSbyt0IMMKCwADD4Tc/fBSEN4uKtxbwHhMZ0Ak6dTDAkTvbE4T7dTtmQZm96Hyz7Np8bCs87xnn6rpdpFBfY33alIJ5jvZwN2zIV82AXIj00AXWeRQAPl9ell5UXOmIKFuKK0oiWrk6G+gVAZISNOdM5IIivbawlJmmgM4O6CLNekXJRC6WQQaDu/7Lcjt/GjhmRXrt4kRxcnyCQBAeRsK0Dcec7Qzl9eiy8pFjxqOK6XVZcd/bA8dMqQPaRhFNnmWmyV1zTChHvs5ZuPJMwfqsiGNG7udQA/1cTo5rCmhtoZyefKNcYDFMl9UcE2LqNtTZ6x//ZoNmntl6ShLHtrGei1zggxW7h7I4henAPqty9Bmnpn7Y936/RZGmOfQOlu1ggZ6Wb2guQP0qmNmocL75eHy538lcfSdGRZGNbGqZTYd6gzACED8rMdLvVjMYV0UqhzbU+PM0bdHnpkYQ1Fj2pYj/9k38BT8x2+oiSKseAAAAAElFTkSuQmCC' alt='verification QR' width='110' height='110'></div>
+  <div class="headrow"><p class="chain" style="flex:1">Ledger chain sealed — latest entry hash 311325c045dc52e7… (tamper-evident: any later edit is detectable server-side)</p><img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJMAAACTAQAAAACinha4AAAC1klEQVR4nMVWu4rcSBQ9pRJUJyPNhAPqlWACx5upo1Lm/2h/gCVHjvSYaJJV+wd2zH6GE1MNhupsvsBQPWrYbKflSIKS7tIbepddFRi2AoEuVdxz7uPcywjfn6P3NxPww20TYwkOpw/jaZf5Hw6MrRa/ha0o7skUQ5Sjm2VM2izH0q+mX1hCmfmoN9eYPEce99KyXUKFrg//eu8fbQf/180pf9o8/8e9746tKAoV32kLEJEb34ZhK26fkRR6/e5wZNlyzJzIPOIUwDyOp0cQDQ6Yc8S1QKiQp9QQGC3GDFvCssHk0oTEZ2HD5Xxh85S3aQRpc1AtIsjlb6nXJqSoGEwJBMIwF7/VwGtJZxkxomaIyYEv9YrOMCHFs4hnYSBcYiX4LCMAbLAQcbPcr8dvlMWoG0J58APsz4fl+aVZAMIAdJZxndLOJb8QNk87om6WUXD5Ncsxz2PCHtYF23ij2Yq7ZnlNetPNoMPXhg2aHpLHcf/iojmFQimpUUDKz0DowpdpyyiqtA1EVApbOfQvn7LkamW+IXnTd1wl96kD5lDbQoNpW6mIaevUC6QQCDoDecpnwKEHPUDY7c/HaxkFT1Oj6NlB66iVvAWY7s5p1yial2P2pzO+fhxe5bi9f1oHn7/88eDgl3RUkIHsdsMlyw759abrUbdA0axfMj9I6eg0y/RfhXGRLOoHUzn4BRWdNyY46P6BrVd3DrMMNIO3qQkEtZJ2KipdaqMV3SxNcCkM3qJzmEe4xLkiWwxdLW2hqHbxWwtTCgNpK4VAumidP824K1XcP/lQ8VZmU/bb8h5shvGl8K9e2xKnQFgs18nLnnN3o2/fIcF+PGYJc5mhl7lPXaMt06YULv3roV+Bsk07+lfvJf/kB467SqG+vM1M8ek4S7t14Hv50CpuCPeCCvb79XK98hAOvMbk7fm8Zz+JiCmHWAERZNxTFEhqETvoBvufduA/AYwAkuJeB3NiAAAAAElFTkSuQmCC' alt='verification QR' width='110' height='110'></div>
 </div>
 
 <div class="card limitations">
   <h2>Limitations — read before deciding</h2>
   <ul><li>All ledger inputs are merchant-self-reported; corroboration covers only the share vouched by a customer or third party.</li><li>No outcome validation: the readiness score has never been checked against actual repayment data — treat it as a triage signal only.</li><li>Parsing is Urdu/roman-Urdu-centric; entry quality varies with script, dialect and how the merchant speaks or types.</li><li>Red flags and forensics are heuristics over ledger internals — patterns, not forensic verification.</li></ul>
-  <div class="foot">Generated: Oct 24, 2026, 1:40 am ·
-    Period: Jul 26, 2026 – Oct 23, 2026 ·
+  <div class="foot">Generated: Oct 24, 2026, 4:03 am ·
+    Period: Jul 26, 2026 – Oct 24, 2026 ·
     general-microfinance-pending-mawakhat</div>
 </div>
 </div></body></html>

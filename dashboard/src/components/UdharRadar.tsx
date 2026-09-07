@@ -26,7 +26,14 @@ export interface UdharRadarProps {
 }
 
 export function UdharRadar({ items, className = '' }: UdharRadarProps) {
-  const total = items.reduce((s, u) => s + u.outstanding_pkd, 0);
+  /* "Who owes you" = the sum of customers who actually OWE. The live /udhar
+     payload also carries over-settled customers with NEGATIVE balances (credit
+     in their favour); netting them here made the radar total Rs 71,149 while
+     the officer card, the committee pack and the printed report all state the
+     positives-only figure (Rs 100,378 on the seeded demo) — qa 2026-09-07 P1.
+     Clamping at zero agrees every surface on one number; the negative rows
+     themselves are never shown as amounts (they only sit below the top-3 cut). */
+  const total = items.reduce((s, u) => s + Math.max(u.outstanding_pkd, 0), 0);
   const top3 = items.slice(0, 3);
   const max = top3.length ? top3[0].outstanding_pkd : 0;
   /** Customer getting a reminder drafted right now — one modal at a time. */

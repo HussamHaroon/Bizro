@@ -90,7 +90,14 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
           <dd className="flex flex-col gap-0.5 text-ink-line">
             <span>{src}</span>
             <span className="font-mono text-xs opacity-80">
-              {t.source.media_id ? `media ${t.source.media_id} · stored on server (never deleted)` : 'no media (manual entry)'}
+              {demo
+                ? /* qa 2026-09-07 P1: the demo note above says no capture is
+                     behind the row — citing a stored media uuid here (and
+                     rendering the generated blob below) contradicted it. */
+                  'seeded example — generated demo media only, no real capture'
+                : t.source.media_id
+                  ? `media ${t.source.media_id} · stored on server (never deleted)`
+                  : 'no media (manual entry)'}
             </span>
           </dd>
         </div>
@@ -129,8 +136,12 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
       </dl>
 
       {/* The original artifact — deepest drill-down level (design.md §4.5):
-           tap a line → source → original voice note / receipt photo. */}
-      <SourceMedia mediaId={t.source.media_id} sourceType={t.source.type} />
+           tap a line → source → original voice note / receipt photo.
+           Demo rows are excluded (qa 2026-09-07 P1): the seeded blobs DO exist
+           on the server, but rendering a playable "original voice note" under
+           the panel's own "no voice note or photo is behind this row" note was
+           a visible self-contradiction. */}
+      {!demo && <SourceMedia mediaId={t.source.media_id} sourceType={t.source.type} />}
 
       {(t.source.raw_output as { transcript?: string } | null | undefined)?.transcript && (
         <div className="flex flex-col gap-0.5">
