@@ -29,6 +29,14 @@ Built for the Bano Qabil x Alibaba Cloud AI Hackathon Pakistan 2026.
 A 43-second ad for the zero-typing loop: an Urdu voice note or receipt photo
 in on WhatsApp, a structured ledger entry and a credit-ready history out.
 
+<p align="center">
+  <img src="docs/screenshots/ledger-production.jpeg" alt="Bizro ledger — monthly view with Udhar Radar, verified entries and demo-data banner" width="720">
+</p>
+
+The merchant ledger as deployed: sales, expenses, udhar given and collected,
+per-customer receivables, one-tap edit/delete, and an honest demo-data banner
+on seeded examples.
+
 ## Live
 
 - Production: <https://bizro-pk.vercel.app> — `/`, `/ledger` and `/health` all
