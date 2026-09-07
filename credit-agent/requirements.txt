@@ -2,6 +2,8 @@
 sqlalchemy>=2.0
 pydantic>=2.13,<3
 httpx>=0.28
+qrcode>=8             # committee one-pager QR
+pillow>=10             # demo seed receipt drawing (PIL)
 
 # Dev:
 pytest>=8
