@@ -705,6 +705,11 @@ _OUTAGE_EXC_NAMES = {
     "DashScopeAuthError",
     "DashScopeRateLimitError",
     "FreeTierBudgetExceeded",  # llm_guard
+    "HTTPError",               # httpx transport (timeout/DNS/conn) — any
+    "ConnectError",            # vendor client
+    "ReadTimeout",
+    "ConnectTimeout",
+    "RequestException",        # requests-family (vision-agent thin client)
 }
 
 

@@ -85,7 +85,13 @@ class DashScopeClient:
         with httpx.Client(timeout=timeout) as http:
             # :free models are congested — a 429/5xx is transient, retry gently
             for attempt in range(3):
-                resp = http.post(url, headers=headers, json=payload)
+                try:
+                    resp = http.post(url, headers=headers, json=payload)
+                except httpx.HTTPError as exc:
+                    # transport errors (timeout/DNS/conn reset) must surface as
+                    # DashScopeError so the webhook maps them to the busy reply
+                    # instead of silence (reliability audit P1, demo-eve)
+                    raise DashScopeError(f"chat_text transport error: {exc}") from exc
                 last_status, last_text = resp.status_code, resp.text[:500]
                 if resp.status_code == 200:
                     break

@@ -159,6 +159,7 @@ def process_voice_note_multi(
     when = _coerce_occurred_at(occurred_at)
     audio_bytes = Path(audio_path).read_bytes()
     cross: dict | None = None  # dual-engine STT agreement record (live path only)
+    stt_engines_meta = None  # set only on the live STT branch (audit stamp)
 
     if settings.use_mock:
         scenario = (
@@ -187,6 +188,8 @@ def process_voice_note_multi(
                 )
                 transcript = dual["transcript"]
                 cross = dual.get("cross")
+                stt_engines_meta = {"engines": dual.get("engines", []),
+                                    "errors": dual.get("errors", {})}
                 # plain text call — generic hosts reject the omni field set.
                 # Number aid: bracketed digit hints after spoken number words
                 # are INTENDED to cut digit-conversion errors (hypothesis;
@@ -244,6 +247,13 @@ def process_voice_note_multi(
     # Dual-engine agreement adjustments LAST: confidence boost on agreement,
     # penalty on divergence — auditable in source.raw_output.stt_crosscheck.
     stt_crosscheck.apply_crosscheck(txs, cross)
+    if stt_engines_meta:
+        for tx_dict in txs:
+            src = dict(tx_dict.get("source") or {})
+            raw = dict(src.get("raw_output") or {})
+            raw["stt_engines"] = stt_engines_meta
+            src["raw_output"] = raw
+            tx_dict["source"] = src
     return {"transactions": txs, "reply_text": reply}
 
 

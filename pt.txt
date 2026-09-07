@@ -1,0 +1,491 @@
+FF..FFFFFF.FF...............                                             [100%]
+================================== FAILURES ===================================
+___________ test_pending_confirmation_outbound_row_carries_buttons ____________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_pending_confirmation_outbound_row_carries_buttons(client):
+        """Mock mode still logs the button labels: the confirmation_text row gets
+        the two reply buttons in its payload (§7.1)."""
+        from server.app import dispatch as disp
+    
+        wa = _wa("92400")
+>       tx_id = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '924007b37d436'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.69474902feba4adf8941f783dfc2e447', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+----------------------------- Captured log setup ------------------------------
+WARNING  bizro.main:main.py:55 DashScope is in MOCK mode — all model output is clearly-labeled synthetic. Set DASHSCOPE_API_KEY (HANDOFF.md ①) for live calls.
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.69474902feba4adf8941f783dfc2e447)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+__________________ test_mock_send_result_logs_button_labels ___________________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_mock_send_result_logs_button_labels(client):
+        """Mock delivery is observable: the webhook outcome's `sent` payload
+        includes the button labels it would have attached live."""
+        wa = _wa("92401")
+        out = client.post("/webhook/whatsapp", json=_audio_payload(wa)).json()["results"][0]
+>       assert out["sent"]["mock"] is True
+               ^^^^^^^^^^^
+E       KeyError: 'sent'
+
+server\tests\test_day3_features.py:178: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.62bc31bf7d1b4c7e974f5ed2afcfd091)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+__________ test_button_confirm_payload_confirms_most_recent_pending ___________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_button_confirm_payload_confirms_most_recent_pending(client):
+        wa = _wa("92403")
+>       tx_id = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:263: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '92403308d7865'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.169d305836f747a2a047f01ebf858ebb', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.169d305836f747a2a047f01ebf858ebb)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+_______ test_interactive_button_reply_tap_confirms_most_recent_pending ________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_interactive_button_reply_tap_confirms_most_recent_pending(client):
+        """Real WhatsApp taps arrive as type=interactive/button_reply (id+title) —
+        NOT the legacy type=button shape the simulators send. Regression guard for
+        the silently-dropped-tap bug."""
+        wa = _wa("92413")
+>       tx_id = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:289: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '9241385bbf3c0'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.56507b0ea44947d0ba46677243b6f2c4', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.56507b0ea44947d0ba46677243b6f2c4)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+__________ test_button_correct_keeps_pending_and_asks_for_voice_note __________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_button_correct_keeps_pending_and_asks_for_voice_note(client):
+        wa = _wa("92404")
+>       tx_id = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:310: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '92404ebb4d2ea'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.e97570573e194f1b972c616408eaa4bb', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.e97570573e194f1b972c616408eaa4bb)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+______________________ test_button_text_fallback_confirm ______________________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_button_text_fallback_confirm(client):
+        """Older Graph API versions carry only button.text — no payload."""
+        wa = _wa("92405")
+>       tx_id = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:328: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '92405bf062508'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.6619915115fd425baefbe754b51fb1f8', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.6619915115fd425baefbe754b51fb1f8)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+______________________ test_button_text_fallback_correct ______________________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_button_text_fallback_correct(client):
+        wa = _wa("92406")
+>       tx_id = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:339: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '92406273bbe1e'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.70016128f58c435ab849a7e170228f2d', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.70016128f58c435ab849a7e170228f2d)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+________________ test_button_acts_on_most_recent_pending_only _________________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_button_acts_on_most_recent_pending_only(client):
+        wa = _wa("92407")
+>       older = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:349: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '9240712df8f8f'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.cff70d53b0d945d0868fb0ccee0dc10b', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.cff70d53b0d945d0868fb0ccee0dc10b)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+_________________ test_button_unknown_payload_gets_help_reply _________________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_button_unknown_payload_gets_help_reply(client):
+        wa = _wa("92409")
+>       tx_id = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:370: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '92409c05c6d45'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.17a7118d9c7f40c88b2516466ca49826', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.17a7118d9c7f40c88b2516466ca49826)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+__________________ test_text_reply_confirm_path_still_works ___________________
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+
+    def test_text_reply_confirm_path_still_works(client):
+        """Buttons are an upgrade, not a replacement — '1' still confirms."""
+        wa = _wa("92410")
+>       tx_id = _seed_pending_tx(client, wa)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+server\tests\test_day3_features.py:383: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001962F0D5400>
+wa = '92410a1bc6409'
+
+    def _seed_pending_tx(client: TestClient, wa: str) -> str:
+        r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
+        assert r.status_code == 200, r.text
+        out = r.json()["results"][0]
+>       assert out["ok"] is True and out["status"] == "pending", out
+E       AssertionError: {'message_id': 'wamid.4d7216b347494efe8b358d3d5198ef98', 'ok': False, 'error': 'internal'}
+E       assert (False is True)
+
+server\tests\test_day3_features.py:115: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  bizro.whatsapp:whatsapp_client.py:168 Webhook signature validation DISABLED: WHATSAPP_APP_SECRET not set (fine for the simulator path; set it before exposing a real tunnel).
+WARNING  bizro.media:media.py:91 Inbound voice media has no known magic prefix (81 bytes) — accepted with caution
+ERROR    bizro.webhook:webhook.py:193 Message handling failed (wamid=wamid.4d7216b347494efe8b358d3d5198ef98)
+Traceback (most recent call last):
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 190, in _process_payload
+    outcome = _handle_message(msg, contacts, sim_envelope)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 243, in _handle_message
+    outcome = _ingest_media(
+        session, merchant, msg, sim_envelope, occurred_at, kind="voice"
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\webhook.py", line 596, in _ingest_media
+    env = dispatch.process_voice_note_multi(
+        str(path), merchant, occurred_at, digest
+    )
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 143, in process_voice_note_multi
+    result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\server\app\dispatch.py", line 77, in _call_with_occurred_at
+    return fn(path, merchant, occurred_at)
+  File "D:\02-Study\AlkhidmatHackathon\voice-agent\voice_agent\pipeline.py", line 249, in process_voice_note_multi
+    if stt_engines_meta:
+       ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'stt_engines_meta' where it is not associated with a value
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\02-Study\AlkhidmatHackathon\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED server/tests/test_day3_features.py::test_pending_confirmation_outbound_row_carries_buttons
+FAILED server/tests/test_day3_features.py::test_mock_send_result_logs_button_labels
+FAILED server/tests/test_day3_features.py::test_button_confirm_payload_confirms_most_recent_pending
+FAILED server/tests/test_day3_features.py::test_interactive_button_reply_tap_confirms_most_recent_pending
+FAILED server/tests/test_day3_features.py::test_button_correct_keeps_pending_and_asks_for_voice_note
+FAILED server/tests/test_day3_features.py::test_button_text_fallback_confirm
+FAILED server/tests/test_day3_features.py::test_button_text_fallback_correct
+FAILED server/tests/test_day3_features.py::test_button_acts_on_most_recent_pending_only
+FAILED server/tests/test_day3_features.py::test_button_unknown_payload_gets_help_reply
+FAILED server/tests/test_day3_features.py::test_text_reply_confirm_path_still_works
+10 failed, 18 passed, 1 warning in 3.04s

@@ -19,7 +19,9 @@ from server.app.nudges import compute_weekly_nudge, send_weekly_nudges  # noqa: 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--merchant", default=None, help="single merchant uuid")
+    ap.add_argument("--merchant", default=None, help="single merchant uuid (compute-only, no send)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="show what would be sent, send nothing (safe for rehearsal)")
     args = ap.parse_args()
 
     with db_session() as session:
@@ -28,7 +30,7 @@ def main() -> None:
             print(json.dumps({"merchant_id": args.merchant, **nudge},
                              ensure_ascii=False, indent=2))
         else:
-            for row in send_weekly_nudges(session):
+            for row in send_weekly_nudges(session, dry_run=args.dry_run):
                 print(json.dumps(row, ensure_ascii=False))
 
 

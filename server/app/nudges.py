@@ -20,7 +20,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .db import Merchant, Transaction
+from .db import Merchant, OutboundMessage, Transaction
 from . import whatsapp_client
 
 
@@ -181,11 +181,25 @@ def compute_weekly_nudge(session: Session, merchant_id, now: datetime | None = N
     }
 
 
-def send_weekly_nudges(session: Session, now: datetime | None = None) -> list[dict]:
-    """Send to every merchant; returns one result row per merchant (mock-safe)."""
+def send_weekly_nudges(session: Session, now: datetime | None = None,
+                        dry_run: bool = False) -> list[dict]:
+    """Send to every merchant; one result row per merchant, never raises
+    mid-loop (reliability audit P1: a bare run against live WhatsApp used to
+    blast merchants then crash with zero audit rows — now every send is
+    best-effort via dispatch.deliver and logged to outbound_messages)."""
+    from . import dispatch as _dispatch
+
     results = []
     for m in session.scalars(select(Merchant)).all():
         nudge = compute_weekly_nudge(session, m.id, now=now)
-        send = whatsapp_client.send_text(m.wa_id or "", nudge["text_ur"])
+        if dry_run:
+            results.append({"merchant_id": str(m.id), "stats": nudge["stats"],
+                            "send": {"dry_run": True, "body": nudge["text_ur"]}})
+            continue
+        send = _dispatch.deliver(m.wa_id or "", nudge["text_ur"])
+        session.add(OutboundMessage(
+            merchant_id=m.id, kind="weekly_nudge", body=nudge["text_ur"],
+            payload={"to": m.wa_id, "delivered": send.get("delivered")}))
         results.append({"merchant_id": str(m.id), "stats": nudge["stats"], "send": send})
+    session.commit()
     return results

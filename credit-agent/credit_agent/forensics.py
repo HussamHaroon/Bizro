@@ -37,7 +37,15 @@ REPEAT_SAME_AMOUNT = 4          # same amount+kind+customer repeated N times
 
 
 def _aware(dt):
-    return dt if dt.tzinfo is not None else dt.replace(tzinfo=None)
+    """Normalize BOTH directions to aware-UTC: Neon returns tz-aware rows while
+    exif.py produces naive datetimes — mixing them in a subtraction 500s the
+    whole report (reliability audit P1). Naive is treated as UTC, the
+    server-wide storage convention (same rule as server/app/nudges.py)."""
+    from datetime import timezone as _tz
+
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=_tz.utc)
+    return dt.astimezone(_tz.utc)
 
 
 def _meta(tx: Any) -> dict:

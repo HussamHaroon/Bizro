@@ -217,16 +217,26 @@ def _handle_message(
     # shopkeeper. Only bare YES/NO-style texts are captured; anything else
     # falls through to the normal merchant path.
     _body = str(((msg.get("text") or {}) or {}).get("body") or "")
-    if _body and customer_confirm.is_customer_confirmation(_body):
+    if _body and len(_body) <= 40 and not _body.lower().startswith(("cancel", "undo")):
+        # §13: a known customer texting short confirms/corrections is handled on
+        # the customer path — never routed to merchant onboarding (a stray
+        # "ok"/"1" from a customer would otherwise create a phantom merchant).
         with db_session() as _session:
             _cust = customer_confirm.find_customer_by_phone(
                 _session, str(msg.get("from", ""))
             )
             if _cust is not None:
-                return customer_confirm.apply_customer_reply(
-                    _session, _cust_merchant(_session, _cust), _cust, _body,
-                    deliver_fn=dispatch.deliver, send_reply_fn=dispatch.send_reply,
-                )
+                if customer_confirm.is_customer_confirmation(_body):
+                    return customer_confirm.apply_customer_reply(
+                        _session, _cust_merchant(_session, _cust), _cust, _body,
+                        deliver_fn=dispatch.deliver, send_reply_fn=dispatch.send_reply,
+                    )
+                if customer_confirm.classify_customer_reply(_body) is None:
+                    _nudge = ("Please reply YES to confirm the recorded entry, "
+                              "or NO if it is wrong.")
+                    _sent = dispatch.deliver(_cust.phone, _nudge)
+                    return {"ok": True, "type": "text", "customer_reply": "nudge",
+                            "reply": _nudge, "sent": _sent}
 
     wa_id: str = msg.get("from", "")
     ts = msg.get("timestamp")

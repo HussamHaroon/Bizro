@@ -142,7 +142,7 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
         s.flush()  # customers must exist before transactions reference them
 
         def add_tx(day_offset, kind, amount, source, conf, flag="none", status="confirmed",
-                   desc="", customer=None, trust_tier=None):
+                   desc="", customer=None, trust_tier=None, item_lines=None):
             # day_offset 0 = TODAY: a random 1-12h earlier than `now`, so the
             # newest entry lands today (or late yesterday) — never in the future
             # (owner ruling: demo history runs up to and including today).
@@ -157,6 +157,7 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
                 id=uuid.uuid4(), merchant_id=m.id,
                 customer_id=cust_ids.get(customer),
                 kind=kind, amount_pkr=round(amount, 2), description=desc,
+                item_lines=item_lines,
                 occurred_at=when,
                 source_type=source,
                 source_media_id=media_id,
@@ -221,9 +222,20 @@ def _gen_healthy(rng, add_tx, days: int) -> None:
         # dip above is the honest anomaly the officer must see
         if recent or rng.random() > 0.10:  # daily cash sale; shuttered ~1 day in ten
             confirmed_walk_in = rng.random() < 0.15
-            add_tx(day, "sale", rng.uniform(600, 3200) * growth, "voice",
-                   rng.uniform(0.88, 0.98), desc="cash sale",
-                   trust_tier="customer_confirmed" if confirmed_walk_in else None)
+            # recent sales carry item lines ~half the time so the October
+            # inventory + demand cards have real data to show
+            sale_lines = None
+            if recent and rng.random() < 0.5:
+                it, price, unit = rng.choice(ITEMS)
+                qty = rng.randint(1, 3)
+                total = round(qty * price, 2)
+                sale_lines = [{"item": it, "qty": qty, "unit": unit,
+                               "unit_price": price, "line_total": total}]
+                amt = total
+            add_tx(day, "sale", (amt if sale_lines else rng.uniform(600, 3200) * growth),
+                   "voice", rng.uniform(0.88, 0.98), desc="cash sale",
+                   trust_tier="customer_confirmed" if confirmed_walk_in else None,
+                   item_lines=sale_lines)
         if (recent and rng.random() > 0.35) or rng.random() > 0.72:
             # a second, often typed, sale most days — typed by the merchant
             add_tx(day, "sale", rng.uniform(400, 2800) * growth, "text",
@@ -259,7 +271,11 @@ def _gen_healthy(rng, add_tx, days: int) -> None:
             add_tx(day, "expense", qty * price * growth, "photo", conf,
                    flag="price_anomaly" if flagged else "none",
                    status="pending" if flagged else "confirmed",
-                   desc=f"supplier: {item} {qty} {unit}", trust_tier=tier)
+                   desc=f"supplier: {item} {qty} {unit}",
+                   trust_tier=tier,
+                   item_lines=[{"item": item, "qty": qty, "unit": unit,
+                                "unit_price": round(price, 2),
+                                "line_total": round(qty * price, 2)}])
 
 
 def _gen_contrast(rng, add_tx, days: int) -> None:
