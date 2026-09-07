@@ -43,3 +43,4 @@ presentation/
 # guide pdf build intermediates
 docs/_guide_*.pdf
 docs/build_guide_pdf.py
+.worktrees2/
