@@ -25,7 +25,7 @@ from .formatting import (
 )
 from .narrative import build_narrative
 from .officer import compute_officer_metrics
-from .rubric import score
+from .rubric import INDICATOR_NOTE, LIMITATIONS, score
 from .trust import compute_trust
 
 PERIODS = {
@@ -151,6 +151,9 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
                 "score": scored.score,
                 "band": scored.band,
                 "label_ur": scored.label_ur,
+                # §12 honest labeling: travels with the score into every
+                # consumer of the payload, not just the renderers.
+                "note": INDICATOR_NOTE,
             },
             "metrics": [
                 _metric("entries", "Total entries", "کل اندراجات",
@@ -196,6 +199,10 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
             "trust": trust,
             # §12: officer completeness metrics for the review pack.
             "officer": officer,
+            # §12: the four standing limitations, rendered as a footer card on
+            # every surface — self-reported inputs, no outcome validation,
+            # Urdu-centric parsing, heuristics not forensics.
+            "limitations": list(LIMITATIONS),
         }
         if is_mock:
             report["mock"] = True

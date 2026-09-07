@@ -30,6 +30,26 @@ BAND_LABELS_UR = {
     "insufficient_data": "معلومات کم ہے",
 }
 
+# Honest labeling (schema.md §12): EVERY surface that renders the score also
+# renders this. The weights above are documented judgment, not validated
+# against repayment outcomes — the label says so wherever the number appears.
+INDICATOR_NOTE = "readiness indicator (not a validated repayment predictor)"
+
+# The four limitations every consumer of a Bizro report must see (§12):
+# self-reported inputs, no outcome validation, Urdu-centric parsing,
+# heuristics not forensics. Single source of truth — report.py stores them
+# in report_json.limitations and the committee one-pager renders them.
+LIMITATIONS = [
+    "All ledger inputs are merchant-self-reported; corroboration covers only "
+    "the share vouched by a customer or third party.",
+    "No outcome validation: the readiness score has never been checked "
+    "against actual repayment data — treat it as a triage signal only.",
+    "Parsing is Urdu/roman-Urdu-centric; entry quality varies with script, "
+    "dialect and how the merchant speaks or types.",
+    "Red flags and forensics are heuristics over ledger internals — patterns, "
+    "not forensic verification.",
+]
+
 
 @dataclass
 class Scored:

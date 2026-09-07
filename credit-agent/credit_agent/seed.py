@@ -2,7 +2,9 @@
 
 Two merchant profiles so the loan-officer picker demos RANGE (design.md §4.5):
 - "healthy" (default, Al-Madina Kiryana Store): ~90 days, 5-6 entries/week,
-  high confidence, clean flags → scores "ready".
+  high confidence, clean flags → scores "ready"; §12 officer-pack states are
+  baked in — one concentrated top debtor, aged udhar (61-90 days), a realistic
+  trust-tier mix, and a deliberate activity dip in the latest week.
 - "contrast" (Bilal Ki Dukan): ~60 days, ~25 sparse entries, a ~12-day logging
   gap, 2-3 price_anomaly flags left pending at low confidence, net cash-flow
   hovering near zero → scores "nearly"/"not_yet", never "ready".
@@ -38,6 +40,11 @@ ITEMS = [
 ]
 CONTRAST_ANOMALY_DAYS = (3, 15, 51)   # price-anomaly receipts (2-3, spread)
 CONTRAST_GAP = (19, 30)               # ~12 days of stopped logging (irregularity)
+
+# §12 officer-pack demo states (healthy profile, deterministic):
+TOP_DEBTOR = CUSTOMERS[0]             # "Rahmat" — the concentrated debtor
+AGED_UDHAR_DAYS = (88, 80, 72, 65)    # 61-90-day-old credit to the top debtor
+ACTIVITY_DIP_DAYS = frozenset(range(0, 7))  # the latest week is deliberately thin
 
 
 def _demo_voice_bytes(seconds: float = 0.3) -> bytes:
@@ -176,21 +183,42 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
 
 
 def _gen_healthy(rng, add_tx, days: int) -> None:
-    """Steady 6-day-a-week shop: 1-2 entries most days, a nine-customer udhar
-    circle with partial settlements, wholesale restock receipts every week or
-    two (two left pending price flags), amounts trending gently upward. Recent
-    months are as full as older ones — a loan officer must see a LIVE shop,
-    not one that stopped logging in August.
+    """Steady 6-day-a-week shop with officer-pack demo states baked in (§12):
+    - ONE concentrated top debtor (TOP_DEBTOR) holding the largest udhar
+      balance — draws the concentration warning on the review pack;
+    - AGED_UDHAR_DAYS entries 65-88 days old to that same debtor (and 95 days
+      when the seed runs long enough) — the 61-90/90+ aging buckets are real;
+    - an ACTIVITY_DIP over the latest week: a few entries keep the shop alive
+      but the week lands under half the 8-week median — the sparkline drops.
+    Otherwise as before: 1-2 entries most days, a nine-customer udhar circle
+    with partial settlements, wholesale restock receipts every week or two
+    (two left pending price flags), amounts trending gently upward.
     Trust tiers (server §11 contract): a realistic mix — mostly self_reported
     (NULL), some customer-confirmed walk-in settlements/sales, and the first
-    three supplier receipts third_party (the §10 verification handshake)."""
+    three supplier receipts third_party (the §10 verification handshake).
+    Deterministic: every branch is driven by the fixed-seed rng."""
     anomalies = 0
     third_party_left = 3  # supplier-verified receipts, capped for realism
+    top_debtor = TOP_DEBTOR
+    # a 95-day-old credit appears only when the seed runs long enough for it
+    aged_days = AGED_UDHAR_DAYS + ((95,) if days >= 97 else ())
     for day in range(days, -1, -1):  # day 0 = today (inclusive newest cap)
         dow = day % 7
         growth = 1 + 0.18 * (days - day) / max(1, days)  # gentle upward trend
-        recent = day <= 10  # the newest stretch is always fully logged —
-        # a shop being screened for credit cannot look like it stopped midway
+        if day in ACTIVITY_DIP_DAYS:
+            # the dip: a sale every other day only — no second sale, no
+            # udhar, no restock. The shop looks slowed, not abandoned.
+            if day % 2 == 0:
+                add_tx(day, "sale", rng.uniform(600, 2400) * growth, "voice",
+                       rng.uniform(0.88, 0.96), desc="cash sale")
+            continue
+        if day in aged_days:
+            if day < days:  # day == days is outside the generated window
+                add_tx(day, "udhar_given", rng.uniform(6000, 10500) * growth,
+                       "voice", rng.uniform(0.84, 0.94), customer=top_debtor,
+                       desc="udhar given (stock lifted on credit)")
+        recent = day <= 10  # the newest stretch is still well logged — the
+        # dip above is the honest anomaly the officer must see
         if recent or rng.random() > 0.10:  # daily cash sale; shuttered ~1 day in ten
             confirmed_walk_in = rng.random() < 0.15
             add_tx(day, "sale", rng.uniform(600, 3200) * growth, "voice",
@@ -200,14 +228,19 @@ def _gen_healthy(rng, add_tx, days: int) -> None:
             # a second, often typed, sale most days — typed by the merchant
             add_tx(day, "sale", rng.uniform(400, 2800) * growth, "text",
                    rng.uniform(0.90, 0.97), desc="cash sale")
-        if dow in (1, 4):  # udhar out, twice a week, to the circle
+        if dow in (1, 4):  # udhar out, twice a week — the top debtor lifts
+            # stock far more often than anyone else (the concentration story)
+            who = top_debtor if rng.random() < 0.45 else rng.choice(CUSTOMERS)
             add_tx(day, "udhar_given", rng.uniform(800, 6500) * growth, "voice",
-                   rng.uniform(0.84, 0.96), customer=rng.choice(CUSTOMERS),
+                   rng.uniform(0.84, 0.96), customer=who,
                    desc="udhar given")
         if dow in (2, 5):  # partial settlements, twice a week — in person when
-            # the customer walks in (customer_confirmed), else merchant-stated
+            # the customer walks in (customer_confirmed), else merchant-stated;
+            # the top debtor almost never settles (that is why he concentrates)
+            who = (rng.choice(CUSTOMERS) if rng.random() < 0.10
+                   else rng.choice(CUSTOMERS[1:]))
             add_tx(day, "udhar_settlement", rng.uniform(500, 5200) * growth, "voice",
-                   rng.uniform(0.88, 0.97), customer=rng.choice(CUSTOMERS),
+                   rng.uniform(0.88, 0.97), customer=who,
                    desc="udhar received",
                    trust_tier="customer_confirmed" if rng.random() < 0.25 else None)
         if day > 4 and day % rng.randint(6, 9) == 0:  # wholesale restock receipt —

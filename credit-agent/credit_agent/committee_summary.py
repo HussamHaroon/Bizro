@@ -29,6 +29,7 @@ import io
 import uuid
 
 from .formatting import format_date_label, format_datetime_label
+from .rubric import INDICATOR_NOTE, LIMITATIONS
 
 # Same D4-1 stamped-ledger palette as render.py — duplicated inline so this
 # module stays self-contained (render.py may evolve independently).
@@ -43,20 +44,12 @@ BAND_FILLS = {
     "insufficient_data": (RAISED, INK),
 }
 
-# Shown when an older payload predates report_json.limitations (phase 4 of
-# §12 added the key; the committee page must carry the footer either way).
-DEFAULT_LIMITATIONS = [
-    "All inputs are merchant-self-reported; corroboration is partial by design.",
-    "The readiness score is not a validated repayment predictor — no outcome "
-    "data backs these weights yet.",
-    "Ledger content is Urdu/roman-Urdu-centric; parsing quality varies with "
-    "script and phrasing.",
-    "Red flags and forensics are heuristics over ledger internals, not "
-    "forensic verification.",
-]
+# Shown when an older payload predates report_json.limitations (§12 added
+# the key): the single source of truth is rubric.LIMITATIONS — same four
+# standing limitations the report payload stores.
+DEFAULT_LIMITATIONS = LIMITATIONS
 
 VISIT_PLACEHOLDER = "capture on visit"
-INDICATOR_NOTE = "readiness indicator (not a validated repayment predictor)"
 CHAIN_UNSEALED = "chain: not yet sealed"
 
 MAX_NOTICES = 5

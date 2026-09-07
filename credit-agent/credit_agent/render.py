@@ -137,6 +137,8 @@ _CSS = Template("""
                font-size:14px; font-weight:600; }
   .trustline .num { font-size:20px; }
   .trustdetail { font-weight:400; font-size:12px; }
+  .indicatornote { margin-top:8px; font-size:12px; font-style:italic; }
+  .limitations li { margin:4px 0; font-size:12.5px; }
   table { width:100%; border-collapse:collapse; margin-top:12px; }
   td,th { border-top:2px solid $ink; padding:8px 10px; text-align:left;
           vertical-align:top; }
@@ -247,6 +249,24 @@ def render_report_html(report: dict) -> str:
             f" <span class='trustdetail'>(PKR {corr_amt} of "
             f"PKR {total_amt} stated revenue) — "
             f"{_esc(trust.get('note', ''))}</span></div>"
+        )
+
+    # §12 honest labeling: the score's indicator caveat renders wherever the
+    # score does (payload key added in §12; older payloads just omit it).
+    indicator_note = (report.get("readiness") or {}).get("note") or ""
+    indicator_html = (
+        f"<div class='indicatornote'>{_esc(indicator_note)}</div>" if indicator_note else ""
+    )
+
+    # §12 limitations footer — the four standing limitations, on every report.
+    limitations = report.get("limitations") or []
+    limitations_card = ""
+    if limitations:
+        limitations_card = (
+            "<div class='card limitations'><div class='cardhead'>"
+            "<strong>Limitations — read before deciding</strong></div><ul>"
+            + "".join(f"<li>{_esc(x)}</li>" for x in limitations)
+            + "</ul></div>"
         )
 
     metrics_rows = "".join(
@@ -479,6 +499,7 @@ def render_report_html(report: dict) -> str:
   <div class="band"><div class="score" style="background:{band_fill};color:{fill_text}">{_esc(report.get('readiness',{}).get('score'))}</div>
     <div><div class="bandlabel">{_esc(band.replace('_',' '))}</div>
     <span class="ur">{_esc(report.get('readiness',{}).get('label_ur'))}</span></div></div>
+  {indicator_html}
   {trust_html}
 </div>
 <div class="card"><div class="cardhead"><strong>Summary</strong></div>
@@ -495,6 +516,7 @@ def render_report_html(report: dict) -> str:
   <div class="foot">Criteria basis: {_esc(report.get('criteria_basis'))} ·
   {attribution} · Generated: {_esc(generated_label)}</div>
 </div>
+{limitations_card}
 </div></body></html>"""
 
 
