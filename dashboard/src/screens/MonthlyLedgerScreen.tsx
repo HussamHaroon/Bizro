@@ -6,9 +6,10 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { api, fetchInventory, fetchStreak } from '../api/client';
+import { api, fetchInsights, fetchInventory, fetchStreak } from '../api/client';
 import type {
   InventoryView,
+  MerchantInsights,
   SavingsStreak,
   Transaction,
   TransactionKind,
@@ -18,6 +19,7 @@ import { AmountText } from '../components/AmountText';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { EmptyState } from '../components/EmptyState';
 import { HeroStat } from '../components/HeroStat';
+import { InsightsCard } from '../components/InsightsCard';
 import { InventoryCard } from '../components/InventoryCard';
 import { LedgerIntegrityChip } from '../components/LedgerIntegrityChip';
 import { LedgerDayHeader, LedgerRow, isDemoRow } from '../components/LedgerRow';
@@ -73,6 +75,8 @@ export function MonthlyLedgerScreen() {
   const [streak, setStreak] = useState<SavingsStreak | null>(null);
   /** Derived stock (v0.9). Optional endpoint: null = card hidden, never an error. */
   const [inventory, setInventory] = useState<InventoryView | null>(null);
+  /** Derived insights (v0.9). Optional endpoint: null = card hidden, never an error. */
+  const [insights, setInsights] = useState<MerchantInsights | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -102,6 +106,11 @@ export function MonthlyLedgerScreen() {
     // an older server without the route just hides the card (graceful absence).
     fetchInventory().then((v) => {
       if (alive) setInventory(v);
+    });
+    // Insights are whole-ledger too (demand/restock/price patterns) and
+    // optional the same way: absence hides the card, never an error.
+    fetchInsights().then((v) => {
+      if (alive) setInsights(v);
     });
     return () => {
       alive = false;
@@ -348,6 +357,12 @@ export function MonthlyLedgerScreen() {
       {/* Derived stock (v0.9) — sits under Udhar Radar: money owed, then goods
           on shelves. Renders nothing on servers without the route. */}
       {inventory && <InventoryCard view={inventory} />}
+
+      {/* Derived insights (v0.9) — under the stock card: restock (the action),
+          then when things sell, then price movers. Derived patterns from the
+          existing ledger, never forecasts. Renders nothing on servers without
+          the route. */}
+      {insights && <InsightsCard insights={insights} />}
 
       {/* Kind filter — every chip is word-paired (EN + UR), never icon-only.
           D4-1: square sticker chips; active = green-fill with paper text. */}

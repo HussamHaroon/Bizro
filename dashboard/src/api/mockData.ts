@@ -11,11 +11,15 @@
 
 import type {
   CreditReportPreview,
+  DemandTimingRow,
   InventoryItem,
   InventoryView,
   LedgerVerifyResult,
+  MerchantInsights,
   MerchantSummary,
+  PriceTrendRow,
   ReadinessLevel,
+  RestockRow,
   SavingsStreak,
   SourceType,
   Transaction,
@@ -151,6 +155,14 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
   tx('expense', 1200, '2026-06-18T19:15:00+05:00', m(), { description: 'Shop electricity bill' }),
   tx('udhar_settlement', 1200, '2026-06-22T17:30:00+05:00', v(0.9, 'm-0605'), { counterparty: BILAL }),
   tx('sale', 2100, '2026-06-26T12:00:00+05:00', v(0.96, 'm-0606'), { counterparty: AHMAD }),
+  // INSIGHTS FIXTURE (labeled): a second oil receipt at the SAME price — with
+  // the July one it gives cooking oil 5L two first-half price observations,
+  // so the price-trends row below is a real median comparison, not a flip.
+  tx('expense', 1250, '2026-06-26T18:10:00+05:00', o(OCR_VL, 0.9, 'm-0608'), {
+    counterparty: ALMADINA,
+    description: 'Oil top-up — same price',
+    item_lines: [{ item: 'cooking oil 5L', qty: 1, unit: 'tin', unit_price: 1250, line_total: 1250 }],
+  }),
   tx('expense', 5300, '2026-06-29T18:05:00+05:00', o(OCR_VL, 0.9, 'm-0607'), {
     counterparty: ALMADINA,
     description: 'Fortnight restock — flour, tea',
@@ -179,6 +191,24 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
   }),
   tx('sale', 1900, '2026-07-21T12:40:00+05:00', v(0.95, 'm-0706'), { counterparty: SANA }),
   tx('udhar_given', 900, '2026-07-24T16:10:00+05:00', v(0.82, 'm-0707'), { counterparty: YUSUF }),
+  // INSIGHTS FIXTURES (labeled): flour and chai receipts that (a) give atta
+  // 10kg bag a second first-half price observation (330 vs the June 320 and
+  // the August 420 → a real "up" median move) and (b) stock the chai patti
+  // the August chai sales below sell — 4+3+1 bought vs 7 sold leaves the fast
+  // seller at in_stock 1 (low), which the restock list then ranks by demand.
+  tx('expense', 1320, '2026-07-24T18:20:00+05:00', o(OCR_VL, 0.9, 'm-0709'), {
+    counterparty: ALMADINA,
+    description: 'Flour top-up — price watch',
+    item_lines: [
+      { item: 'atta 10kg bag', qty: 2, unit: 'bag', unit_price: 330, line_total: 660 },
+      { item: 'atta 10kg bag', qty: 2, unit: 'bag', unit_price: 330, line_total: 660 },
+    ],
+  }),
+  tx('expense', 1800, '2026-07-25T17:50:00+05:00', o(OCR_VL, 0.91, 'm-0710'), {
+    counterparty: ALMADINA,
+    description: 'Chai patti restock',
+    item_lines: [{ item: 'chai patti 950g', qty: 3, unit: 'packet', unit_price: 600, line_total: 1800 }],
+  }),
   tx('expense', 6100, '2026-07-28T18:35:00+05:00', o(OCR_VL, 0.91, 'm-0708'), {
     counterparty: ALMADINA,
     description: 'Eid stock — dates, milk powder',
@@ -202,12 +232,25 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
       { item: 'sugar 1kg', qty: 8, unit: 'kg', unit_price: 100, line_total: 800 },
     ],
   }),
+  // INSIGHTS FIXTURES (labeled): chai patti voice sales WITH item lines, so
+  // the demand card has a real pattern to read — three Saturday evenings vs a
+  // Friday morning (best_day Saturday, best_window evening). Saturday 1 Aug
+  // 2026 anchors the fixture week; most voice sales here still carry NO lines
+  // (the real undercount the inventory card discloses).
+  tx('sale', 1360, '2026-08-07T10:30:00+05:00', v(0.93, 'm-0804b'), {
+    counterparty: HINA,
+    item_lines: [{ item: 'chai patti 950g', qty: 2, unit: 'packet', unit_price: 680, line_total: 1360 }],
+  }),
   tx('sale', 1250, '2026-08-07T11:15:00+05:00', v(0.97, 'm-0804'), {
     counterparty: SANA,
     // INVENTORY FIXTURE (labeled): a voice sale WITH item lines — the pipeline
     // can return them; most voice sales in this fixture carry none (the real
     // undercount the inventory card discloses).
     item_lines: [{ item: 'sugar 1kg', qty: 12, unit: 'kg', unit_price: 100, line_total: 1200 }],
+  }),
+  tx('sale', 1360, '2026-08-08T18:30:00+05:00', v(0.94, 'm-0804c'), {
+    counterparty: AHMAD,
+    item_lines: [{ item: 'chai patti 950g', qty: 2, unit: 'packet', unit_price: 680, line_total: 1360 }],
   }),
   tx('udhar_settlement', 1000, '2026-08-09T17:05:00+05:00', v(0.9, 'm-0805'), { counterparty: AHMAD }),
   // Below the 0.75 CONFIDENCE_CONFIRM_THRESHOLD → stored pending until confirmed.
@@ -219,7 +262,19 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     confirmation_ur: 'رسید صاف نہیں پڑھی جا سکی۔ کیا خرچ 620 روپے ہے؟',
   }),
   tx('sale', 480, '2026-08-13T10:50:00+05:00', m(), { counterparty: HINA }),
+  // INSIGHTS FIXTURE (labeled): second-half oil receipt at the LOWER price —
+  // with 6/26+7/11 @1250 vs 8/12+8/21 @1020 the price card reads a real
+  // median move (down ~18%), two observations per half.
+  tx('expense', 1020, '2026-08-12T18:25:00+05:00', o(OCR_VL, 0.9, 'm-0815b'), {
+    counterparty: ALMADINA,
+    description: 'Oil restock — softer price',
+    item_lines: [{ item: 'cooking oil 5L', qty: 1, unit: 'tin', unit_price: 1020, line_total: 1020 }],
+  }),
   tx('udhar_given', 3500, '2026-08-15T15:35:00+05:00', v(0.86, 'm-0807'), { counterparty: SANA }),
+  tx('sale', 1360, '2026-08-15T18:45:00+05:00', v(0.93, 'm-0807b'), {
+    counterparty: SANA,
+    item_lines: [{ item: 'chai patti 950g', qty: 2, unit: 'packet', unit_price: 680, line_total: 1360 }],
+  }),
   // Price anomaly caught by the Vision Audit sanity check; merchant EDITED it.
   tx('expense', 2800, '2026-08-17T18:55:00+05:00', o(OCR_VL, 0.83, 'm-0808'), {
     description: 'Snacks restock (qty corrected by merchant)',
@@ -257,6 +312,12 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
     flag: 'low_confidence',
     status: 'pending',
     confirmation_ur: 'آواز صاف نہیں تھی۔ کیا چاچا یوسف کو 800 روپے ادھار دیے؟',
+  }),
+  // INSIGHTS FIXTURE (labeled): the third Saturday-evening chai sale — the
+  // newest entry of the fixture ledger (day 79 of the span).
+  tx('sale', 680, '2026-08-22T18:15:00+05:00', v(0.94, 'm-0822'), {
+    counterparty: HINA,
+    item_lines: [{ item: 'chai patti 950g', qty: 1, unit: 'packet', unit_price: 680, line_total: 680 }],
   }),
 ];
 
@@ -378,8 +439,9 @@ export function deriveLedgerVerify(items: Transaction[]): LedgerVerifyResult {
    case/whitespace-insensitively (credit_agent._norm_item idea). flag =
    "negative" when sold > bought (a shown data-quality disclosure, §9 spirit),
    "low" when in_stock ≤ max(2, 10% of bought). With these fixtures: sugar 1kg
-   lands at in_stock −2 (18 bought vs 20 sold) and tapal chai 200g at 0 (low) —
-   so the offline demo shows both disclosure states honestly. */
+   lands at in_stock −2 (18 bought vs 20 sold), chai patti 950g at 1 (8 bought
+   vs 7 sold — the labeled insights fixtures sell it steadily) and tapal chai
+   200g at 0 (low) — so the offline demo shows the disclosure states honestly. */
 
 const INVENTORY_LOW_FLOOR = 2;
 const INVENTORY_LOW_SHARE = 0.1;
@@ -424,6 +486,181 @@ export function deriveInventory(items: Transaction[]): InventoryView {
     items: rows,
     note: 'Derived from logged item lines: receipts add stock, sales and udhar remove it. "negative" means more logged sold than bought — usually sales recorded without item lines, shown as a data-quality disclosure, not an accusation.',
   };
+}
+
+/* ---- Derived insights (v0.9 addendum — insights agent) ------------------------
+   Mock stand-in for GET /api/merchants/{id}/insights, DERIVED from the SAME
+   fixtures the ledger renders — a 1:1 mirror of credit_agent.insights
+   (qa/reviews/2026-09-07-insights-findings.md §c; no new tables, no
+   forecasting, no ML — patterns presented as patterns):
+
+   - demand_timing: sale + udhar_given item_lines bucketed by PKT day-of-week
+     and daypart (morning <12, afternoon 12-17, evening >=17) → best day +
+     best window + a weekly unit RATE for the top items (≥3 units — below that
+     a "best day" is noise).
+   - restock_now: CONSUMES deriveInventory above (the SAME flagged rows the
+     InventoryCard shows — the stock math is never duplicated here) ranked by
+     demand over the trailing 28 days.
+   - price_trends: expense item_lines, median unit price first half vs second
+     half of the item's observations (≥2 per half), ±1% band reads "flat".
+
+   Empty ledger → exactly three empty lists — the card shows its honest empty
+   state, numbers are never invented. */
+
+const INSIGHTS_DEMAND_KINDS: TransactionKind[] = ['sale', 'udhar_given'];
+const INSIGHTS_DEMAND_TOP_ITEMS = 5;
+const INSIGHTS_DEMAND_MIN_UNITS = 3;
+const INSIGHTS_RECENT_DAYS = 28;
+const INSIGHTS_RESTOCK_MAX = 8;
+const INSIGHTS_PRICE_MIN_OBS = 2;
+const INSIGHTS_PRICE_FLAT_PCT = 1;
+const INSIGHTS_PRICE_MAX = 6;
+
+const INSIGHT_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const INSIGHT_PARTS = ['morning', 'afternoon', 'evening'] as const;
+
+const INSIGHTS_PKT_OFFSET_MS = 5 * 3_600_000; // PKT = UTC+5
+
+/** PKT calendar instant of an ISO timestamp (fixtures carry +05:00 offsets;
+    naive strings read as UTC — the same convention as the server). */
+function pktOf(iso: string): Date {
+  const ms = Date.parse(iso);
+  return new Date((Number.isNaN(ms) ? 0 : ms) + INSIGHTS_PKT_OFFSET_MS);
+}
+
+function insightMedian(xs: number[]): number {
+  const ys = [...xs].sort((a, b) => a - b);
+  const mid = ys.length >> 1;
+  return ys.length % 2 ? ys[mid] : (ys[mid - 1] + ys[mid]) / 2;
+}
+
+export function deriveInsights(items: Transaction[]): MerchantInsights {
+  const active = items.filter((t) => t.status !== 'rejected');
+  if (active.length === 0) {
+    return { demand_timing: [], restock_now: [], price_trends: [] };
+  }
+  const times = active.map((t) => Date.parse(t.occurred_at)).filter((ms) => !Number.isNaN(ms));
+  const spanDays = times.length
+    ? Math.max(1, Math.round((Math.max(...times) - Math.min(...times)) / 86_400_000) + 1)
+    : 0;
+  if (spanDays === 0) {
+    return { demand_timing: [], restock_now: [], price_trends: [] };
+  }
+  const note = `Based on your last ${spanDays} days`;
+
+  // --- demand timing -----------------------------------------------------------
+  const demand = new Map<string, { dow: Map<number, number>; part: Map<string, number>; units: number }>();
+  for (const t of active) {
+    if (!INSIGHTS_DEMAND_KINDS.includes(t.kind)) continue;
+    const pkt = pktOf(t.occurred_at);
+    const dow = (pkt.getUTCDay() + 6) % 7; // Monday-first
+    const hour = pkt.getUTCHours();
+    const part = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+    for (const line of Array.isArray(t.item_lines) ? t.item_lines : []) {
+      const name = normItem(String(line?.item ?? ''));
+      const qty = Number(line?.qty ?? 0);
+      if (!name || !Number.isFinite(qty) || qty <= 0) continue;
+      const rec = demand.get(name) ?? { dow: new Map(), part: new Map(), units: 0 };
+      rec.dow.set(dow, (rec.dow.get(dow) ?? 0) + qty);
+      rec.part.set(part, (rec.part.get(part) ?? 0) + qty);
+      rec.units += qty;
+      demand.set(name, rec);
+    }
+  }
+  const demand_timing: DemandTimingRow[] = [...demand.entries()]
+    .sort((a, b) => b[1].units - a[1].units || a[0].localeCompare(b[0]))
+    .slice(0, INSIGHTS_DEMAND_TOP_ITEMS)
+    .filter(([, rec]) => rec.units >= INSIGHTS_DEMAND_MIN_UNITS)
+    .map(([name, rec]) => {
+      const bestDow = [...rec.dow.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+      const bestPart = [...rec.part.entries()].sort(
+        (a, b) =>
+          b[1] - a[1] ||
+          INSIGHT_PARTS.indexOf(a[0] as (typeof INSIGHT_PARTS)[number]) -
+            INSIGHT_PARTS.indexOf(b[0] as (typeof INSIGHT_PARTS)[number]),
+      )[0][0];
+      return {
+        item: name,
+        best_day: INSIGHT_DAY_NAMES[bestDow],
+        best_window: bestPart as DemandTimingRow['best_window'],
+        weekly_units: Math.round(((rec.units * 7) / spanDays) * 10) / 10,
+        note,
+      };
+    });
+
+  // --- restock (consumes deriveInventory — no duplicated stock math) -----------
+  const maxMs = Math.max(...times);
+  const cutoff = maxMs - INSIGHTS_RECENT_DAYS * 86_400_000;
+  const recent = new Map<string, number>();
+  for (const t of active) {
+    if (!INSIGHTS_DEMAND_KINDS.includes(t.kind)) continue;
+    const ms = Date.parse(t.occurred_at);
+    if (Number.isNaN(ms) || ms < cutoff) continue;
+    for (const line of Array.isArray(t.item_lines) ? t.item_lines : []) {
+      const name = normItem(String(line?.item ?? ''));
+      const qty = Number(line?.qty ?? 0);
+      if (!name || !Number.isFinite(qty) || qty <= 0) continue;
+      recent.set(name, (recent.get(name) ?? 0) + qty);
+    }
+  }
+  const weeks = Math.max(1, Math.min(INSIGHTS_RECENT_DAYS, spanDays) / 7);
+  const severity: Record<string, number> = { negative: 0, low: 1 };
+  const restock_now: RestockRow[] = deriveInventory(items).items
+    .filter((it) => it.flag === 'low' || it.flag === 'negative')
+    .map((it) => ({
+      item: it.item,
+      unit: it.unit,
+      in_stock: it.in_stock,
+      flag: it.flag,
+      weekly_demand: Math.round(((recent.get(it.item) ?? 0) / weeks) * 10) / 10,
+      note,
+    }))
+    .sort((a, b) => b.weekly_demand - a.weekly_demand || severity[a.flag] - severity[b.flag] || a.item.localeCompare(b.item))
+    .slice(0, INSIGHTS_RESTOCK_MAX);
+
+  // --- price trends --------------------------------------------------------------
+  const obs = new Map<string, { when: number; price: number; unit: string | null }[]>();
+  for (const t of active) {
+    if (t.kind !== 'expense') continue;
+    const ms = Date.parse(t.occurred_at);
+    if (Number.isNaN(ms)) continue;
+    for (const line of Array.isArray(t.item_lines) ? t.item_lines : []) {
+      const name = normItem(String(line?.item ?? ''));
+      const price = Number(line?.unit_price ?? 0);
+      if (!name || !Number.isFinite(price) || price <= 0) continue;
+      const list = obs.get(name) ?? [];
+      list.push({ when: ms, price, unit: line?.unit ?? null });
+      obs.set(name, list);
+    }
+  }
+  const price_trends: PriceTrendRow[] = [...obs.entries()]
+    .map(([name, points]) => {
+      points.sort((a, b) => a.when - b.when);
+      const half = points.length >> 1;
+      const first = points.slice(0, half).map((p) => p.price);
+      const second = points.slice(half).map((p) => p.price);
+      if (first.length < INSIGHTS_PRICE_MIN_OBS || second.length < INSIGHTS_PRICE_MIN_OBS) return null;
+      const m1 = insightMedian(first);
+      const m2 = insightMedian(second);
+      if (!(m1 > 0)) return null;
+      const pct = Math.round(((m2 - m1) / m1) * 1000) / 10;
+      const direction: PriceTrendRow['direction'] =
+        pct >= INSIGHTS_PRICE_FLAT_PCT ? 'up' : pct <= -INSIGHTS_PRICE_FLAT_PCT ? 'down' : 'flat';
+      return {
+        item: name,
+        unit: points[0].unit,
+        first_median: Math.round(m1 * 100) / 100,
+        second_median: Math.round(m2 * 100) / 100,
+        pct_change: pct,
+        direction,
+        note,
+      };
+    })
+    .filter((r): r is PriceTrendRow => r !== null)
+    .sort((a, b) => Math.abs(b.pct_change) - Math.abs(a.pct_change) || a.item.localeCompare(b.item))
+    .slice(0, INSIGHTS_PRICE_MAX);
+
+  return { demand_timing, restock_now, price_trends };
 }
 
 /* ---- Credit Readiness preview (DRAFT shape — see types/schema.ts header) -----

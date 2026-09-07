@@ -23,6 +23,7 @@
 import {
   MOCK_MERCHANT,
   MOCK_TRANSACTIONS,
+  deriveInsights,
   deriveInventory,
   deriveLedgerVerify,
   deriveReportPreview,
@@ -35,6 +36,7 @@ import type {
   InventoryView,
   LanguageSetting,
   LedgerVerifyResult,
+  MerchantInsights,
   MerchantSettings,
   MerchantSettingsPut,
   MerchantSummary,
@@ -398,6 +400,70 @@ export async function fetchInventory(): Promise<InventoryView | null> {
           sold: Number(i.sold ?? 0),
           in_stock: Number(i.in_stock ?? 0),
           flag: i.flag === 'low' || i.flag === 'negative' ? i.flag : 'ok',
+        })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** GET /api/merchants/{id}/insights (v0.9 addendum — demand timing / restock /
+    price trends, derived from existing data; credit_agent.insights) — the
+    InsightsCard source. OPTIONAL endpoint like fetchStreak/fetchInventory:
+    any absence (older server, 404, network) → null and the card simply
+    doesn't render — a missing feature, never an error. In mock mode the view
+    is DERIVED from the same fixtures the ledger renders (deriveInsights — a
+    1:1 mirror of the server math, with the restock list consumed from
+    deriveInventory exactly as the server consumes compute_inventory). */
+export async function fetchInsights(): Promise<MerchantInsights | null> {
+  if (fellBack) return deriveInsights(MOCK_TRANSACTIONS);
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/merchants/${encodeURIComponent(currentMerchantId())}/insights`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const d: unknown = await res.json();
+    if (
+      !d ||
+      !Array.isArray((d as MerchantInsights).demand_timing) ||
+      !Array.isArray((d as MerchantInsights).restock_now) ||
+      !Array.isArray((d as MerchantInsights).price_trends)
+    ) {
+      return null;
+    }
+    const v = d as MerchantInsights;
+    return {
+      demand_timing: v.demand_timing
+        .filter((r): r is MerchantInsights['demand_timing'][number] => !!r && typeof r.item === 'string')
+        .map((r) => ({
+          item: r.item,
+          best_day: String(r.best_day ?? ''),
+          best_window:
+            r.best_window === 'afternoon' || r.best_window === 'evening' ? r.best_window : 'morning',
+          weekly_units: Number(r.weekly_units ?? 0),
+          note: typeof r.note === 'string' ? r.note : '',
+        })),
+      restock_now: v.restock_now
+        .filter((r): r is MerchantInsights['restock_now'][number] => !!r && typeof r.item === 'string')
+        .map((r) => ({
+          item: r.item,
+          unit: r.unit ?? null,
+          in_stock: Number(r.in_stock ?? 0),
+          flag: r.flag === 'low' || r.flag === 'negative' ? r.flag : 'ok',
+          weekly_demand: Number(r.weekly_demand ?? 0),
+          note: typeof r.note === 'string' ? r.note : '',
+        })),
+      price_trends: v.price_trends
+        .filter((r): r is MerchantInsights['price_trends'][number] => !!r && typeof r.item === 'string')
+        .map((r) => ({
+          item: r.item,
+          unit: r.unit ?? null,
+          first_median: Number(r.first_median ?? 0),
+          second_median: Number(r.second_median ?? 0),
+          pct_change: Number(r.pct_change ?? 0),
+          direction: r.direction === 'up' || r.direction === 'down' ? r.direction : 'flat',
+          note: typeof r.note === 'string' ? r.note : '',
         })),
     };
   } catch {

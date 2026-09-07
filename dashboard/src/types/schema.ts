@@ -321,3 +321,53 @@ export interface InventoryView {
   /** Server's honest derivation note — surfaces on the card as fine print. */
   note: string;
 }
+
+/* ---- v0.9 addendum (insights agent) — demand / restock / price trends ------
+   GET /api/merchants/{id}/insights → three lists DERIVED from existing data
+   (item_lines + occurred_at + unit_price; no new tables, no forecasting, no
+   ML). Patterns are presented AS patterns: every row carries a "Based on your
+   last N days" note. Empty ledger → exactly three empty lists, never invented.
+   OPTIONAL endpoint: the client returns null on any absence and the card
+   doesn't render — a missing feature, never an error. */
+
+/** "chai patti sells Saturday evenings" — goods-OUT lines (sale +
+    udhar_given) bucketed by PKT day-of-week and daypart (morning <12,
+    afternoon 12-17, evening >=17). weekly_units is an average RATE over the
+    observed window, not a forecast. */
+export interface DemandTimingRow {
+  item: string;
+  best_day: string;
+  best_window: 'morning' | 'afternoon' | 'evening';
+  weekly_units: number;
+  note: string;
+}
+
+/** Flagged inventory (low/negative — the SAME flags the InventoryCard shows,
+    consumed from compute_inventory) ranked by recent weekly demand. */
+export interface RestockRow {
+  item: string;
+  unit: string | null;
+  in_stock: number;
+  flag: 'ok' | 'low' | 'negative';
+  weekly_demand: number;
+  note: string;
+}
+
+/** "supplier prices moved" — expense item_lines: median unit price in the
+    first half vs second half of the item's observations. direction is
+    "up"/"down" beyond ±1%, else "flat" (rounding noise, no signal). */
+export interface PriceTrendRow {
+  item: string;
+  unit: string | null;
+  first_median: number;
+  second_median: number;
+  pct_change: number;
+  direction: 'up' | 'down' | 'flat';
+  note: string;
+}
+
+export interface MerchantInsights {
+  demand_timing: DemandTimingRow[];
+  restock_now: RestockRow[];
+  price_trends: PriceTrendRow[];
+}
