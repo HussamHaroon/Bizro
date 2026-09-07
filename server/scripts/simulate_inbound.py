@@ -19,8 +19,11 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
+import hmac
 import io
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -31,15 +34,41 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+
+def _load_dotenv_into_environ() -> None:
+    """The server reads .env itself; this script sees only the real environment.
+    Load the same file (without overriding already-set vars) so signature
+    validation and mock-mode behave identically for both."""
+    env_file = REPO_ROOT / ".env"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_dotenv_into_environ()
+
 DEFAULT_WA_ID = "923001234567"
 DEFAULT_NAME = "Karyana Store (sim)"
 
 
 def _request(url: str, method: str = "GET", payload: dict | None = None) -> tuple[int, dict | str]:
     data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(
-        url, data=data, method=method, headers={"Content-Type": "application/json"}
-    )
+    headers = {"Content-Type": "application/json"}
+    if data is not None:
+        # Mirror Meta: sign the RAW body with the app secret when one is
+        # configured — the webhook enforces X-Hub-Signature-256 then.
+        secret = os.environ.get("WHATSAPP_APP_SECRET", "")
+        if secret:
+            sig = hmac.new(secret.encode(), data, hashlib.sha256).hexdigest()
+            headers["X-Hub-Signature-256"] = f"sha256={sig}"
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             body = resp.read().decode()

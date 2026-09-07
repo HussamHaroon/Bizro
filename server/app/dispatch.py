@@ -93,6 +93,62 @@ def process_voice_note(
     return _fallback_voice(audio_path, merchant, occurred_at, media_sha256)
 
 
+def _envelope_from_single(single: dict[str, Any]) -> dict[str, Any]:
+    """Wrap a legacy single-tx result (or server fallback) as the multi envelope."""
+    return {
+        "transactions": [single],
+        "reply_text": single.get("confirmation_ur") or single.get("reply_ur") or "",
+    }
+
+
+def _resolve_multi_fn(
+    hyphen_dir: str, module: str, multi_func: str, legacy_func: str
+) -> PipelineFn | None:
+    """Multi-entry resolution: multi fn → legacy fn (envelope-wrapped) → None.
+    An EXPLICIT None cached under the multi key means 'no pipeline — server
+    fallback' (tests force the fallback this way); it never falls through to
+    legacy, so a stubbed-out pipeline stays stubbed out."""
+    multi_key = f"{module}.{multi_func}"
+    if multi_key in _pipeline_cache and _pipeline_cache[multi_key] is None:
+        return None
+    fn = _load_pipeline_fn(hyphen_dir, module, multi_func)
+    if fn is not None:
+        return fn
+    legacy = _load_pipeline_fn(hyphen_dir, module, legacy_func)
+    if legacy is not None:
+        def wrapped(*args: Any, **kwargs: Any) -> Any:
+            return _envelope_from_single(legacy(*args, **kwargs))
+        return wrapped
+    return None
+
+
+def process_voice_note_multi(
+    audio_path: str, merchant: Merchant, occurred_at: datetime, media_sha256: str
+) -> dict[str, Any]:
+    """Voice note → multi-entry envelope
+    `{"transactions": [...], "reply_text": combined confirmation}`.
+    Falls back to the legacy single-entry pipeline (result envelope-wrapped)
+    when only it is importable — keeps old stubs/tests/pipelines working —
+    and to the labeled server fallback when neither is."""
+    fn = _resolve_multi_fn(
+        "voice-agent", "voice_agent.pipeline",
+        "process_voice_note_multi", "process_voice_note",
+    )
+    merchant_ctx = {
+        "id": str(merchant.id),
+        "wa_id": merchant.wa_id,
+        "display_name": merchant.display_name,
+    }
+    if fn is not None:
+        result = _call_with_occurred_at(fn, audio_path, merchant_ctx, occurred_at)
+        if isinstance(result, dict) and "transactions" in result:
+            return result
+        return _envelope_from_single(result)
+    return _envelope_from_single(
+        _fallback_voice(audio_path, merchant, occurred_at, media_sha256)
+    )
+
+
 def process_transcript(
     text: str, merchant: Merchant, occurred_at: datetime
 ) -> dict[str, Any]:
@@ -111,6 +167,29 @@ def process_transcript(
     if fn is not None:
         return _call_text_pipeline(fn, text, merchant_ctx, occurred_at)
     return _fallback_text(text, merchant, occurred_at)
+
+
+def process_transcript_multi(
+    text: str, merchant: Merchant, occurred_at: datetime
+) -> dict[str, Any]:
+    """Typed text → multi-entry envelope (same contract as
+    process_voice_note_multi, including the legacy-pipeline fallback).
+    Model outages propagate (busy reply)."""
+    fn = _resolve_multi_fn(
+        "voice-agent", "voice_agent.pipeline",
+        "process_transcript_multi", "process_transcript",
+    )
+    merchant_ctx = {
+        "id": str(merchant.id),
+        "wa_id": merchant.wa_id,
+        "display_name": merchant.display_name,
+    }
+    if fn is not None:
+        result = _call_text_pipeline(fn, text, merchant_ctx, occurred_at)
+        if isinstance(result, dict) and "transactions" in result:
+            return result
+        return _envelope_from_single(result)
+    return _envelope_from_single(_fallback_text(text, merchant, occurred_at))
 
 
 def _call_text_pipeline(
@@ -372,12 +451,17 @@ def persist_transaction(
     merchant: Merchant,
     tx_data: dict[str, Any],
     media_row_id: uuid.UUID | None,
+    *,
+    write_outbound: bool = True,
+    commit: bool = True,
 ) -> Transaction:
     """Validate pipeline output (schema.md §1) and persist it.
 
     Threshold rule (schema.md §1): confidence < CONFIDENCE_CONFIRM_THRESHOLD
     forces status=pending until the merchant confirms.
-    """
+    `write_outbound=False` + `commit=False` are for batch persistence
+    (persist_transactions_batch writes ONE combined confirmation instead of
+    one per entry)."""
     parsed = TransactionIn.model_validate(tx_data)
     settings = get_settings()
 
@@ -436,7 +520,7 @@ def persist_transaction(
     session.add(tx)
     session.flush()
 
-    if parsed.confirmation_ur:
+    if write_outbound and parsed.confirmation_ur:
         session.add(
             OutboundMessage(
                 merchant_id=merchant.id,
@@ -449,8 +533,60 @@ def persist_transaction(
                 payload={"buttons": CONFIRM_BUTTONS} if status == "pending" else None,
             )
         )
-    session.commit()
+    if commit:
+        session.commit()
     return tx
+
+
+def envelope_rejection(envelope: dict[str, Any]) -> str | None:
+    """§6.9 classification for a MULTI envelope: when EVERY entry is
+    unpersistable (rejected / no amount), the combined reply_text IS the
+    clarification to send and nothing is persisted. Any persistable entry →
+    None (the batch persists and the reply enumerates)."""
+    txs = (envelope or {}).get("transactions") or []
+    if not txs:
+        return DEFAULT_CLARIFICATION_UR
+    for tx_data in txs:
+        if pipeline_rejection(tx_data) is None:
+            return None
+    reply = str((envelope or {}).get("reply_text") or "").strip()
+    return reply or DEFAULT_CLARIFICATION_UR
+
+
+def persist_transactions_batch(
+    session: Session,
+    merchant: Merchant,
+    tx_list: list[dict[str, Any]],
+    media_row_id: uuid.UUID | None,
+    reply_text: str,
+) -> list[Transaction]:
+    """Persist every entry of a multi-person voice note — each as its OWN
+    transaction row linked to the SAME source media (the audit trail keeps
+    one voice note → N entries). ONE combined confirmation message is logged
+    and returned-attached to the first row (never N separate confirmations,
+    never a summed single row)."""
+    rows: list[Transaction] = []
+    for tx_data in tx_list:
+        rows.append(
+            persist_transaction(
+                session, merchant, tx_data, media_row_id,
+                write_outbound=False, commit=False,
+            )
+        )
+    if rows and reply_text.strip():
+        session.add(
+            OutboundMessage(
+                merchant_id=merchant.id,
+                transaction_id=rows[0].id,
+                kind="confirmation_text",
+                body=reply_text,
+                payload={"buttons": CONFIRM_BUTTONS}
+                if any(r.status == "pending" for r in rows)
+                else None,
+            )
+        )
+    session.commit()
+    return rows
 
 
 def deliver(

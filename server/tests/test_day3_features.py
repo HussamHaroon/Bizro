@@ -198,7 +198,7 @@ def test_non_pending_confirmation_has_no_buttons(client, monkeypatch):
             "confirmation_ur": "Cash sale: 1200 rupees recorded.",
         }
 
-    monkeypatch.setitem(disp._pipeline_cache, "voice_agent.pipeline.process_voice_note",
+    monkeypatch.setitem(disp._pipeline_cache, "voice_agent.pipeline.process_voice_note_multi",
                         confident_pipeline)
     wa = _wa("92402")
     out = client.post("/webhook/whatsapp", json=_audio_payload(wa)).json()["results"][0]

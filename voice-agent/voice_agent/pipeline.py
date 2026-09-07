@@ -22,29 +22,49 @@ from typing import Any
 from pydantic import ValidationError
 
 from voice_agent.config import Settings, load_settings
-from voice_agent.confirmation import UNCLEAR_KIND_MARKER, build_confirmation, detect_language
+from voice_agent.confirmation import (
+    UNCLEAR_KIND_MARKER,
+    build_combined_confirmation,
+    build_confirmation,
+    detect_language,
+)
 from voice_agent.dashscope_client import DashScopeClient, DashScopeError
 from voice_agent.decode import DecodeError, decode_audio
 from voice_agent.mock_data import SCENARIOS, infer_scenario, mock_response_text
 from voice_agent.models import Transaction
+from voice_agent.numbers import collapse_suspected, normalize_spoken_numbers
 
 SYSTEM_PROMPT = """You are Bizro's voice-ledger parser for Pakistani karyana (corner-store) merchants.
 You receive ONE short WhatsApp voice note in casual Urdu, often mixed with English words and brand
-names, numbers spoken as words ("panch hazar", "پندرہ سو"). Transcribe it, then extract the transaction.
+names, numbers spoken as words ("panch hazar", "پندرہ سو"). Transcribe it, then extract EVERY
+transaction mentioned — a single note often names SEVERAL people with SEPARATE amounts.
 
 Respond with ONLY a JSON object, no prose, in exactly this shape:
 {
   "transcript": "<verbatim transcription, Urdu script; keep code-switched English words as spoken>",
   "confidence": <float 0..1 — your honest confidence in the EXTRACTION, not the transcription>,
-  "transaction": {
-    "kind": "sale | expense | udhar_given | udhar_settlement | null",
-    "amount_pkr": <positive number, PKR rupees | null>,
-    "counterparty": {"name": "<customer or supplier name | null>", "phone": null},
-    "description": "<short English summary for the ledger>",
-    "item_lines": [{"item": "...", "qty": <number>, "unit": "packet|tin|bag|...", "unit_price": <number>, "line_total": <number>}],
-    "unclear": [<list of field names you are NOT sure about: "amount", "kind", "counterparty_name">]
-  }
+  "transactions": [
+    {
+      "kind": "sale | expense | udhar_given | udhar_settlement | null",
+      "amount_pkr": <positive number, PKR rupees | null>,
+      "counterparty": {"name": "<customer or supplier name | null>", "phone": null},
+      "description": "<short English summary for the ledger>",
+      "item_lines": [{"item": "...", "qty": <number>, "unit": "packet|tin|bag|...", "unit_price": <number>, "line_total": <number>}],
+      "confidence": <optional float 0..1 — THIS entry's own confidence; use when one entry is certain and a sibling is not>,
+      "unclear": [<list of field names you are NOT sure about: "amount", "kind", "counterparty_name">]
+    }
+  ]
 }
+
+MULTI-PERSON RULES (the most important rules in this prompt):
+- ONE entry PER person+purpose. "Ahmad ko panch hazar aur Bilal ko do hazar ka udhar" is TWO
+  entries: Ahmad 5000, Bilal 2000. NEVER merge people. NEVER sum amounts into one total.
+- If one person's amount is unclear, mark ONLY that entry amount_pkr=null + unclear ["amount"] —
+  the other people's entries stay clean and confident.
+- Different purposes may mix in one note ("Ahmad ko udhar diya, Usman ne paise wapas kiye") —
+  each gets its own entry with its own kind.
+- If the SAME person appears twice with two amounts, emit two entries for that person.
+- A note about ONE person with ONE amount → the list has exactly one entry.
 
 Reply language: the transcript stays in the spoken Urdu, but every field the
 merchant reads (description, item names when you can) is written as a short,
@@ -61,16 +81,21 @@ Kind semantics (direction is implied by kind; amount is always positive):
 - "expense": merchant bought stock/paid a supplier (receipt photos also land here).
 
 HARD RULES:
-- If the note is NOT a transaction (a question, small talk), set kind=null and list "kind" in unclear.
-- If the amount is ambiguous ("پانچ یا چھ ہزار"), set amount_pkr=null and list "amount" in unclear.
-  NEVER pick one of several possible amounts. NEVER invent digits.
+- If the note is NOT a transaction (a question, small talk), return ONE entry with kind=null
+  and list "kind" in its unclear.
+- If an amount is ambiguous ("پانچ یا چھ ہزار"), set that entry's amount_pkr=null and list
+  "amount" in its unclear. NEVER pick one of several possible amounts. NEVER invent digits.
 - Convert spoken number words to digits: "panch hazar"=5000, "پندرہ سو"=1500, "aath bori"=8 bags.
 - English number words are often written in Urdu script PHONETICALLY by the transcriber:
   "سون تھاؤزن" = 7000, "ٹو ان ہزار" = 2000, "پوائنٹ فائیو" = 0.5, "فورٹی فائیو" = 45.
   Always convert these phonetic English numbers to digits like any other spoken number.
 - item_lines only when the note clearly lists items; else [].
 - If item_lines exist and their line_totals do not sum to amount_pkr, still report what was said —
-  do NOT silently fix; the pipeline flags the mismatch."""
+  do NOT silently fix; the pipeline flags the mismatch.
+
+A normalized transcript may be provided as an aid: it contains bracketed digit hints after spoken
+number words ("panch hazar [5000]"). Use it to double-check your digit conversion; the VERBATIM
+transcript field must still be the original wording."""
 
 
 # ---------------------------------------------------------------------------
@@ -87,9 +112,36 @@ def process_voice_note(
     settings: Settings | None = None,
     mock_scenario: str | None = None,
 ) -> dict:
-    """Process one WhatsApp voice note → schema.md §1 transaction dict.
+    """LEGACY single-entry entry point — now a wrapper over
+    `process_voice_note_multi`. Returns the transaction dict when the note
+    yielded exactly one entry; for multi-person notes it returns a
+    schema-conformant clarification payload — it NEVER returns a summed total
+    (that was the collapse bug this module was rebuilt to kill)."""
+    env = process_voice_note_multi(
+        audio_path, merchant, occurred_at, media_id=media_id,
+        settings=settings, mock_scenario=mock_scenario,
+    )
+    txs = env["transactions"]
+    if len(txs) == 1:
+        return txs[0]
+    return _multi_entry_clarification(txs, settings or load_settings())
 
-    `merchant`: optional {"display_name": ...} — used on the invoice header only.
+
+def process_voice_note_multi(
+    audio_path: str | Path,
+    merchant: dict | None = None,
+    occurred_at: str | dt.datetime | None = None,
+    *,
+    media_id: str | None = None,
+    settings: Settings | None = None,
+    mock_scenario: str | None = None,
+) -> dict:
+    """Process one WhatsApp voice note → multi-entry envelope:
+    `{"transactions": [schema.md §1 dicts...], "reply_text": <combined confirmation>}`.
+
+    `merchant`: optional {"display_name": ..., "customers": ["Ahmad", ...]} —
+    display name on confirmations; known customer names bias counterparty
+    spelling so amounts associate with the RIGHT person.
     `occurred_at`: message timestamp (defaults to now, Asia/Karachi).
     `mock_scenario`: test/demo hook to pin a canned scenario in mock mode.
     """
@@ -122,11 +174,17 @@ def process_voice_note(
                 transcript = transcribe(
                     decoded.data, filename=f"voice.{decoded.api_format}", settings=settings
                 )
-                # plain text call — generic hosts reject the omni field set
+                # plain text call — generic hosts reject the omni field set.
+                # Number aid: bracketed digit hints after spoken number words
+                # cut digit-conversion errors (the #1 association killer).
+                aid = normalize_spoken_numbers(transcript)
                 model_text = client.chat_text(
                     system=SYSTEM_PROMPT,
                     user_text=(
-                        f"Voice note transcript:\n{transcript}\n\n" + _user_prompt(when)
+                        f"Voice note transcript:\n{transcript}\n\n"
+                        f"Number aid (hints only — verbatim transcript stays authoritative):\n{aid}\n\n"
+                        + _customers_hint(merchant)
+                        + _user_prompt(when)
                     ),
                 ).text
             except Exception as exc:  # noqa: BLE001 — webhook path never crashes
@@ -138,38 +196,37 @@ def process_voice_note(
                 if isinstance(exc, DashScopeError) or type(exc).__name__ == "FreeTierBudgetExceeded":
                     raise
                 # Corrupt audio or STT failure → ask again; never crash the webhook.
-                return _low_confidence_fallback(
+                return _multi_fallback_envelope(
                     transcript="", when=when, media_id=media_id, confidence=0.0,
-                    settings=settings, mock=False, note=f"stt path failed: {exc}",
+                    settings=settings, note=f"stt path failed: {exc}",
                 )
         else:
             try:
                 decoded = decode_audio(audio_bytes, strategy=settings.audio_decode)
             except DecodeError as exc:
                 # Corrupt/undecodable audio → ask again; never crash the webhook path.
-                return _low_confidence_fallback(
+                return _multi_fallback_envelope(
                     transcript="", when=when, media_id=media_id, confidence=0.0,
-                    settings=settings, mock=False, note=f"audio decode failed: {exc}",
+                    settings=settings, note=f"audio decode failed: {exc}",
                 )
             model_text = client.omni_chat(
                 system=SYSTEM_PROMPT, user_text=_user_prompt(when), audio=decoded
             ).text
 
-    tx_dict, errors = _assemble(
+    txs, reply, errors = _assemble_all(
         model_text, when, media_id, settings, mock=settings.use_mock,
         mock_scenario=scenario if settings.use_mock else None,
     )
     if errors and not settings.use_mock:
         # One repair-retry against the real model (mock scenarios are always valid).
         model_text = _repair_call(client, settings, model_text, errors)
-        tx_dict, errors = _assemble(model_text, when, media_id, settings, mock=False)
-        if errors:
-            tx_dict = _low_confidence_fallback(
-                transcript=_extract_transcript(model_text), when=when, media_id=media_id,
-                confidence=0.0, settings=settings, mock=False,
-                note="model output failed schema validation after repair",
-            )
-    return tx_dict
+        txs, reply, errors = _assemble_all(
+            model_text, when, media_id, settings, mock=False
+        )
+        # Per-entry failures already became low_confidence entries inside
+        # _assemble_all, so the envelope stays schema-valid even after a
+        # failed repair — nothing else to do here.
+    return {"transactions": txs, "reply_text": reply}
 
 
 # Mock scenario used when a typed message arrives with no scenario pinned
@@ -186,11 +243,34 @@ def process_transcript(
     settings: Settings | None = None,
     mock_scenario: str | None = None,
 ) -> dict:
-    """Process one TYPED WhatsApp message → schema.md §1 transaction dict.
+    """LEGACY single-entry entry point — wrapper over `process_transcript_multi`.
+    Single-entry notes return the transaction dict as before; multi-person notes
+    return a clarification payload, NEVER a summed total."""
+    env = process_transcript_multi(
+        text, merchant, occurred_at, media_id=media_id,
+        settings=settings, mock_scenario=mock_scenario,
+    )
+    txs = env["transactions"]
+    if len(txs) == 1:
+        return txs[0]
+    return _multi_entry_clarification(txs, settings or load_settings())
 
-    Mirrors the STT branch of process_voice_note: the plain text model does the
-    structuring (`client.chat_text`). The only differences: there is no audio to
-    decode/transcribe, the emitted source.type is "text", and the typed message
+
+def process_transcript_multi(
+    text: str,
+    merchant: dict | None = None,
+    occurred_at: str | dt.datetime | None = None,
+    *,
+    media_id: str | None = None,
+    settings: Settings | None = None,
+    mock_scenario: str | None = None,
+) -> dict:
+    """Process one TYPED WhatsApp message → multi-entry envelope
+    `{"transactions": [...], "reply_text": combined confirmation}`.
+
+    Mirrors the STT branch of process_voice_note_multi: the plain text model does
+    the structuring (`client.chat_text`). The only differences: there is no audio
+    to decode/transcribe, the emitted source.type is "text", and the typed message
     itself is kept in raw_output as the audit transcript.
 
     Model-call exceptions (timeout/outage) PROPAGATE — the server distinguishes
@@ -213,45 +293,163 @@ def process_transcript(
         model_text = mock_response_text(scenario)
     else:
         client = DashScopeClient(settings)  # fail fast on missing key
-        # plain text call — same path as the STT branch of process_voice_note
+        aid = normalize_spoken_numbers(body)
+        # plain text call — same path as the STT branch of process_voice_note_multi
         model_text = client.chat_text(
             system=SYSTEM_PROMPT,
-            user_text=f"Typed message:\n{body}\n\n" + _user_prompt(when),
+            user_text=(
+                f"Typed message:\n{body}\n\n"
+                f"Number aid (hints only):\n{aid}\n\n"
+                + _customers_hint(merchant)
+                + _user_prompt(when)
+            ),
         ).text
 
-    tx_dict, errors = _assemble(
+    txs, reply, errors = _assemble_all(
         model_text, when, media_id, settings, mock=settings.use_mock,
         mock_scenario=scenario if settings.use_mock else None,
         source_type="text",
     )
     if errors and not settings.use_mock:
         model_text = _repair_call(client, settings, model_text, errors, text_mode=True)
-        tx_dict, errors = _assemble(
+        txs, reply, errors = _assemble_all(
             model_text, when, media_id, settings, mock=False, source_type="text"
         )
-        if errors:
-            tx_dict = _low_confidence_fallback(
-                transcript=_extract_transcript(model_text), when=when, media_id=media_id,
-                confidence=0.0, settings=settings, mock=False,
-                note="model output failed schema validation after repair",
-                source_type="text",
-            )
 
     # The typed message IS the transcript for this path — keep it in raw_output
     # (audit trail) alongside whatever transcript the model echoed.
-    src = dict(tx_dict.get("source") or {})
-    raw = dict(src.get("raw_output") or {})
-    if not raw.get("transcript"):
-        raw["transcript"] = body
-    raw["typed_text"] = body
-    src["raw_output"] = raw
-    tx_dict["source"] = src
-    return tx_dict
+    for tx_dict in txs:
+        src = dict(tx_dict.get("source") or {})
+        raw = dict(src.get("raw_output") or {})
+        if not raw.get("transcript"):
+            raw["transcript"] = body
+        raw["typed_text"] = body
+        src["raw_output"] = raw
+        tx_dict["source"] = src
+    return {"transactions": txs, "reply_text": reply}
+
+
+def _customers_hint(merchant: dict | None) -> str:
+    """Known customer names bias the model toward the merchant's spellings —
+    wrong-spelling names are how an amount ends up on the WRONG person."""
+    names = ((merchant or {}).get("customers") or [])
+    names = [str(n).strip() for n in names if str(n).strip()][:25]
+    if not names:
+        return ""
+    return "This merchant's known customers (prefer these spellings): " + ", ".join(names) + ".\n\n"
+
+
+def _multi_entry_clarification(txs: list[dict], settings: Settings) -> dict:
+    """Compat payload for legacy single-entry callers when a note actually held
+    N>1 entries: a pending low_confidence entry whose confirmation asks the
+    merchant to rely on the combined reply. NEVER a merged total."""
+    transcript = ""
+    names: list[str] = []
+    for t in txs or []:
+        src = (t.get("source") or {}).get("raw_output") or {}
+        transcript = transcript or str(src.get("transcript") or "")
+        nm = ((t.get("counterparty") or {}).get("name") or "").strip()
+        if nm:
+            names.append(nm)
+    note = f"multiple entries detected ({len(txs)}); legacy caller receives clarification only"
+    fb = _low_confidence_fallback(
+        transcript=transcript, when=_coerce_occurred_at(None), media_id=None,
+        confidence=0.0, settings=settings, mock=False,
+        note=note,
+    )
+    return fb
 
 
 # ---------------------------------------------------------------------------
 # Assembly: model text → validated, flagged, confirmed transaction dict
 # ---------------------------------------------------------------------------
+
+
+def _assemble_all(
+    model_text: str, when: dt.datetime, media_id: str | None,
+    settings: Settings, *, mock: bool, mock_scenario: str | None = None,
+    source_type: str = "voice",
+) -> tuple[list[dict], str, list[str]]:
+    """Multi-entry assembly: model JSON → (entries, combined reply, errors).
+
+    Accepts both the multi-entry "transactions" list and the legacy singular
+    "transaction" object. Each entry runs the FULL single-entry logic
+    (validation, unclear→low_confidence, derived flags, its own confirmation)
+    by re-invoking _assemble on a per-entry JSON — so every guarantee the
+    single path had holds per person.
+
+    COLLAPSE GUARD: if the transcript signals more person-amount clauses than
+    the model returned entries, the model probably merged people into a summed
+    total — a clarification entry is appended instead of trusting the merge.
+    """
+    parsed, extract_err = _extract_json(model_text)
+    if extract_err:
+        fb = _low_confidence_fallback(
+            transcript=_extract_transcript(model_text), when=when, media_id=media_id,
+            confidence=0.0, settings=settings, mock=mock, note=extract_err,
+            source_type=source_type,
+        )
+        return [fb], fb["confirmation_ur"], [extract_err]
+
+    transcript = str(parsed.get("transcript") or "")
+    confidence = _safe_confidence(parsed.get("confidence"))
+
+    entries = parsed.get("transactions")
+    if entries is None:
+        single = parsed.get("transaction")
+        entries = [single] if isinstance(single, dict) else []
+    if not isinstance(entries, list):
+        entries = []
+    entries = [e if isinstance(e, dict) else {} for e in entries] or [{}]
+
+    tx_dicts: list[dict] = []
+    errors: list[str] = []
+    for entry in entries:
+        # Per-entry confidence (when the model provides one) wins over the
+        # note-level confidence — one person's unclear amount must never drag
+        # a sibling's certain entry below the confirm threshold.
+        entry_conf = _safe_confidence(entry.get("confidence")) or confidence
+        per_entry_text = json.dumps(
+            {"transcript": transcript, "confidence": entry_conf, "transaction": entry},
+            ensure_ascii=False,
+        )
+        tx_dict, errs = _assemble(
+            per_entry_text, when, media_id, settings, mock=mock,
+            mock_scenario=mock_scenario, source_type=source_type,
+        )
+        tx_dicts.append(tx_dict)
+        errors.extend(errs)
+
+    # -- collapse guard (never trust a silently-summed total) ----------------
+    clean = [t for t in tx_dicts if t.get("flag") != "low_confidence"]
+    if clean and collapse_suspected(transcript, len(clean)):
+        tx_dicts.append(_low_confidence_fallback(
+            transcript=transcript, when=when, media_id=media_id,
+            confidence=min(0.5, confidence),
+            settings=settings, mock=mock,
+            note=(
+                "collapse guard: transcript signals more person-amounts than the "
+                f"{len(clean)} extracted entr(y/ies) — please confirm each person's "
+                "amount separately"
+            ),
+            mock_scenario=mock_scenario, source_type=source_type,
+        ))
+
+    combined = build_combined_confirmation(tx_dicts)
+    return tx_dicts, combined, errors
+
+
+def _multi_fallback_envelope(
+    *, transcript: str, when: dt.datetime, media_id: str | None,
+    confidence: float, settings: Settings, note: str,
+) -> dict:
+    """Envelope-shaped version of the low-confidence 'ask again' path, used when
+    audio itself fails before any model call."""
+    fb = _low_confidence_fallback(
+        transcript=transcript, when=when, media_id=media_id, confidence=confidence,
+        settings=settings, mock=False, note=note,
+    )
+    return {"transactions": [fb], "reply_text": fb["confirmation_ur"]}
 
 
 def _assemble(

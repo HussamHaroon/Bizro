@@ -98,6 +98,57 @@ SCENARIOS: dict[str, dict] = {
         },
         "confidence": 0.86,
     },
+    "multi_udhar_two": {
+        # THE regression scenario: one note, two people, two amounts.
+        "transcript": "احمد کو پانچ ہزار روپے ادھار دیے اور بلال کو دو ہزار کا ادھار دیا۔",
+        "transactions": [
+            {
+                "kind": "udhar_given",
+                "amount_pkr": 5000,
+                "counterparty": {"name": "احمد", "phone": None},
+                "description": "Udhar given to Ahmad",
+                "item_lines": [],
+                "confidence": 0.92,
+                "unclear": [],
+            },
+            {
+                "kind": "udhar_given",
+                "amount_pkr": 2000,
+                "counterparty": {"name": "بلال", "phone": None},
+                "description": "Udhar given to Bilal",
+                "item_lines": [],
+                "confidence": 0.9,
+                "unclear": [],
+            },
+        ],
+        "confidence": 0.91,
+    },
+    "multi_mixed_one_unclear": {
+        # Two people; one amount certain, one ambiguous — the clean entry must
+        # stay clean; only the unclear one gets flagged.
+        "transcript": "عثمان نے آٹھ سو نقد دے دیے، اور ناصر کو کچھ ادھار دیا… پانچ یا چھ ہزار۔",
+        "transactions": [
+            {
+                "kind": "udhar_settlement",
+                "amount_pkr": 800,
+                "counterparty": {"name": "عثمان", "phone": None},
+                "description": "Usman paid back 800",
+                "item_lines": [],
+                "confidence": 0.9,
+                "unclear": [],
+            },
+            {
+                "kind": "udhar_given",
+                "amount_pkr": None,  # NEVER guess (schema.md §1)
+                "counterparty": {"name": "ناصر", "phone": None},
+                "description": "Udhar to Nasir, amount uncertain",
+                "item_lines": [],
+                "confidence": 0.4,
+                "unclear": ["amount"],
+            },
+        ],
+        "confidence": 0.62,
+    },
     "garbage_audio": {
         # Model heard nothing usable. Pipeline maps this to the low-confidence fallback.
         "transcript": "",

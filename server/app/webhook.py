@@ -366,7 +366,7 @@ def _ingest_free_text(
         }
 
     try:
-        tx_data = dispatch.process_transcript(body, merchant, occurred_at)
+        env = dispatch.process_transcript_multi(body, merchant, occurred_at)
     except Exception:
         logger.exception("Text pipeline failed (wamid=%s)", msg.get("id"))
         _o = lang_mod.pick(
@@ -378,30 +378,35 @@ def _ingest_free_text(
             "error": "model_outage", "reply": _o, "sent": sent,
         }
 
-    # §6.9: no-amount / rejected / non-transaction result → clarify, persist nothing.
-    rejection = dispatch.pipeline_rejection(tx_data)
+    # §6.9: every entry rejected/no-amount → clarify, persist nothing.
+    rejection = dispatch.envelope_rejection(env)
     if rejection is not None:
         return _text_miss_outcome(msg, session, merchant, clarification=rejection)
 
     try:
-        tx = dispatch.persist_transaction(session, merchant, tx_data, None)
+        txs = dispatch.persist_transactions_batch(
+            session, merchant, env["transactions"], None,
+            env.get("reply_text") or "",
+        )
     except ValidationError:
         logger.warning(
             "Typed message failed contract validation (wamid=%s)", msg.get("id")
         )
         return _text_miss_outcome(msg, session, merchant)
 
-    # Parsed transaction: deliver the confirmation exactly like the audio path —
-    # persist_transaction wrote the outbound row; send_confirmation delivers
-    # (with one-tap buttons while pending, §7.1).
-    confirmation = tx_data.get("confirmation_ur") or ""
-    sent = dispatch.send_confirmation(merchant, tx, confirmation) if confirmation else None
+    # Parsed transaction(s): deliver the combined confirmation exactly like the
+    # audio path — persist_transactions_batch wrote ONE outbound row; the first
+    # tx carries delivery (with one-tap buttons while pending, §7.1).
+    confirmation = env.get("reply_text") or ""
+    sent = dispatch.send_confirmation(merchant, txs[0], confirmation) if confirmation else None
     return {
         "message_id": msg.get("id"),
         "ok": True,
         "type": "text",
-        "transaction_id": str(tx.id),
-        "status": tx.status,
+        "transaction_id": str(txs[0].id),
+        "transaction_ids": [str(t.id) for t in txs],
+        "entries": len(txs),
+        "status": txs[0].status,
         "confirmation_ur": confirmation,
         "reply": confirmation,
         "sent": sent,
@@ -490,10 +495,14 @@ def _ingest_media(
     rejection_reply: str | None = None
     try:
         if kind == "voice":
-            tx_data = dispatch.process_voice_note(str(path), merchant, occurred_at, digest)
+            env = dispatch.process_voice_note_multi(
+                str(path), merchant, occurred_at, digest
+            )
         else:
-            tx_data = dispatch.process_receipt_image(
-                str(path), merchant, occurred_at, digest, history=history
+            env = dispatch._envelope_from_single(
+                dispatch.process_receipt_image(
+                    str(path), merchant, occurred_at, digest, history=history
+                )
             )
     except Exception as exc:
         # §6.4/F-6: ReceiptRejected carries a polite reply — send it,
@@ -509,38 +518,45 @@ def _ingest_media(
             )
         if rejection_reply is None:
             raise
-        tx_data = None
+        env = None
 
-    # §6.9/F-1: ambiguous/no-amount result → clarification, never persistence.
+    # §6.9/F-1: every entry ambiguous/no-amount → clarification, never persistence.
     if rejection_reply is None:
-        rejection_reply = dispatch.pipeline_rejection(tx_data)
+        rejection_reply = dispatch.envelope_rejection(env)
 
     if rejection_reply is not None:
         sent = dispatch.send_reply(session, merchant, rejection_reply)
         return _rejection_outcome(msg, rejection_reply, sent, media=media_block)
 
-    _src = (tx_data or {}).get("source") or {}
+    entries = env["transactions"]
+    _src = (entries[0] or {}).get("source") or {}
     lang_mod.set_merchant_lang(
         session, merchant,
         lang_mod.detect_language(
             ((_src.get("raw_output") or {}).get("transcript")) or ""
         ),
     )
-    # Link the pipeline output to the stored blob before validation/persist.
-    src = tx_data.get("source") or {}
-    src.setdefault("media_id", str(blob.id))
-    tx_data["source"] = src
+    # Link EVERY entry to the stored blob before validation/persist — one
+    # voice note, N entries, all carrying the same source media (audit trail).
+    for tx_data in entries:
+        src = tx_data.get("source") or {}
+        src.setdefault("media_id", str(blob.id))
+        tx_data["source"] = src
 
-    tx = dispatch.persist_transaction(session, merchant, tx_data, blob.id)
-    confirmation = tx_data.get("confirmation_ur") or ""
-    sent = dispatch.send_confirmation(merchant, tx, confirmation) if confirmation else None
+    txs = dispatch.persist_transactions_batch(
+        session, merchant, entries, blob.id, env.get("reply_text") or ""
+    )
+    confirmation = env.get("reply_text") or ""
+    sent = dispatch.send_confirmation(merchant, txs[0], confirmation) if confirmation else None
     return {
         "message_id": msg.get("id"),
         "ok": True,
         "type": msg["type"],
         "media": media_block,
-        "transaction_id": str(tx.id),
-        "status": tx.status,
+        "transaction_id": str(txs[0].id),
+        "transaction_ids": [str(t.id) for t in txs],
+        "entries": len(txs),
+        "status": txs[0].status,
         "confirmation_ur": confirmation,
         "sent": sent,
     }

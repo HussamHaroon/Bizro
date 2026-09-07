@@ -305,6 +305,66 @@ def build_confirmation(tx: Transaction, numeral_style: str = "western", lang: st
 build_confirmation_ur = build_confirmation
 
 
+def _strip_confirmation_shell(text: str, lang: str) -> str:
+    """Remove the single-entry lead + trailing question, leaving the bare
+    sentence — used to compose multi-entry confirmations."""
+    lead = "سمجھ گیا۔" if lang == "ur" else "Got it."
+    question = QUESTION_UR if lang == "ur" else QUESTION
+    out = text.strip()
+    if out.startswith(lead):
+        out = out[len(lead):].strip()
+    if out.endswith(question):
+        out = out[: -len(question)].strip()
+    return out
+
+
+def build_combined_confirmation(tx_dicts: list[dict], numeral_style: str = "western") -> str:
+    """One WhatsApp reply for a multi-person voice note: every person's entry
+    enumerated with ITS OWN amount, clarifications for flagged entries, and a
+    single trailing question. Never sums amounts — the collapse bug this kills.
+
+    Accepts assembled transaction DICTS (pipeline output). Single clean entry
+    short-circuits to the byte-identical single-entry confirmation."""
+    entries: list[Transaction] = []
+    lang = "en"
+    for d in tx_dicts or []:
+        try:
+            model = Transaction.model_validate(d)
+        except Exception:
+            continue
+        t = (((d.get("source") or {}).get("raw_output")) or {}).get("transcript") or ""
+        if detect_language(str(t)) == "ur":
+            lang = "ur"
+        entries.append(model)
+    if not entries:
+        return (
+            "معذرت، آپ کی بات سمجھ نہیں آئی۔" if lang == "ur"
+            else "Sorry, we did not understand your note."
+        )
+
+    clean = [e for e in entries if e.flag != "low_confidence"]
+    if len(entries) == 1:
+        return build_confirmation(entries[0], numeral_style, lang)
+
+    lead = "سمجھ گیا۔" if lang == "ur" else "Got it."
+    n = to_numeral_digits(len(entries), numeral_style)
+    header = f"{lead} {n} اندراجات:" if lang == "ur" else f"{lead} {n} entries:"
+
+    lines: list[str] = []
+    for i, e in enumerate(entries, start=1):
+        full = build_confirmation(e, numeral_style, lang)
+        if e.flag == "low_confidence":
+            lines.append(full)  # already a per-entry clarification question
+        else:
+            lines.append(f"{to_numeral_digits(i, numeral_style)}. "
+                         f"{_strip_confirmation_shell(full, lang)}")
+
+    if not clean:
+        return " ".join(lines)
+    question = QUESTION_UR if lang == "ur" else QUESTION
+    return header + "\n" + "\n".join(lines) + "\n" + question
+
+
 # Per-field clarification questions for ambiguous parses.
 _CLARIFY_AMOUNT = "How much was it? Please type the amount or say it again."
 _CLARIFY_KIND = "Was this credit, a cash sale, or an expense?"

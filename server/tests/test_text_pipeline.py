@@ -32,7 +32,7 @@ from server.app.webhook import (
     TEXT_PARSE_MISS_REPLY_UR,
 )
 
-TEXT_PIPELINE_KEY = "voice_agent.pipeline.process_transcript"
+TEXT_PIPELINE_KEY = "voice_agent.pipeline.process_transcript_multi"
 
 
 @pytest.fixture(scope="module")
@@ -292,7 +292,7 @@ def test_dispatch_fallback_labels_mock_text_source(client, monkeypatch):
     from server.app import dispatch as disp
     from datetime import datetime, timezone
 
-    monkeypatch.setitem(disp._pipeline_cache, TEXT_PIPELINE_KEY, None)
+    monkeypatch.setitem(disp._pipeline_cache, "voice_agent.pipeline.process_transcript", None)
     wa = _wa("92510")
     with db_session() as s:
         m = Merchant(wa_id=wa, display_name="Fallback Ctx")

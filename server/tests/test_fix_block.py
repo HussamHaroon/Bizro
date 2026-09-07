@@ -234,7 +234,7 @@ def test_f1_pipeline_null_amount_result_is_rejected(client, monkeypatch):
             "confirmation_ur": "How much was the amount?",
         }
 
-    monkeypatch.setitem(disp._pipeline_cache, "voice_agent.pipeline.process_voice_note",
+    monkeypatch.setitem(disp._pipeline_cache, "voice_agent.pipeline.process_voice_note_multi",
                         null_amount_pipeline)
     r = client.post("/webhook/whatsapp", json=_audio_payload(wa))
     out = r.json()["results"][0]
