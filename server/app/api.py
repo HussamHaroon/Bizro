@@ -5,6 +5,7 @@
 - GET   /api/merchants/{id}/transactions/export.csv   (loan-officer ledger export)
 - GET   /api/merchants/{id}/udhar                     (derived view, schema.md §3)
 - GET   /api/merchants/{id}/inventory                 (derived view — stock from item_lines, no new tables)
+- GET   /api/merchants/{id}/insights                  (derived view — demand timing / restock / price trends, no new tables)
 - POST  /api/transactions/{id}/confirm
 - PATCH /api/transactions/{id}                        (audit-preserving correction)
 - DELETE /api/transactions/{id}                       (true erase: row + media + audit rows)
@@ -1201,3 +1202,45 @@ def merchant_inventory(merchant_id: str):
     with db_session() as session:
         merchant = _get_merchant(session, merchant_id)
         return compute_inventory(session, merchant.id)
+
+
+# --- merchant insights (no new tables) -----------------------------------------
+# GET /api/merchants/{merchant_id}/insights
+#
+# Demand timing / restock urgency / price movers — all DERIVED from existing
+# data (item_lines + occurred_at + unit_price over the last 90 days; the
+# udhar-radar/inventory pattern: zero migrations). Restock CONSUMES
+# compute_inventory above (the stock math is never duplicated); demand timing
+# and price trends key items off the SAME credit_agent _norm_item names.
+# credit_agent.insights imports lazily — the same tolerance as inventory.py's
+# _norm_item loader: a missing package degrades to honest empty lists, never
+# a 500. Details: qa/reviews/2026-09-07-insights-findings.md.
+def _load_compute_insights():
+    """credit_agent.insights.compute_insights, lazily (inventory.py:46-60
+    tolerance pattern — ensure_repo_root_on_path adds the hyphenated dir)."""
+    try:
+        ensure_repo_root_on_path()
+        from credit_agent.insights import compute_insights
+
+        return compute_insights
+    except ImportError as exc:  # pragma: no cover - depends on layout
+        logger.info("credit_agent.insights not importable (%s) — insights endpoint returns empty.", exc)
+        return None
+
+
+@router.get("/merchants/{merchant_id}/insights")
+def merchant_insights(merchant_id: str):
+    with db_session() as session:
+        merchant = _get_merchant(session, merchant_id)
+        compute = _load_compute_insights()
+        if compute is None:
+            return {"demand_timing": [], "restock_now": [], "price_trends": []}
+        cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+        txs = session.scalars(
+            select(Transaction)
+            .where(Transaction.merchant_id == merchant.id)
+            .where(Transaction.occurred_at >= cutoff)
+            .order_by(Transaction.occurred_at.desc())
+        ).all()
+        inventory = compute_inventory(session, merchant.id)
+        return compute(txs, inventory_items=inventory["items"])

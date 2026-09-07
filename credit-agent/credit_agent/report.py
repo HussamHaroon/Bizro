@@ -6,6 +6,7 @@ skeleton + additive narrative_ur/mock keys), persisted to credit_reports.
 
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -206,6 +207,32 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         }
         if is_mock:
             report["mock"] = True
+
+        # --- merchant insights (v0.9 insights agent; appended block) -----------
+        # Demand timing / restock urgency / price movers — all DERIVED from the
+        # rows already loaded above (item_lines + occurred_at + unit_price; no
+        # new tables, no forecasting — qa/reviews/2026-09-07-insights-findings.md).
+        # Restock CONSUMES server/app/inventory.py::compute_inventory over THIS
+        # session (the stock math is never duplicated; unavailable server
+        # package → restock list [] while demand/price still compute). A
+        # derived card must never break report generation: any failure here
+        # degrades to the honest empty shape, never a raised error.
+        try:
+            from .insights import compute_insights, insights_inventory_items
+
+            report["insights"] = compute_insights(
+                list(txs),
+                inventory_items=insights_inventory_items(session, mid),
+            )
+        except Exception as exc:  # pragma: no cover — degrade, never block a report
+            logging.getLogger("bizro.report").warning(
+                "insights computation failed (%s) — report carries empty insights.", exc
+            )
+            report["insights"] = {
+                "demand_timing": [],
+                "restock_now": [],
+                "price_trends": [],
+            }
 
         # §6.3/§6.11: the mock marker MUST survive persistence — any consumer
         # loading this row (dashboard cached preview, committee tools) must be
