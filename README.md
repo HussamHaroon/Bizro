@@ -14,7 +14,9 @@ Built for the Bano Qabil x Alibaba Cloud AI Hackathon Pakistan 2026.
 
 ## The product in seconds
 
-![Bizro product ad](assets/bizro-ad.mp4)
+<p align="center">
+  <video src="assets/bizro-ad.mp4" controls muted playsinline width="720"></video>
+</p>
 
 A 43-second ad for the zero-typing loop: an Urdu voice note or receipt photo
 in on WhatsApp, a structured ledger entry and a credit-ready history out.
