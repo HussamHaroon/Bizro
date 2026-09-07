@@ -38,7 +38,8 @@ server_run.log
 !README.md
 
 # transient deck renders (pymupdf slide dumps)
-presentation/render/
+presentation/
 
 # guide pdf build intermediates
 docs/_guide_*.pdf
+docs/build_guide_pdf.py
