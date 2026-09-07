@@ -11,6 +11,7 @@ import { AmountText, toneForKind } from './AmountText';
 import { Button } from './Button';
 import { SourceMedia } from './SourceMedia';
 import { TrustSealBadge } from './TrustSealBadge';
+import { TrustTierBadge } from './TrustTierBadge';
 import { formatConfidence, formatDateTime, formatPkr } from '../lib/format';
 import { isDemoRow } from '../lib/demo';
 
@@ -113,6 +114,16 @@ export function AuditTrail({ transaction: t, onEdit, onConfirm, justConfirmed = 
                 <span>confidence {formatConfidence(t.source.confidence)}</span>
               </span>
             )}
+          </dd>
+        </div>
+        {/* §11 trust tier — who besides the merchant vouched for this entry
+            (null tier renders the honest self-reported default). */}
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-ink-green">
+            Trust
+          </dt>
+          <dd>
+            <TrustTierBadge tier={t.trust_tier} size="md" />
           </dd>
         </div>
       </dl>

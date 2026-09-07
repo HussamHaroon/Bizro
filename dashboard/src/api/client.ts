@@ -23,6 +23,7 @@
 import {
   MOCK_MERCHANT,
   MOCK_TRANSACTIONS,
+  deriveLedgerVerify,
   deriveReportPreview,
   deriveStreak,
   deriveUdhar,
@@ -31,6 +32,7 @@ import { adaptCanonicalReport, isCanonicalReport } from './reportAdapter';
 import type {
   CreditReportPreview,
   LanguageSetting,
+  LedgerVerifyResult,
   MerchantSettings,
   MerchantSettingsPut,
   MerchantSummary,
@@ -325,6 +327,103 @@ export async function fetchStreak(): Promise<SavingsStreak | null> {
   } catch {
     return null;
   }
+}
+
+/** GET /api/merchants/{id}/ledger/verify (schema.md §11, server/app/ledger.py
+    verify_chain) — the LedgerIntegrityChip source. OPTIONAL endpoint like the
+    ones above: any absence (older server, 404, network) → null and the chip
+    renders nothing — a missing feature, never an error. In mock mode the
+    verdict is DERIVED from the fixtures (deriveLedgerVerify), including one
+    deliberately amended row so the honest "audit working" state is demoable. */
+export async function fetchLedgerVerify(
+  merchantId: string = currentMerchantId(),
+): Promise<LedgerVerifyResult | null> {
+  if (fellBack) return deriveLedgerVerify(MOCK_TRANSACTIONS);
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}/ledger/verify`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const d: unknown = await res.json();
+    if (!d || typeof (d as LedgerVerifyResult).checked !== 'number') return null;
+    const v = d as LedgerVerifyResult;
+    return {
+      valid: Boolean(v.valid),
+      checked: v.checked,
+      amended_after_sealing: Array.isArray(v.amended_after_sealing) ? v.amended_after_sealing.map(String) : [],
+      unsealed: typeof v.unsealed === 'number' ? v.unsealed : 0,
+      broken_at: v.broken_at == null ? null : String(v.broken_at),
+      details: Array.isArray(v.details) ? v.details : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ---- Officer-portal fetchers (explicit merchant id, outside attempt()) --------
+   The /officer screen renders a CARD PER APPLICANT, so it cannot ride the
+   module-singleton merchant key. These take an explicit id and, like attempt(),
+   flip the app to labeled fixtures ONLY when the failure lands before any live
+   call has ever succeeded (server down / first-call error) — a merchant report
+   is primary financial data, so the officer screen must agree with the rest of
+   the app on mock mode. Once live has answered once, a later failure surfaces
+   as that card's honest "unavailable" state — never a silent fixture swap. */
+
+/** Shared flip with attempt()'s exact semantics (idempotent). */
+function enterMockFallback(reason: string): void {
+  if (fellBack || liveEverSucceeded) return;
+  fellBack = true;
+  fallbackReason = reason;
+  notify();
+}
+
+/** attempt() for explicit-merchant primary data: live first; on a first-call
+    failure flip to fixtures and answer from them; afterwards failures return
+    null (the card's unavailable state). */
+async function attemptFor<T>(merchantId: string, path: string, mockValue: () => T): Promise<T | null> {
+  if (!fellBack) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}${path}`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`API ${res.status} ${res.statusText} — ${path}`);
+      liveEverSucceeded = true;
+      return (await res.json()) as T;
+    } catch (e) {
+      enterMockFallback(e instanceof Error ? e.message : String(e));
+      if (!fellBack) return null; // live was working — honest per-card absence
+    }
+  }
+  return mockValue();
+}
+
+/** GET /api/merchants/{id}/report/preview for a SPECIFIC merchant — canonical
+    §6.5 payloads go through the same adapter as the live client; the v0.7
+    trust/officer/limitations fields ride along untouched (optional contract). */
+export async function fetchMerchantReport(merchantId: string): Promise<CreditReportPreview | null> {
+  const raw = await attemptFor<unknown>(merchantId, '/report/preview', () =>
+    deriveReportPreview(MOCK_TRANSACTIONS),
+  );
+  if (!raw) return null;
+  const canonical = (raw as { report?: unknown })?.report ?? raw;
+  if (isCanonicalReport(canonical)) {
+    // adaptCanonicalReport derives skeleton stats from rows; the officer card
+    // reads band/score/flags, so an empty row set is fine here (the card's
+    // entries/activity come from fetchMerchantTransactions, not the report).
+    return adaptCanonicalReport(canonical, []);
+  }
+  return { ...(raw as CreditReportPreview), mock: Boolean((raw as CreditReportPreview).mock) };
+}
+
+/** GET /api/merchants/{id}/transactions for a SPECIFIC merchant — feeds the
+    officer card's entries count, weekly activity bars and udhar derivation. */
+export async function fetchMerchantTransactions(merchantId: string): Promise<Transaction[] | null> {
+  const raw = await attemptFor<unknown>(merchantId, '/transactions', () => MOCK_TRANSACTIONS);
+  if (raw == null) return null;
+  return Array.isArray(raw)
+    ? (raw as Transaction[])
+    : (((raw as { transactions?: Transaction[] })?.transactions as Transaction[]) ?? []);
 }
 
 /** GET+PUT /api/merchants/{id}/settings (schema.md §8, ruling D4-2) — per-

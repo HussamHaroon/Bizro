@@ -12,6 +12,7 @@ import { AmountText } from '../components/AmountText';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { EmptyState } from '../components/EmptyState';
 import { HeroStat } from '../components/HeroStat';
+import { LedgerIntegrityChip } from '../components/LedgerIntegrityChip';
 import { LedgerDayHeader, LedgerRow, isDemoRow } from '../components/LedgerRow';
 import { reportDemoRows } from '../components/MockBanner';
 import { ProgressCardButton } from '../components/ProgressCardButton';
@@ -242,6 +243,10 @@ export function MonthlyLedgerScreen() {
       {/* Growth: shareable "this week" card (canvas PNG) — stats from the data
           already on screen; the chip itself hides off the current month. */}
       <ProgressCardButton txs={txs} month={month} streakWeeks={streak?.streak_weeks ?? 0} />
+
+      {/* §11 ledger integrity verdict — whole-ledger, not month-scoped. Optional
+          endpoint: renders nothing on servers without the route (honest absence). */}
+      <LedgerIntegrityChip />
 
       {error && (
         <p role="alert" className="bizro-card px-4 py-3 text-sm font-semibold text-ledger-red">

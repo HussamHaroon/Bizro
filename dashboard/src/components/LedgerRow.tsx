@@ -17,6 +17,7 @@ import type { Transaction, TransactionKind } from '../types/schema';
 import { AmountText, toneForKind } from './AmountText';
 import { AuditTrail } from './AuditTrail';
 import { SealMark } from './TrustSealBadge';
+import { TrustTierBadge } from './TrustTierBadge';
 import { StatusPill } from './StatusPill';
 import {
   IconChevronDown,
@@ -117,10 +118,16 @@ export function LedgerRow({
               )}
             </span>
             {/* Meta line (D4r fix 1): datetime + the ONE status chip — the
-                flag folds into it; source detail lives in the drill-down. */}
+                flag folds into it; source detail lives in the drill-down.
+                §11 tier chip joins ONLY when it carries signal beyond the
+                default (customer/third-party vouching) — self-reported is the
+                baseline and stays in the drill-down, so rows keep whispering. */}
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
               <span className="text-ink-line opacity-75">{formatDateTime(t.occurred_at)}</span>
               <StatusPill status={t.status} flag={t.flag !== 'none' ? t.flag : null} />
+              {(t.trust_tier === 'customer_confirmed' || t.trust_tier === 'third_party') && (
+                <TrustTierBadge tier={t.trust_tier} />
+              )}
             </span>
           </span>
           <span className="ml-auto pr-1 text-right">

@@ -11,6 +11,7 @@
 
 import type {
   CreditReportPreview,
+  LedgerVerifyResult,
   MerchantSummary,
   ReadinessLevel,
   SavingsStreak,
@@ -20,6 +21,7 @@ import type {
   TransactionSource,
   TransactionStatus,
   TransactionFlag,
+  TrustTier,
   UdharOutstanding,
 } from '../types/schema';
 
@@ -45,9 +47,17 @@ function tx(
     status?: TransactionStatus;
     confirmation_ur?: string | null;
     raw_output?: TransactionSource['raw_output'];
+    /** §11 trust tier — see the ladder on the type. Default derives from the
+        row: pending or manual = self_reported, otherwise customer_confirmed
+        (the merchant's own confirmation is the entry's only backing unless a
+        handshake says otherwise). */
+    trust_tier?: TrustTier;
   } = {},
 ): Transaction {
   seq += 1;
+  const status = p.status ?? 'confirmed';
+  const tier: TrustTier =
+    p.trust_tier ?? (status === 'pending' || source.type === 'manual' ? 'self_reported' : 'customer_confirmed');
   return {
     id: `mock-tx-${String(seq).padStart(3, '0')}`,
     kind,
@@ -61,9 +71,14 @@ function tx(
     occurred_at,
     source,
     flag: p.flag ?? 'none',
-    status: p.status ?? 'confirmed',
+    status,
     confirmation_ur:
       p.confirmation_ur !== undefined ? p.confirmation_ur : defaultConfirmationUr(kind, amount_pkr, p.counterparty?.name),
+    // §11 fixture chain: labeled pseudo-hashes in insertion order (the UI never
+    // renders raw hashes; the verify chip works off deriveLedgerVerify below).
+    entry_hash: `mock-seal-${String(seq).padStart(3, '0')}`,
+    prev_entry_hash: seq === 1 ? null : `mock-seal-${String(seq - 1).padStart(3, '0')}`,
+    trust_tier: tier,
   };
 }
 
@@ -215,6 +230,9 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
       { item: 'atta 10kg bag', qty: 8, unit: 'bag', unit_price: 420, line_total: 3360 },
       { item: 'cooking oil 5L', qty: 2, unit: 'tin', unit_price: 1020, line_total: 2040 },
     ],
+    // §10/§11: the distributor confirmed this purchase via the
+    // verify-supplier WhatsApp handshake → the top of the trust ladder.
+    trust_tier: 'third_party',
   }),
   // Voice parse too uncertain → pending with a clarification question (schema.md §1:
   // "the pipeline must NOT guess").
@@ -306,6 +324,33 @@ export function deriveStreak(items: Transaction[]): SavingsStreak {
     streak_weeks: streak,
     best_streak_weeks: best,
     current_week_positive: (current?.net ?? 0) > 0,
+  };
+}
+
+/** schema.md §11 — mock stand-in for GET /api/merchants/{id}/ledger/verify,
+    DERIVED from the same fixtures the ledger renders (server/app/ledger.py
+    verify_chain semantics): an entry whose status is 'edited' is exactly a row
+    whose current fields differ from the sealed hash (amended after sealing);
+    pending rows are the ones without a seal in the demo's insert path.
+    Deliberately NOT all-green: the fixture story carries one merchant-edited
+    entry so the chip can show its honest framing — amended ≠ hidden, it is
+    the audit working, and `original_values` keeps the pre-edit snapshot. */
+export function deriveLedgerVerify(items: Transaction[]): LedgerVerifyResult {
+  const active = items.filter((t) => t.status !== 'rejected');
+  const checked = active.filter((t) => t.entry_hash).length;
+  const amended = active.filter((t) => t.status === 'edited').map((t) => t.id);
+  const unsealed = active.filter((t) => !t.entry_hash).length;
+  return {
+    valid: amended.length === 0,
+    checked,
+    amended_after_sealing: amended,
+    unsealed,
+    broken_at: null,
+    details: amended.map((id) => ({
+      tx_id: id,
+      problem: 'amended_after_sealing',
+      note: 'fixture — the merchant edited this entry after sealing; original_values keeps the pre-edit snapshot',
+    })),
   };
 }
 

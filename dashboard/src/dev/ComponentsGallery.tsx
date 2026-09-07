@@ -21,6 +21,9 @@ import { StatusPill } from '../components/StatusPill';
 import { StreakChip } from '../components/StreakChip';
 import { TrendSparkline } from '../components/TrendSparkline';
 import { TrustSealBadge, SealMark } from '../components/TrustSealBadge';
+import { TrustTierBadge } from '../components/TrustTierBadge';
+import { LedgerIntegrityChip } from '../components/LedgerIntegrityChip';
+import { OfficerPack, WeeklyActivityBars } from '../components/OfficerPack';
 import { UdharRadar } from '../components/UdharRadar';
 import { IconExpense, IconLedger, IconReport, IconSale } from '../components/icons';
 import { MOCK_TRANSACTIONS, deriveUdhar } from '../api/mockData';
@@ -191,6 +194,106 @@ export function ComponentsGallery() {
             <SealMark variant="verified" size="md" />
             <SealMark variant="pending" size="md" />
           </div>
+        </div>
+      </Section>
+
+      <Section
+        title="7b · Trust tier chips (§11)"
+        note="The corroboration ladder: self_reported = neutral rule-line, customer_confirmed = settled-teal, third_party = gold fill + upright seal roundel (the rotated stamp stays the one tilted sticker). ALWAYS icon + word — color is never the only signal. Rows show only signal-carrying tiers; the AuditTrail drill-down always shows the full ladder."
+      >
+        <div className="bizro-card flex flex-wrap items-center gap-3 px-4 py-4">
+          <TrustTierBadge tier="self_reported" />
+          <TrustTierBadge tier="customer_confirmed" />
+          <TrustTierBadge tier="third_party" />
+          <TrustTierBadge tier={null} size="md" />
+          <TrustTierBadge tier="third_party" size="md" />
+          <p className="text-xs text-ink-line opacity-75">null tier renders the honest default: self-reported.</p>
+        </div>
+      </Section>
+
+      <Section
+        title="7c · Ledger integrity chip (§11)"
+        note="GET /api/merchants/{id}/ledger/verify verdicts — forced here via the result prop. The framing is the feature: amended ≠ hidden, it is the audit working; the chain is tamper-EVIDENT, not tamper-PROOF. Absent verdict (server without the route) renders nothing — never a fake all-good."
+      >
+        <div className="bizro-card flex flex-col gap-3 px-4 py-4">
+          <LedgerIntegrityChip
+            result={{
+              valid: true,
+              checked: 31,
+              amended_after_sealing: [],
+              unsealed: 2,
+              broken_at: null,
+              details: [],
+            }}
+          />
+          <LedgerIntegrityChip
+            result={{
+              valid: false,
+              checked: 31,
+              amended_after_sealing: ['mock-tx-020'],
+              unsealed: 2,
+              broken_at: null,
+              details: [],
+            }}
+          />
+          <LedgerIntegrityChip
+            result={{
+              valid: false,
+              checked: 31,
+              amended_after_sealing: [],
+              unsealed: 0,
+              broken_at: 'mock-tx-014',
+              details: [],
+            }}
+          />
+        </div>
+      </Section>
+
+      <Section
+        title="7d · Officer pack blocks (v0.7, in flight)"
+        note="Aging bar rows + weekly activity bars + the full pack section. Every field is optional by contract: normalizers accept fraction-or-pct spellings, unknown shapes are dropped, and the section itself renders NOTHING when the payload carries no officer block."
+      >
+        <div className="flex flex-col gap-4">
+          <div className="bizro-card px-5 py-5">
+            <WeeklyActivityBars
+              points={[1, 4, 3, 6, 5, 2, 4, 5].map((entries, i) => ({ week: `W${8 - i}`, entries }))}
+              label="Entries per week"
+            />
+          </div>
+          <OfficerPack
+            report={{
+              mock: true,
+              merchant: { id: 'demo', display_name: 'Demo Merchant' },
+              period: { start: '2026-06-01', end: '2026-08-21' },
+              generated_at: '2026-08-21T21:00:00+05:00',
+              model: null,
+              readiness: { level: 'almost', score_0_100: 61, summary_en: '', summary_ur: '' },
+              monthly_cashflow: [],
+              consistency: { months_active: 3, avg_entries_per_week: 3.5, longest_gap_days: 4 },
+              flags: [],
+              sourcing: {
+                total_entries: 31,
+                ai_entries: 25,
+                ai_share: 0.81,
+                avg_confidence: 0.89,
+                by_source: { voice: { entries: 18, avg_confidence: 0.9 }, photo: { entries: 7, avg_confidence: 0.88 }, text: { entries: 0, avg_confidence: null }, manual: { entries: 6, avg_confidence: null } },
+              },
+              narrative_ur: null,
+              line_items: [],
+              trust: { corroboration_pct: 64 },
+              officer: {
+                aging: [
+                  { bucket: '0-30', amount_pkr: 4200, count: 3 },
+                  { bucket: '31-60', amount_pkr: 2800, count: 2 },
+                  { bucket: '60+', amount_pkr: 1500, count: 1 },
+                ],
+                collection_rate: 0.72,
+                top_debtor_concentration_pct: 46,
+                weekly_activity: [1, 4, 3, 6, 5, 2, 4, 5],
+                activity_drop_pct: 58,
+              },
+            }}
+          />
         </div>
       </Section>
 

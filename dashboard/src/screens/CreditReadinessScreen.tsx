@@ -24,6 +24,8 @@ import { EditTransactionForm } from '../components/EditTransactionForm';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SealGauge } from '../components/SealGauge';
 import { SealMark } from '../components/TrustSealBadge';
+import { TrustTierBadge } from '../components/TrustTierBadge';
+import { OfficerPack } from '../components/OfficerPack';
 import { TrendSparkline } from '../components/TrendSparkline';
 import {
   IconFlag,
@@ -516,6 +518,11 @@ export function CreditReadinessScreen() {
         )}
       </section>
 
+      {/* Officer pack (v0.7, credit-agent in flight) — aging, collection rate,
+          concentration, activity drop, corroboration. Renders ONLY when the
+          payload carries the block; absent fields hide their own sections. */}
+      <OfficerPack report={report} />
+
       {/* Sourced line items with the audit-trail drill-down (design.md §7.2). */}
       <section aria-labelledby="lineitems-title">
         <h2 id="lineitems-title" className="mb-2 flex flex-wrap items-baseline gap-x-2 px-1">
@@ -550,6 +557,14 @@ export function CreditReadinessScreen() {
                           demo
                         </span>
                       )}
+                      {/* §11 tier chip — only when it carries signal beyond the
+                          self-reported baseline (same rule as ledger rows). */}
+                      {(() => {
+                        const tier = t?.trust_tier;
+                        return tier === 'customer_confirmed' || tier === 'third_party' ? (
+                          <TrustTierBadge tier={tier} />
+                        ) : null;
+                      })()}
                     </span>
                     <span className="text-xs text-ink-line opacity-75">
                       {formatMonth(li.month)} ·{' '}
