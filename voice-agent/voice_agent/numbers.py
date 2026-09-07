@@ -70,13 +70,22 @@ _SCALE_WORDS: dict[str, int] = {
     "ہزار": 1_000, "ہزاروں": 1_000,
     "lakh": 100_000, "lac": 100_000, "لاکھ": 100_000,
     "crore": 10_000_000, "krore": 10_000_000, "کروڑ": 10_000_000,
+    # "sau" composes a following-or-preceding count into hundreds for the
+    # normalization HINT ("pandrah sau" → [1500]) — as this module's docstring
+    # documents. Deliberately NOT in _SCALE_ONLY below: hundreds are also item
+    # quantities ("aath sau gram"), and must not trip the collapse guard.
+    "sau": 100, "سو": 100, "hundred": 100,
 }
 
 for _w, _v in _TENS_COMPOUNDS.items():
     _NUM_WORDS.setdefault(_w, _v)
 
+# Arabic-script punctuation (، ؛ ؟ ۔) sits INSIDE \u0600-\u06ff — without the
+# exclusions below it glues onto words ("ہزار،") and the scale/number tables
+# stop matching exactly where Urdu text uses commas the most.
 _WORD_RE = re.compile(
-    r"[A-Za-z\u0600-\u06ff]+", re.UNICODE
+    r"[A-Za-z\u0600-\u060b\u060d-\u061a\u061c-\u061e\u0620-\u06d3\u06d5-\u06ff]+",
+    re.UNICODE,
 )
 _DIGIT_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
@@ -177,7 +186,7 @@ def count_amount_signals(text: str) -> int:
 
 
 _PERSON_JOIN_RE = re.compile(
-    r"(?:,\s*|\s+(?:aur|or|and|اور|یا|ya)\s+)", re.IGNORECASE
+    r"(?:,\s*|\u060c\s*|\s+(?:aur|or|and|اور|یا|ya)\s+)", re.IGNORECASE
 )
 
 

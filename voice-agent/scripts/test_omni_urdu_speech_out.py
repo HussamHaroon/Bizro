@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Bizro Day-0 probe: can qwen3.5-omni-plus SPEAK Urdu out? (design.md §2 / §9)
+"""Bizro Day-0 probe: can the configured omni model (MODEL_VOICE, e.g.
+qwen3.5-omni-plus) SPEAK Urdu out? (design.md §2 / §9)
 
 Run the instant DASHSCOPE_API_KEY lands:
     .venv/Scripts/python.exe scripts/test_omni_urdu_speech_out.py

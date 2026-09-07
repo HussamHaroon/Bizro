@@ -34,11 +34,14 @@ class _FakeResp:
 
 @pytest.fixture
 def stt_settings(monkeypatch) -> Settings:
+    # stt_provider pinned to "groq": THIS fixture deliberately tests the
+    # free-tier Whisper branch. The default is "auto" (see the auto tests below).
     s = Settings(
         dashscope_api_key="sk-or-test",  # live-ish: forces the non-mock branch
         dashscope_base_url="https://openrouter.test/api/v1",
         model_voice="test/text-model:free",
         mock_mode="never",
+        stt_provider="groq",
         stt_api_key="gsk_test",
         stt_base_url="https://api.groq.test/openai/v1",
         stt_model="whisper-large-v3-turbo",
@@ -132,6 +135,7 @@ def test_stt_failure_asks_again_instead_of_crashing(monkeypatch):
     s = Settings(
         dashscope_api_key="sk-or-test",
         mock_mode="never",
+        stt_provider="groq",  # pinned: this test is about graceful failure, not routing
         stt_api_key="gsk_test",
         stt_model="whisper-large-v3-turbo",
     )
@@ -205,3 +209,8 @@ def test_qwen_asr_failure_falls_back_to_whisper(monkeypatch):
     assert seen == ["completions", "transcriptions"]  # qwen tried, whisper saved it
     assert "احمد کو پانچ ہزار کا ادھار دیا" in _FakeClient.last_user_text
     assert out["amount_pkr"] == 5000
+
+
+# The STT_PROVIDER=auto routing tests live in test_stt_auto.py — they are pure
+# transcribe() unit tests with no wav dependency, so they must not sit under
+# this module's skipif (no seeded media in fresh worktrees).

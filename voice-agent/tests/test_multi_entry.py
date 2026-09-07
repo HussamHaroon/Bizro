@@ -141,6 +141,31 @@ def test_amount_signals_detect_scale_amounts():
     assert collapse_suspected(text, entry_count=2) is False
 
 
+def test_normalize_composes_hundred_scale():
+    # the module docstring documents this: "پندرہ سو" → [1500]. Hundreds compose
+    # in the HINT layer but stay OUT of the amount signals (quantities).
+    assert "[1500]" in normalize_spoken_numbers("Usman ne pandrah sau ka saman liya")
+    assert "[800]" in normalize_spoken_numbers("Usman ne aath sau diye")
+    assert "[200000]" in normalize_spoken_numbers("do lakh ka udhar")
+    # ...and still no signal → single-entry sales with item totals don't trip the guard
+    text = "do packet chai patti, ek dabba ghee, kul pandrah sau"
+    assert count_amount_signals(text) == 0
+
+
+def test_urdu_comma_does_not_glue_onto_words():
+    # ، (U+060C) sits inside the Arabic range — it must not fuse with "ہزار"
+    # or the number/scale tables stop matching exactly where Urdu uses commas.
+    text = "عثمان کو دو ہزار، ناصر کو تین ہزار اور شاہد کو چار ہزار کا ادھار"
+    out = normalize_spoken_numbers(text)
+    assert "[2000]" in out and "[3000]" in out and "[4000]" in out
+    # the Urdu comma itself survives verbatim (normalization only inserts)
+    assert "ہزار [2000]،" in out
+    assert count_amount_signals(text) == 3
+    assert count_person_joins(text) == 2
+    assert collapse_suspected(text, entry_count=2) is True
+    assert collapse_suspected(text, entry_count=3) is False
+
+
 # ---------------------------------------------------------------------------
 # Backward compatibility: single-entry behavior byte-identical
 # ---------------------------------------------------------------------------

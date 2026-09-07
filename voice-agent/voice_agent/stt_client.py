@@ -2,13 +2,21 @@
 
 Two providers, one function:
 
-    STT_PROVIDER=qwen  → qwen3-asr-flash via the DashScope chat-completions
-                         endpoint (single user message, one input_audio content
-                         item carrying a base64 data URI — the strict shape the
-                         ASR task accepts; text+audio mixes and system messages
-                         are rejected). Any failure falls back to Whisper.
-    STT_PROVIDER=groq  (default) → OpenAI-shaped /audio/transcriptions, i.e.
-                         Groq whisper-large-v3-turbo (free, no card, Urdu).
+    STT_PROVIDER=auto (default) → the documented architecture, made true:
+                         Qwen ASR (qwen3-asr-flash via the DashScope
+                         chat-completions endpoint) runs FIRST whenever a
+                         DASHSCOPE_API_KEY is present; without a key the
+                         free-tier Groq path is used. Any Qwen failure falls
+                         back to Whisper.
+    STT_PROVIDER=qwen  → pin Qwen ASR: qwen3-asr-flash via the DashScope
+                         chat-completions endpoint (single user message, one
+                         input_audio content item carrying a base64 data URI —
+                         the strict shape the ASR task accepts; text+audio
+                         mixes and system messages are rejected). Any failure
+                         falls back to Whisper.
+    STT_PROVIDER=groq  → pin the OpenAI-shaped /audio/transcriptions, i.e.
+                         Groq whisper-large-v3-turbo (free, no card, Urdu) —
+                         the free-tier fallback.
 
 The fallback is deliberate resilience: Qwen ASR rejects some container formats
 (browser webm, Meta ogg/opus on some plans) and shares the Model Studio quota —
@@ -53,8 +61,17 @@ _ASR_INSTRUCTION = (
 
 
 def transcribe(audio_bytes: bytes, *, filename: str = "voice.wav", settings: Settings) -> str:
-    """Transcribe one voice note → transcript text (verbatim)."""
-    if settings.stt_provider == "qwen" and settings.dashscope_api_key:
+    """Transcribe one voice note → transcript text (verbatim).
+
+    Provider selection (settings.stt_provider):
+      "auto" (default) → Qwen ASR when a DashScope key is present, else Groq;
+      "qwen" / "groq"  → pin one engine (qwen still degrades to Groq without
+      a DashScope key). A Qwen failure ALWAYS falls back to Groq Whisper.
+    """
+    wants_qwen = settings.stt_provider == "qwen" or (
+        settings.stt_provider == "auto" and bool(settings.dashscope_api_key)
+    )
+    if wants_qwen and settings.dashscope_api_key:
         try:
             return _qwen_asr(audio_bytes, filename=filename, settings=settings)
         except Exception as exc:  # noqa: BLE001 — any Qwen failure falls back

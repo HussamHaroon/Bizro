@@ -1,10 +1,13 @@
 """Bizro voice-agent — Voice Khata pipeline.
 
-WhatsApp Urdu voice note in → structured transaction JSON (server/schema.md §1) +
-clean Urdu text confirmation out, plus the branded WhatsApp invoice renderer.
+WhatsApp Urdu voice note in → structured transaction JSON (server/schema.md §1)
++ a text confirmation out (simple English by the 2026-09-04 owner ruling, Urdu
+when the inbound message is Arabic-script — language mirroring, 2026-10-02),
+plus the branded WhatsApp invoice renderer.
 
 Text-only confirmation is the MVP path (design.md §2): Urdu speech-OUT for the omni
-model is only usable after `scripts/test_omni_urdu_speech_out.py` passes with a key.
+model is only usable after `scripts/test_omni_urdu_speech_out.py` passes with a key
+AND a human approves the audio.
 """
 
 from voice_agent.config import Settings, load_settings
