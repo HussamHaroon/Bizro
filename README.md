@@ -2,7 +2,11 @@
 
 ### Project walkthrough
 
-https://youtu.be/epfOT6UnsNU
+<p align="center">
+  <a href="https://youtu.be/epfOT6UnsNU">
+    <img src="assets/walkthrough-thumb.png" alt="Bizro project walkthrough - click to watch on YouTube" width="720">
+  </a>
+</p>
 
 Bizro is a zero-typing WhatsApp bookkeeping copilot for Pakistani karyana
 (corner) shopkeepers. A shopkeeper sends an Urdu voice note ("sold ghee to
