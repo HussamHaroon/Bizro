@@ -29,6 +29,7 @@ from string import Template
 
 from .formatting import (
     DEFAULT_BASE_URL,
+    format_date_label,
     format_datetime_label,
     format_range_label,
     provider_from_base_url,
@@ -154,6 +155,20 @@ _CSS = Template("""
   .cardhead strong { font-family:$numerals; font-size:15px; text-transform:uppercase;
                      letter-spacing:.04em; }
   .foot { font-size:12px; margin-top:12px; padding-top:8px; border-top:2px solid $ink; }
+  /* §12 officer review pack */
+  .warnchip { display:inline-block; background:$red; color:#FFFFFF;
+              font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+              font-size:11px; padding:2px 8px; border-radius:$radius;
+              margin-left:8px; vertical-align:middle; }
+  .sparkwrap { margin-top:14px; }
+  .spark { display:flex; align-items:flex-end; gap:5px; height:52px;
+           border-bottom:2px solid $ink; padding:0 2px; }
+  .spark .bar { width:26px; background:$ink; border-radius:1px 1px 0 0; }
+  .spark .bar.dropped { background:$red; }
+  .sparklabel { display:flex; gap:5px; padding:0 2px; }
+  .sparklabel span { width:26px; font-size:9px; text-align:center;
+                     white-space:nowrap; overflow:visible; }
+  .mnote { font-size:12px; margin-top:8px; }
   /* print: flatten hard shadows to plain borders, un-rotate the stamp (D4-1 ④) */
   @media print {
     body { padding:10mm; background:#FFFFFF; }
@@ -358,6 +373,84 @@ def render_report_html(report: dict) -> str:
             + "</div>"
         )
 
+    # §12 Officer review pack card — aging, collection rate, concentration,
+    # weekly-entries sparkline. Dates format through formatting.py: the
+    # truthfulness rule (no raw ISO on a user-visible surface) holds here too.
+    officer = report.get("officer") or {}
+    officer_card = ""
+    if officer:
+        ag = officer.get("aging") or {}
+        aging_rows = ""
+        for row in ag.get("buckets") or []:
+            cust_bits = []
+            for c in row.get("customers") or []:
+                amt = _esc(f"{float(c.get('amount', 0)):,.0f}")
+                cust_bits.append(f"{_esc(c.get('name'))} (PKR {amt})")
+            custs = ", ".join(cust_bits) if cust_bits else "—"
+            bucket_total = _esc(f"{float(row.get('total', 0)):,.0f}")
+            aging_rows += (
+                f"<tr><td>{_esc(row.get('bucket'))} days</td>"
+                f"<td class='num'>PKR {bucket_total}</td><td>{custs}</td></tr>"
+            )
+        if not aging_rows:
+            aging_rows = "<tr><td colspan='3'>no outstanding udhar</td></tr>"
+
+        col = officer.get("collection") or {}
+        rate = col.get("rate")
+        rate_disp = "—" if rate is None else f"{float(rate) * 100:.0f}%"
+
+        conc = officer.get("concentration") or {}
+        warn_chip = (
+            "<span class='warnchip'>concentrated</span>" if conc.get("warn") else ""
+        )
+
+        act = officer.get("activity") or {}
+        weeks = act.get("weeks") or []
+        counts = [int(w.get("count", 0)) for w in weeks]
+        max_count = max(counts + [1])
+        dropped = act.get("activity_drop_pct") is not None
+        bars, labels = "", ""
+        for idx, w in enumerate(weeks):
+            n = counts[idx]
+            h = max(4, round(n / max_count * 44))
+            is_last = idx == len(weeks) - 1
+            cls = "bar dropped" if (is_last and dropped) else "bar"
+            day_label = format_date_label(w.get("start"))
+            title = _esc(f"week of {day_label}: {n} entries")
+            bars += f"<div class='{cls}' style='height:{h}px' title='{title}'></div>"
+            labels += f"<span>{_esc(format_date_label(w.get('start')).split(',')[0])}</span>"
+        spark_html = (
+            f"<div class='spark'>{''.join(bars)}</div>"
+            f"<div class='sparklabel'>{labels}</div>"
+            if bars else ""
+        )
+        act_drop = act.get("activity_drop_pct")
+        act_drop_disp = (
+            f" — activity down {act_drop}% vs the 8-week median"
+            if act_drop is not None else ""
+        )
+
+        officer_card = (
+            "<div class='card'><div class='cardhead'>"
+            "<strong>Officer review pack</strong>"
+            "<span class='ur'>افسر کے لیے جائزہ</span></div>"
+            "<table><tr><th>Receivables age</th><th class='num'>Outstanding</th>"
+            "<th>Who owes it</th></tr>"
+            + aging_rows
+            + "</table>"
+            + f"<p class='mnote'>{_esc(ag.get('note_en', ''))}</p>"
+            + "<table><tr><th>Collection rate (credit given this period)</th>"
+            f"<th class='num'>{_esc(rate_disp)}</th></tr>"
+            + f"<tr><td colspan='2'>{_esc(col.get('note_en', ''))}</td></tr></table>"
+            + "<table><tr><th>Top-debtor concentration</th>"
+            + f"<th class='num'>{_esc(conc.get('top_debtor') or '—')}{warn_chip}</th></tr>"
+            + f"<tr><td colspan='2'>{_esc(conc.get('note_en', ''))}</td></tr></table>"
+            + "<div class='sparkwrap'><strong>Entries per week (last 8 weeks)"
+            + f"{_esc(act_drop_disp)}</strong>{spark_html}"
+            + f"<p class='mnote'>{_esc(act.get('note_en', ''))}</p></div>"
+            + "</div>"
+        )
+
     mock_banner = (
         f"<div class='mock'>MOCK DATA — synthesized without live model calls</div>"
         if mock else ""
@@ -395,6 +488,7 @@ def render_report_html(report: dict) -> str:
   {metrics_rows}</table></div>
 <div class="card"><div class="cardhead"><strong>Red flags</strong></div><ul class="flags">{flags_html}</ul></div>
 {data_quality_card}
+{officer_card}
 <div class="card"><div class="cardhead"><strong>Line items (audit trail)</strong>{_stamp()}</div>
   <table><tr><th>Item</th><th class="num">Amount</th><th>Source</th>
   <th class="num">Conf.</th></tr>{line_rows}</table>

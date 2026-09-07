@@ -24,6 +24,7 @@ from .formatting import (
     provider_from_base_url,
 )
 from .narrative import build_narrative
+from .officer import compute_officer_metrics
 from .rubric import score
 from .trust import compute_trust
 
@@ -91,6 +92,10 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         # udhar_settlement) carries a tier vouched by someone other than the
         # merchant. Disclosure for the officer, never a trust score.
         trust = compute_trust(list(txs))
+        # §12: officer completeness metrics — aging, collection rate,
+        # concentration, weekly-entries activity. The desk-check numbers a
+        # manual credit officer would compile, computed from the ledger.
+        officer = compute_officer_metrics(list(txs), customers, now=end)
         # §10: forensics ride the same disclosure card — patterns from ledger
         # internals + receipt provenance, never assertions of intent.
         data_quality["forensics"] = forensics
@@ -189,6 +194,8 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
             "data_quality": data_quality,
             # §12: trust tiers — corroboration share of stated revenue.
             "trust": trust,
+            # §12: officer completeness metrics for the review pack.
+            "officer": officer,
         }
         if is_mock:
             report["mock"] = True
