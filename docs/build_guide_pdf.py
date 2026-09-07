@@ -344,9 +344,9 @@ def build_body():
             "This guide was generated from the verified working manual on "
             "4 September 2026. Every file path, command, model name and status "
             "code in it was checked against the repository or the live "
-            "deployment on that date. The editable source lives at "
-            + mono("docs/GUIDE.md") + " and the repo overview at "
-            + mono("README.md") + ".", body_style)],
+            "deployment on that date. This PDF is built by "
+            + mono("docs/build_guide_pdf.py") + " (run it to rebuild); the "
+            "repo overview is " + mono("README.md") + ".", body_style)],
             bg=PAPER, border=2.5, shadow=4, pad=(7, 7)),
     ]))
     story.append(PageBreak())
@@ -692,8 +692,8 @@ def build_body():
                       + "  (JSON status at " + mono("/health") + ")", body_style),
             Paragraph("One-command local demo: " + mono("bash scripts/run_demo.sh"), body_style),
             Paragraph("Rehearse the judge flow: " + mono("python server/scripts/demo_flow.py"), body_style),
-            Paragraph("Rebuild this guide after editing " + mono("docs/GUIDE.md") + ": "
-                      + mono("python docs/build_guide_pdf.py"), body_style),
+            Paragraph("Rebuild this guide: " + mono("python docs/build_guide_pdf.py")
+                      + " (the content lives in the script)", body_style),
             Spacer(1, 3),
         ], bg=PAPER, border=3, shadow=5, pad=(9, 11)),
     ]))
