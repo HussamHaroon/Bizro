@@ -190,5 +190,6 @@ Both deliverables live in `docs/`:
 - `docs/Bizro_Guide.pdf` — the deep guide as a print-ready PDF: local setup,
   the webhook flow, the Qwen model stack and fallbacks, the demo walkthrough,
   security posture, ops, and troubleshooting.
-- `docs/Bizro_Pitch.pptx` — the 11-slide pitch deck (problem, product,
-  architecture, demo, traction, ask).
+- `docs/Bizro_Pitch.pptx` — the 11-slide pitch deck (problem, the Mawakhat
+  lending rail, solution, live demo, how it works, technology, trust & audit,
+  why Bizro, impact).
