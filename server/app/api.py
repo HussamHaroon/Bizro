@@ -666,7 +666,12 @@ def _call_reminder_model(shop: str, payload: dict[str, Any]) -> str:
 
     import httpx
 
-    key = os.environ.get("DASHSCOPE_API_KEY") or get_settings().dashscope_api_key
+    # An explicitly-set (even empty) env var means "no key" and must win over
+    # the lru_cached Settings, which may predate an env change in long-lived
+    # processes (tests, dev reload).
+    key = os.environ.get("DASHSCOPE_API_KEY")
+    if key is None:
+        key = get_settings().dashscope_api_key
     if not key:
         raise ReminderDraftError("no DASHSCOPE_API_KEY configured")
     base = (os.environ.get("DASHSCOPE_BASE_URL") or get_settings().dashscope_base_url).rstrip("/")
@@ -775,6 +780,52 @@ def confirm_transaction(transaction_id: str):
         # §6.7 (C-1): mutation responses carry the wire row top-level — the
         # dashboard consumes the body directly as the Transaction.
         return _tx_to_wire(session, tx, session.get(Customer, tx.customer_id) if tx.customer_id else None)
+
+
+@router.post("/transactions/{transaction_id}/verify-supplier")
+def verify_supplier(transaction_id: str):
+    """Supplier verification handshake (schema.md §10) — the one anti-fabrication
+    anchor outside the merchant's control: the DISTRIBUTOR confirms the purchase.
+    Sends a yes/no WhatsApp to the supplier phone (extracted from the receipt by
+    OCR, else the customer record) and logs the request. Mock-safe. The reply
+    itself lands in the normal inbound flow as a text message for the merchant's
+    thread — full two-way matching is future scope; the request trail is the
+    audit anchor for now."""
+    with db_session() as session:
+        tx = _get_transaction(session, transaction_id)
+        raw = tx.raw_model_output or {}
+        meta = raw.get("receipt_meta") or {} if isinstance(raw, dict) else {}
+        phone = (meta.get("supplier_phone") or "").strip() if isinstance(meta, dict) else ""
+        if not phone and tx.customer_id:
+            cust = session.get(Customer, tx.customer_id)
+            phone = (getattr(cust, "phone", None) or "").strip() if cust else ""
+        if not phone:
+            raise HTTPException(
+                status_code=422,
+                detail="no supplier phone on this receipt (not extracted, not on customer record)",
+            )
+        body = (
+            f"Verification: did you sell PKR {float(tx.amount_pkr):,.0f} of goods to "
+            f"{(session.get(Merchant, tx.merchant_id).display_name or 'this shop')} "
+            f"on {tx.occurred_at.date().isoformat()}? Reply YES or NO."
+        )
+        sent = dispatch.deliver(phone, body)
+        session.add(
+            OutboundMessage(
+                merchant_id=tx.merchant_id,
+                transaction_id=tx.id,
+                kind="supplier_verification_request",
+                body=body,
+                payload={"to": phone, "sent": sent},
+            )
+        )
+        session.commit()
+        return {
+            "queued": True,
+            "to_last4": phone[-4:],
+            "delivery": sent,
+            "note": "supplier reply matching is future scope; request is on the audit trail",
+        }
 
 
 @router.patch("/transactions/{transaction_id}")

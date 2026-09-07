@@ -141,9 +141,21 @@ def process_receipt_image(
     if extraction.supplier_name:
         description = f"Supplier purchase: {extraction.supplier_name}"
 
+    # Provenance anchors (schema.md §10): printed bill number / supplier phone
+    # come from the DISTRIBUTOR's bill book, and EXIF capture time from the
+    # camera — neither is under the merchant's narrative control. Stored for
+    # credit-side forensics (sequence analysis, capture-time mismatch).
+    from .exif import extract_exif
+
+    receipt_meta: dict[str, Any] = {
+        "bill_number": extraction.bill_number,
+        "supplier_phone": extraction.supplier_phone,
+        **extract_exif(image_path),
+    }
     raw_output: dict[str, Any] = {
         "model_response_text": result.raw_text,
         "extraction": extraction.model_dump(),
+        "receipt_meta": receipt_meta,
         "sanity": [_detail_json(detail) for detail in details],
         "merchant": merchant,
     }

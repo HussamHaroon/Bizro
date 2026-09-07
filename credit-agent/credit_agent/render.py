@@ -282,14 +282,49 @@ def render_report_html(report: dict) -> str:
                 f"<tr><td>Trailing {_esc(ws.get('window_days', 14))}-day sales vs baseline</td>"
                 f"<td class='num'>{_esc(ws.get('ratio'))}×</td></tr>"
             )
+        fo = dq.get("forensics") or {}
+        if fo:
+            bn = fo.get("bill_numbers") or {}
+            ex = fo.get("exif") or {}
+            nat = fo.get("naturalness") or {}
+            dq_rows.append(
+                f"<tr><td>Printed bill numbers on file (suppliers covered)</td>"
+                f"<td class='num'>{_esc(bn.get('suppliers_with_bills', 0))} suppliers · "
+                f"reused {_esc(bn.get('reused_across_dates', 0))} · "
+                f"inversions {_esc(bn.get('sequence_inversions', 0))}</td></tr>"
+            )
+            dq_rows.append(
+                f"<tr><td>Receipt photo camera metadata (EXIF)</td>"
+                f"<td class='num'>{_esc(ex.get('with_exif', 0))}/{_esc(ex.get('photos', 0))} with EXIF · "
+                f"capture mismatches {_esc(ex.get('capture_mismatches', 0))}</td></tr>"
+            )
+            nat_bits = []
+            if nat.get("round_amount_share") is not None:
+                nat_bits.append(f"round-amount share {_esc(nat.get('round_amount_share'))}")
+            if nat.get("daily_sales_cv") is not None:
+                nat_bits.append(f"daily-sales CV {_esc(nat.get('daily_sales_cv'))}")
+            if nat_bits:
+                dq_rows.append(
+                    f"<tr><td>Ledger naturalness (manufactured ledgers are round &amp; uniform)</td>"
+                    f"<td class='num'>{_esc(' · '.join(nat_bits))}</td></tr>"
+                )
     data_quality_card = ""
     if dq_rows:
         basis = _esc((dq.get("basis_note") or "").strip())
+        notes = dq.get("indicators") or []
+        notes_html = (
+            "<div class='foot'><strong>Notices:</strong><ul>"
+            + "".join(f"<li>{_esc(n)}</li>" for n in notes)
+            + "</ul></div>"
+            if notes
+            else ""
+        )
         data_quality_card = (
             "<div class='card'><div class='cardhead'><strong>Data quality &amp; consistency</strong></div>"
             "<table><tr><th>Indicator</th><th style='text-align:right'>Value</th></tr>"
             + "".join(dq_rows)
             + "</table>"
+            + notes_html
             + (f"<div class='foot'>{basis}</div>" if basis else "")
             + "</div>"
         )

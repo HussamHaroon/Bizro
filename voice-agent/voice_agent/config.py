@@ -12,7 +12,14 @@ from pathlib import Path
 
 
 def _load_dotenv(repo_root: Path) -> None:
-    """Tiny .env loader — KEY=VALUE lines, '#' comments, no interpolation."""
+    """Tiny .env loader — KEY=VALUE lines, '#' comments, no interpolation.
+
+    SKIPPED under pytest (or BIZRO_OFFLINE=1): loading the developer's real
+    .env into os.environ mid-session leaks a live DASHSCOPE_API_KEY into
+    other suites' "missing key" paths and can turn unit tests into live
+    model calls. Tests that want .env values set them explicitly."""
+    if os.environ.get("BIZRO_OFFLINE") == "1" or "PYTEST_CURRENT_TEST" in os.environ:
+        return
     env_file = repo_root / ".env"
     if not env_file.is_file():
         return

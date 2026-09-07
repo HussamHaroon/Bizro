@@ -29,6 +29,8 @@ string if written (packet, kg, dozen), else null.
 - stated_total is the receipt's written grand total. Copy it exactly if present, \
 else null. Do NOT compute it yourself.
 - supplier_name: the shop/supplier name if readable, else null.
+- bill_number: the PRINTED bill/receipt/invoice number (often top corner: "Bill \nNo", "Receipt #", "INV-") exactly as printed, else null. Never guess: if unreadable, \nnull + "bill number unreadable" in unclear_parts.
+- supplier_phone: the supplier/distributor phone PRINTED on the bill (header, \nfooter, or stamp), digits only, else null.
 - is_receipt: false if this image is not a receipt/bill/invoice at all (a person, \
 scenery, a screenshot, a product photo, etc.).
 - self_confidence: your own 0.0-1.0 confidence that you read this receipt correctly.
@@ -37,6 +39,8 @@ JSON shape:
 {
   "is_receipt": true,
   "supplier_name": "Al-Madina Kiryana Store" | null,
+  "bill_number": "4401" | null,
+  "supplier_phone": "04235321145" | null,
   "items": [
     {"item": "chai patti", "qty": 2, "unit": "packet", "unit_price": 350}
   ],

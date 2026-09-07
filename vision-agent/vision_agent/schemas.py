@@ -61,12 +61,18 @@ class ReceiptExtraction(BaseModel):
 
     is_receipt: bool = True
     supplier_name: str | None = None
+    # Provenance anchors (forensics, schema.md §10): the PRINTED bill number
+    # and supplier phone come from the DISTRIBUTOR's bill book — data the
+    # merchant does not control. Fabricated paper tends to lack them, reuse
+    # them, or break per-supplier sequences.
+    bill_number: str | None = None
+    supplier_phone: str | None = None
     items: list[ExtractedItem] = Field(default_factory=list)
     stated_total: float | None = Field(default=None, gt=0)
     unclear_parts: list[str] = Field(default_factory=list)
     self_confidence: float = Field(default=0.8, ge=0.0, le=1.0)
 
-    @field_validator("supplier_name", mode="before")
+    @field_validator("supplier_name", "bill_number", "supplier_phone", mode="before")
     @classmethod
     def _blank_supplier_is_none(cls, value: Any) -> Any:
         if isinstance(value, str):

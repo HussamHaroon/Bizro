@@ -15,6 +15,7 @@ from sqlalchemy import select
 from .aggregates import Aggregates, compute_aggregates
 from .data_quality import compute_data_quality
 from .db_view import CreditReport, Customer, Merchant, Transaction, get_sessionmaker
+from .forensics import compute_forensics
 from .formatting import (
     DEFAULT_BASE_URL,
     format_date_label,
@@ -84,6 +85,13 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         scored = score(agg)
         narrative_ur, is_mock = build_narrative(agg, scored, mname)
         data_quality = compute_data_quality(list(txs), now=end)
+        forensics = compute_forensics(list(txs), customers, now=end)
+        # §10: forensics ride the same disclosure card — patterns from ledger
+        # internals + receipt provenance, never assertions of intent.
+        data_quality["forensics"] = forensics
+        data_quality["indicators"] = list(data_quality.get("indicators", [])) + list(
+            forensics.get("indicators", [])
+        )
 
         # Attribution (defect 4): the model id ACTUALLY configured, and the
         # provider derived AT RUNTIME from the host the model calls really go
