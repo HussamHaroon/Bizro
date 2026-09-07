@@ -152,7 +152,7 @@ def _openai_transcribe(
         headers={"Authorization": f"Bearer {settings.openai_api_key}"},
         files=files,
         data=data,
-        timeout=120.0,
+        timeout=20.0,
     )
     if resp.status_code != 200:
         raise STTError(
@@ -193,7 +193,7 @@ def _qwen_asr(audio_bytes: bytes, *, filename: str, settings: Settings) -> str:
                 ]},
             ],
         },
-        timeout=120.0,
+        timeout=20.0,
     )
     if resp.status_code != 200:
         raise STTError(f"Qwen ASR HTTP {resp.status_code}: {resp.text[:300]}")
@@ -225,7 +225,7 @@ def _whisper_transcribe(audio_bytes: bytes, *, filename: str, settings: Settings
         headers={"Authorization": f"Bearer {settings.stt_api_key}"},
         files=files,
         data=data,
-        timeout=120.0,
+        timeout=20.0,
     )
     if resp.status_code != 200:
         raise STTError(f"STT HTTP {resp.status_code}: {resp.text[:300]}")

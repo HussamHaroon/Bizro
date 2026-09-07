@@ -80,7 +80,7 @@ class DashScopeClient:
         import llm_guard
 
         llm_guard.allow(payload["model"])
-        timeout = httpx.Timeout(connect=10.0, read=120.0, write=60.0, pool=30.0)
+        timeout = httpx.Timeout(connect=10.0, read=45.0, write=20.0, pool=30.0)
         last_status, last_text = None, ""
         with httpx.Client(timeout=timeout) as http:
             # :free models are congested — a 429/5xx is transient, retry gently
