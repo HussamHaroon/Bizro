@@ -296,6 +296,19 @@ export function IconEdit({ className, ...rest }: IconProps) {
   );
 }
 
+/** Delete affordance (destructive — erase an entry and its stored media).
+    Pair with the word "Delete"; colored ledger-red at the call site. */
+export function IconTrash({ className, ...rest }: IconProps) {
+  return (
+    <Badge className={className} {...rest}>
+      <rect x="9.9" y="4.6" width="4.2" height="1.8" rx="0.9" />
+      <rect x="6.3" y="7.3" width="11.4" height="1.8" rx="0.9" />
+      <path d="M7.9 10.4h8.2l-.75 7a1.9 1.9 0 0 1-1.9 1.7h-2.9a1.9 1.9 0 0 1-1.9-1.7z" />
+      <rect x="11.1" y="12.2" width="1.8" height="4.6" rx="0.9" />
+    </Badge>
+  );
+}
+
 /** Source drill-down chevron (details). */
 export function IconChevronDown({ className, ...rest }: IconProps) {
   return (

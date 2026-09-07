@@ -23,6 +23,7 @@ import {
   IconEdit,
   IconExpense,
   IconSale,
+  IconTrash,
   IconUdharGiven,
   IconUdharSettled,
 } from './icons';
@@ -41,6 +42,9 @@ export interface LedgerRowProps {
   onEdit?: (t: Transaction) => void;
   /** Pending-entry confirm action; triggers the 300ms seal stamp on completion. */
   onConfirm?: (t: Transaction) => void;
+  /** Destructive erase (entry + its stored voice note / photo). The screen
+      owning the rows confirms before calling — the row itself stays dumb. */
+  onDelete?: (t: Transaction) => void;
   justConfirmed?: boolean;
 }
 
@@ -60,6 +64,7 @@ export function LedgerRow({
   onToggleDetails,
   onEdit,
   onConfirm,
+  onDelete,
   justConfirmed = false,
 }: LedgerRowProps) {
   const kind = KIND_SPEC[t.kind];
@@ -144,6 +149,20 @@ export function LedgerRow({
               className="bizro-btn-quiet inline-flex min-h-touch items-center gap-1.5 rounded-button border-2 border-ink-line bg-fill-green px-3 text-sm font-semibold text-paper hover:bg-ink-green-hover"
             >
               Confirm
+            </button>
+          )}
+          {onDelete && (
+            /* Destructive erase — quiet treatment like Edit (rows never carry
+               shadows), ledger-red text on the raised surface (the danger
+               pairing from Button's 'danger' variant). Icon + word (§4.7). */
+            <button
+              type="button"
+              onClick={() => onDelete(t)}
+              title="Delete this entry and its stored voice note or photo"
+              className="bizro-btn-quiet inline-flex min-h-touch items-center gap-1.5 rounded-button border-2 border-ink-line bg-paper-raised px-2.5 text-sm font-semibold text-ledger-red hover:bg-paper"
+            >
+              <IconTrash className="h-[18px] w-[18px] text-ledger-red" />
+              Delete
             </button>
           )}
         </span>

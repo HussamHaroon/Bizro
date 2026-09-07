@@ -116,6 +116,25 @@ export function MonthlyLedgerScreen() {
     setEditingId(t.id);
   }, []);
 
+  /** Destructive erase — the row, its stored media, its audit rows. There is
+      no in-house modal yet, so window.confirm is the gate (demo-grade, owner
+      allowance); on success the row leaves local state exactly like
+      confirm/edit update it, and the hero stats recompute with it. */
+  const handleDelete = useCallback(async (t: Transaction) => {
+    const ok = window.confirm(
+      'Delete this entry? Its stored voice note or photo is deleted too. This cannot be undone.',
+    );
+    if (!ok) return;
+    try {
+      await api.deleteTransaction(t.id);
+      setTxs((cur) => cur?.filter((x) => x.id !== t.id) ?? cur);
+      setExpandedId((cur) => (cur === t.id ? null : cur));
+      setEditingId((cur) => (cur === t.id ? null : cur));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete the entry');
+    }
+  }, []);
+
   const handleSaved = useCallback(
     (t: Transaction) => {
       setTxs((cur) => cur?.map((x) => (x.id === t.id ? t : x)) ?? cur);
@@ -391,6 +410,7 @@ export function MonthlyLedgerScreen() {
                     onToggleDetails={() => setExpandedId((cur) => (cur === t.id ? null : t.id))}
                     onEdit={handleEdit}
                     onConfirm={handleConfirm}
+                    onDelete={handleDelete}
                     justConfirmed={justConfirmedId === t.id}
                   />
                   {editingId === t.id && (
