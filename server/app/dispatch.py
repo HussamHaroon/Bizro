@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from . import whatsapp_client
 from .config import ensure_repo_root_on_path, get_settings
+from . import lang as lang_mod
 from .db import Customer, Merchant, OutboundMessage, Transaction
 from .media import sha256_bytes
 from .schemas import TransactionIn, transaction_to_wire
@@ -745,12 +746,13 @@ def handle_text_reply(
     if tx is None:
         return NO_PENDING_REPLY_UR, None
 
+    _l = lang_mod.get_merchant_lang(session, merchant)
     if wants_confirm:
         tx.status = "confirmed"
-        reply = BUTTON_CONFIRM_REPLY_UR
+        reply = lang_mod.pick(_l, lang_mod.CONFIRM_ACK_PAIR)
     else:
         tx.status = "rejected"
-        reply = "Okay, the entry was removed."
+        reply = lang_mod.pick(_l, lang_mod.REMOVED_ACK_PAIR)
     session.add(tx)
     session.commit()
     return reply, tx

@@ -120,7 +120,7 @@ def test_text_transaction_persists_with_source_type_text(client, monkeypatch):
     assert rows[0].kind == "confirmation_text"
     assert rows[0].transaction_id == tx.id
     assert rows[0].body == out["confirmation_ur"]
-    assert "5000" in rows[0].body and "Is this correct?" in rows[0].body
+    assert "5000" in rows[0].body and ("Is this correct?" in rows[0].body or "درست ہے؟" in rows[0].body)
 
 
 def test_text_confirmation_visible_via_simulator_outbound_endpoint(client, monkeypatch):

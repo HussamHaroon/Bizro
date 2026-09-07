@@ -19,6 +19,13 @@ from fastapi.testclient import TestClient
 from server.app.db import Merchant, OutboundMessage, db_session
 from server.app.main import app
 from server.app.webhook import ONBOARDING_SEQUENCE_UR
+from app.lang import onboarding_sequence
+
+
+def _expected_seq(trigger: str):
+    # language mirroring: Urdu-script triggers get the Urdu sequence
+    ur = any("؀" <= c <= "ۿ" for c in trigger)
+    return list(onboarding_sequence("ur" if ur else "en"))
 
 
 @pytest.fixture(scope="module")
@@ -73,12 +80,12 @@ def test_onboarding_greeting_stores_two_message_sequence(client, greeting):
     out = r.json()["results"][0]
     assert out["ok"] is True, out
     assert out["onboarding"] is True
-    assert out["replies"] == list(ONBOARDING_SEQUENCE_UR)
+    assert out["replies"] == _expected_seq(greeting)
 
     rows = _outbound_rows(wa)
     assert len(rows) == 2, "onboarding must store exactly two outbound rows"
     stored = [row.body for row in rows]
-    assert sorted(stored) == sorted(ONBOARDING_SEQUENCE_UR)
+    assert sorted(stored) == sorted(_expected_seq(greeting))
     assert all(row.kind == "onboarding" for row in rows)
     assert all(row.transaction_id is None for row in rows), (
         "onboarding rows are regular outbound messages, not tied to a transaction"
@@ -100,7 +107,7 @@ def test_onboarding_outbound_visible_via_rest_chat_view(client):
     r = client.get(f"/api/merchants/{mid}/outbound")
     assert r.status_code == 200, r.text
     bodies = [row["body"] for row in r.json()["outbound"]]
-    assert sorted(bodies) == sorted(ONBOARDING_SEQUENCE_UR)
+    assert sorted(bodies) == sorted(_expected_seq("hello"))
 
 
 # ------------------------------- every trigger word, case-insensitive
@@ -119,7 +126,7 @@ def test_all_trigger_words_route_to_onboarding(client, greeting):
     assert out.get("onboarding") is True, f"{greeting!r} must trigger onboarding"
     rows = _outbound_rows(wa)
     assert len(rows) == 2
-    assert sorted(row.body for row in rows) == sorted(ONBOARDING_SEQUENCE_UR)
+    assert sorted(row.body for row in rows) == sorted(_expected_seq(greeting))
 
 
 # ---------------------------------------- negative: normal text, no trigger
