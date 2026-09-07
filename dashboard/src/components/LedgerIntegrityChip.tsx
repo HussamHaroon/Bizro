@@ -15,8 +15,8 @@
    always (§4.7); the `result` prop lets galleries and tests force a state
    without any network. */
 
-import { useEffect, useState } from 'react';
-import { fetchLedgerVerify } from '../api/client';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { fetchLedgerVerify, clientSnapshot, subscribeClient } from '../api/client';
 import type { LedgerVerifyResult } from '../types/schema';
 import { IconCheck, IconEdited, IconFlag } from './icons';
 
@@ -31,18 +31,22 @@ export interface LedgerIntegrityChipProps {
 
 export function LedgerIntegrityChip({ result, merchantId, className = '' }: LedgerIntegrityChipProps) {
   const [fetched, setFetched] = useState<LedgerVerifyResult | null>(null);
+  // Mock/live mode snapshot: when the app flips to fixtures (first live failure)
+  // the verdict is re-derived so the chip agrees with the rest of the screen —
+  // it never lags one render behind the flip.
+  const mode = useSyncExternalStore(subscribeClient, clientSnapshot);
 
   useEffect(() => {
     if (result !== undefined) return; // a forced verdict owns the render
     let alive = true;
-    setFetched(null); // merchant switch → fresh verdict, never a stale one
+    setFetched(null); // merchant switch / mode flip → fresh verdict, never stale
     fetchLedgerVerify(merchantId).then((v) => {
       if (alive) setFetched(v);
     });
     return () => {
       alive = false;
     };
-  }, [result, merchantId]);
+  }, [result, merchantId, mode]);
 
   const v = result !== undefined ? result : fetched;
   if (!v) return null;

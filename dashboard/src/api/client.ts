@@ -363,52 +363,67 @@ export async function fetchLedgerVerify(
 
 /* ---- Officer-portal fetchers (explicit merchant id, outside attempt()) --------
    The /officer screen renders a CARD PER APPLICANT, so it cannot ride the
-   module-singleton merchant key. These take an explicit id and return null on
-   any absence — a dead merchant card reads "no data", never an app-wide flip
-   to fixtures. In mock mode the single fixture merchant answers every id. */
+   module-singleton merchant key. These take an explicit id and, like attempt(),
+   flip the app to labeled fixtures ONLY when the failure lands before any live
+   call has ever succeeded (server down / first-call error) — a merchant report
+   is primary financial data, so the officer screen must agree with the rest of
+   the app on mock mode. Once live has answered once, a later failure surfaces
+   as that card's honest "unavailable" state — never a silent fixture swap. */
+
+/** Shared flip with attempt()'s exact semantics (idempotent). */
+function enterMockFallback(reason: string): void {
+  if (fellBack || liveEverSucceeded) return;
+  fellBack = true;
+  fallbackReason = reason;
+  notify();
+}
+
+/** attempt() for explicit-merchant primary data: live first; on a first-call
+    failure flip to fixtures and answer from them; afterwards failures return
+    null (the card's unavailable state). */
+async function attemptFor<T>(merchantId: string, path: string, mockValue: () => T): Promise<T | null> {
+  if (!fellBack) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}${path}`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`API ${res.status} ${res.statusText} — ${path}`);
+      liveEverSucceeded = true;
+      return (await res.json()) as T;
+    } catch (e) {
+      enterMockFallback(e instanceof Error ? e.message : String(e));
+      if (!fellBack) return null; // live was working — honest per-card absence
+    }
+  }
+  return mockValue();
+}
 
 /** GET /api/merchants/{id}/report/preview for a SPECIFIC merchant — canonical
     §6.5 payloads go through the same adapter as the live client; the v0.7
     trust/officer/limitations fields ride along untouched (optional contract). */
 export async function fetchMerchantReport(merchantId: string): Promise<CreditReportPreview | null> {
-  if (fellBack) return deriveReportPreview(MOCK_TRANSACTIONS);
-  try {
-    const res = await fetch(
-      `${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}/report/preview`,
-      { headers: { 'Content-Type': 'application/json' } },
-    );
-    if (!res.ok) return null;
-    const payload: unknown = await res.json();
-    const canonical = (payload as { report?: unknown })?.report ?? payload;
-    if (isCanonicalReport(canonical)) {
-      // adaptCanonicalReport derives skeleton stats from rows; the officer card
-      // reads band/score/flags, so an empty row set is fine here (the card's
-      // entries/activity come from fetchMerchantTransactions, not the report).
-      return adaptCanonicalReport(canonical, []);
-    }
-    return { ...(payload as CreditReportPreview), mock: false };
-  } catch {
-    return null;
+  const raw = await attemptFor<unknown>(merchantId, '/report/preview', () =>
+    deriveReportPreview(MOCK_TRANSACTIONS),
+  );
+  if (!raw) return null;
+  const canonical = (raw as { report?: unknown })?.report ?? raw;
+  if (isCanonicalReport(canonical)) {
+    // adaptCanonicalReport derives skeleton stats from rows; the officer card
+    // reads band/score/flags, so an empty row set is fine here (the card's
+    // entries/activity come from fetchMerchantTransactions, not the report).
+    return adaptCanonicalReport(canonical, []);
   }
+  return { ...(raw as CreditReportPreview), mock: Boolean((raw as CreditReportPreview).mock) };
 }
 
 /** GET /api/merchants/{id}/transactions for a SPECIFIC merchant — feeds the
     officer card's entries count, weekly activity bars and udhar derivation. */
 export async function fetchMerchantTransactions(merchantId: string): Promise<Transaction[] | null> {
-  if (fellBack) return MOCK_TRANSACTIONS;
-  try {
-    const res = await fetch(
-      `${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}/transactions`,
-      { headers: { 'Content-Type': 'application/json' } },
-    );
-    if (!res.ok) return null;
-    const data: unknown = await res.json();
-    return Array.isArray(data)
-      ? (data as Transaction[])
-      : (((data as { transactions?: Transaction[] })?.transactions as Transaction[]) ?? []);
-  } catch {
-    return null;
-  }
+  const raw = await attemptFor<unknown>(merchantId, '/transactions', () => MOCK_TRANSACTIONS);
+  if (raw == null) return null;
+  return Array.isArray(raw)
+    ? (raw as Transaction[])
+    : (((raw as { transactions?: Transaction[] })?.transactions as Transaction[]) ?? []);
 }
 
 /** GET+PUT /api/merchants/{id}/settings (schema.md §8, ruling D4-2) — per-

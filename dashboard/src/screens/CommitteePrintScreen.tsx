@@ -67,7 +67,16 @@ export function CommitteePrintScreen() {
     // Committee navigation means the officer is working ON this merchant —
     // key the app to it so any screen they fall back to agrees.
     setMerchant(id);
-    Promise.all([fetchMerchantReport(id), fetchMerchantTransactions(id), fetchLedgerVerify(id)])
+    // The verdict fetch runs AFTER the primary pair: those two own the app's
+    // mock/live mode decision (first-failure fallback), and the verdict must
+    // be read once that's settled — never racy, never stale.
+    Promise.all([fetchMerchantReport(id), fetchMerchantTransactions(id)])
+      .then(([r, t]) => {
+        if (!alive) return [r, t, null] as const;
+        return Promise.all([Promise.resolve(r), Promise.resolve(t), fetchLedgerVerify(id)]) as Promise<
+          readonly [CreditReportPreview | null, Transaction[] | null, LedgerVerifyResult | null]
+        >;
+      })
       .then(([r, t, v]) => {
         if (!alive) return;
         setReport(r);
