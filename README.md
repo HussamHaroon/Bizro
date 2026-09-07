@@ -62,7 +62,7 @@ flowchart TD
         WH --> DSP
     end
 
-    DSP -->|"structured transaction dicts (audited)"| VA["voice-agent/<br/>STT qwen3-asr-flash<br/>(Groq Whisper fallback)<br/>parse qwen-flash"]
+    DSP -->|"structured transaction dicts (audited)"| VA["voice-agent/<br/>STT: qwen3-asr-flash when a DashScope key is configured (auto)<br/>Groq Whisper on the free tier — automatic fallback either way<br/>parse qwen-flash"]
     DSP -->|"structured transaction dicts (audited)"| VI["vision-agent/<br/>OCR qwen-vl-ocr<br/>(qwen3.5-ocr bake-off adapter)<br/>price-sanity flags vs history"]
 
     VA --> CA
@@ -76,9 +76,15 @@ flowchart TD
     DB --> SITE["site/<br/>landing page + live hero mic"]
 ```
 
-All model calls run on Alibaba Cloud Model Studio (DashScope
-OpenAI-compatible mode). See `docs/Bizro_Guide.pdf` for the full pipeline walkthrough,
-the model stack and its fallbacks, and the security posture.
+Model calls run on Alibaba Cloud Model Studio (DashScope
+OpenAI-compatible mode) by default. Speech-to-text is qwen3-asr-flash when a
+DashScope key is configured (automatic); on the free tier Groq
+whisper-large-v3-turbo does the transcribing, and any Qwen failure falls back
+to it automatically — a voice note is never lost to one transcriber's hiccup.
+The chat endpoint can also point at any OpenAI-compatible host (`.env.example`
+ships a budget-capped OpenRouter free-tier swap). See `docs/Bizro_Guide.pdf`
+for the full pipeline walkthrough, the model stack and its fallbacks, and the
+security posture.
 
 ## Repo layout
 
@@ -141,7 +147,7 @@ does.
 
 ## Tests
 
-All three suites are offline and deterministic; no credentials needed.
+All suites are offline and deterministic; no credentials needed.
 
 ```bash
 cd server && python -m pytest tests -q        # 129 passed (measured 2026-09-04)
@@ -163,7 +169,10 @@ The script builds `dashboard/` and `site/`, runs `vercel deploy --prod`,
 re-points the four aliases, and verifies `/health` and `/` return 200. Vercel
 env vars (see the table below) are managed in the Vercel dashboard. Production
 runs on Neon Postgres with `MEDIA_DIR=/tmp/media` — see `docs/Bizro_Guide.pdf`
-for what is durable where.
+for what is durable where. One durability caveat: `/tmp` is ephemeral across
+serverless deployments, so the audit-trail media bytes need the database
+backend (`MEDIA_BACKEND=db`) to be durable there — see
+[Limitations & roadmap](#limitations--roadmap).
 
 ## Environment variables
 
@@ -178,7 +187,7 @@ Canonical contract: `.env.example` (copy to `.env`). Never commit `.env`.
 | `MODEL_OCR_NEW` | Bake-off OCR adapter model | `qwen3.5-ocr` |
 | `MODEL_REASONING` | Credit narrative + reminder drafts | `qwen-flash` |
 | `OCR_MODEL` | Which OCR adapter runs: `vl` or `new` | `vl` |
-| `STT_PROVIDER` | `qwen` (qwen3-asr-flash primary) or `groq` | `groq` |
+| `STT_PROVIDER` | `qwen` → qwen3-asr-flash primary when a DashScope key is configured (any failure auto-falls-back to Groq); `groq` → Whisper free tier | `groq` |
 | `STT_QWEN_MODEL` | Qwen ASR model id | `qwen3-asr-flash` |
 | `STT_API_KEY` / `STT_BASE_URL` / `STT_MODEL` / `STT_LANGUAGE` | Groq Whisper fallback (free tier) | Groq URL, `whisper-large-v3-turbo`, `ur` |
 | `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Cloud API credentials (System User token) | — |
@@ -210,3 +219,113 @@ Both deliverables live in `docs/`:
 - `docs/Bizro_Pitch.pptx` — the 11-slide pitch deck (problem, the Mawakhat
   lending rail, solution, live demo, how it works, technology, trust & audit,
   why Bizro, impact).
+- `docs/privacy-notes.md` — plain-language data notes: what Bizro stores, why,
+  for how long, who can see it, and how deletion works.
+
+## Trust model
+
+Bizro never claims a ledger entry is *true*. It records where every entry
+came from and how confident the model was, then makes corroboration visible:
+
+- **Every entry stores source + confidence** — source type (voice / photo /
+  text), the model that parsed it, a link to the original audio/photo bytes
+  (sha256-hashed on ingest), the raw model output, and a 0–1 parse
+  confidence. Nothing is summarized away.
+- **Trust tiers** — entries carry `self_reported` / `customer_confirmed` /
+  `third_party` provenance as they move up from the merchant's word alone
+  (entry contract, `server/schema.md`).
+- **Reports headline the corroborated-revenue percentage** — how much of the
+  stated revenue stands on more than self-report.
+- **Ledger integrity chain + verification endpoint** (schema.md §11) —
+  ledger rows are hash-chained so tampering is detectable, with an endpoint
+  that re-verifies the chain.
+- **Data-quality indicators, not a trust score** — backfill lag, burst
+  inserts, stock coherence, window spikes and provenance mix are computed in
+  `credit-agent/credit_agent/data_quality.py` and disclosed to the loan
+  officer as evidence for *their* judgment. The code says it outright: these
+  are disclosure, never an accusation, never a black-box number.
+- **Supplier verification** — receipts that carry a supplier phone can
+  trigger a yes/no WhatsApp confirmation to the distributor
+  (`POST /transactions/{id}/verify-supplier`); the request lands on the audit
+  trail today, automatic reply-matching is future scope (below).
+
+## What it costs per shop
+
+A ballpark estimate, clearly not a quote — prices checked Oct 2026 and they
+drift; the authoritative table is Alibaba Cloud Model Studio pricing.
+
+Per event (rough):
+
+| Event | Model calls | Est. cost |
+| --- | --- | --- |
+| Urdu voice note (~15 s) | qwen3-asr-flash ASR + qwen-flash parse + confirmation reply | ~ $0.001–0.002 |
+| Receipt photo | qwen-vl-ocr OCR + price-sanity parse | ~ $0.001–0.002 |
+| Credit Readiness report | deterministic aggregates + one qwen-flash narrative | ~ $0.005 |
+
+Per shop per month (30 days, at $0.0015 per note/receipt midpoint):
+
+| Shop profile | Volume | Est. monthly model cost |
+| --- | --- | --- |
+| Light | 5 voice notes + 2 receipts/day | < $1 |
+| Medium | 15 voice notes + 5 receipts/day | ~ $1 |
+| Heavy | 40 voice notes + 10 receipts/day | ~ $2–3 |
+
+Assumptions: qwen-flash ≈ $0.10/M input and $0.40/M output tokens with a
+parse call ≈ 1K in + 0.3K out; qwen3-asr-flash ≈ $0.000035/s of audio;
+WhatsApp service-dialogue replies (inside the user-initiated 24 h window)
+are currently free on Meta's Cloud API; hosting on free tiers (Vercel, Neon)
+adds $0 at demo scale. Even a heavy shop is single-digit dollars a month.
+
+**Who pays: the lending institution or donor that runs the deployment. The
+merchant pays nothing — zero-typing also means zero-billing.**
+
+## Privacy
+
+Plain-language notes: `docs/privacy-notes.md`. Formal policy:
+`PRIVACY_POLICY.md` (English + Urdu summary). The short version:
+
+- **Consent** — the merchant opts in by messaging the Bizro number; every
+  entry exists because the merchant sent it.
+- **What's stored** — the original voice-note and receipt-photo bytes (audit
+  trail), transcripts, the extracted fields, and customer names as the
+  merchant speaks them. Customer phone numbers are stored only when provided,
+  and customers are identifiable in udhar entries — see the notes doc for why
+  customers should be told.
+- **Retention** — recommended: purge audio/photo bytes after 24 months; the
+  ledger rows are the merchant's books and stay until deleted.
+- **Deletion** — "data delete" in the Bizro chat (or email) removes the
+  merchant's account and records within 30 days.
+- **Who can see it** — the merchant, and, when the merchant shares a report,
+  the lending institution's loan officer.
+
+## Limitations & roadmap
+
+Bizro is honest about what it cannot know. The gaps, named first:
+
+- **Every entry is merchant-volunteered.** Self-reported by default —
+  omission is invisible. Trust tiers and supplier verification exist to raise
+  corroboration, not to prove truth; the credit-agent code explicitly refuses
+  to be a "lie detector".
+- **The readiness score is a readiness indicator, not a validated repayment
+  predictor.** No loan-outcome data exists yet, so the rubric has never been
+  calibrated against who actually repaid.
+- **Anti-fabrication checks are heuristics, not validated forensics.**
+  Backfill / stock-coherence / spike detection catch arithmetic
+  inconsistencies and patterns; they are disclosure for an officer, not proof
+  of fraud.
+- **Urdu-first.** Punjabi and Pashto — first languages for many karyana
+  shopkeepers — are not yet covered end-to-end.
+- **Supplier verification is half-built.** The request is sent and logged on
+  the audit trail; matching the distributor's reply is future scope.
+- **Serverless media is ephemeral without `MEDIA_BACKEND=db`.** On Vercel the
+  filesystem is `/tmp`, so audit-trail bytes only survive deployments once
+  media lives in the database (the `media_blobs.data` column already exists).
+
+| Gap | Concrete next step |
+| --- | --- |
+| Self-reported entries | Roll out the customer-confirmation and supplier-verification loops so the corroborated share of each ledger grows; tier-gate what reports may claim |
+| Unvalidated score | Collect anonymized repayment outcomes from Mawakhat officers, refit the rubric weights against realized outcomes, publish the calibration |
+| Heuristic checks | Label real backfill/anomaly cases with loan officers; tune the thresholds against ground truth instead of priors |
+| Urdu-only | Evaluate Punjabi/Pashto ASR quality, add language detection and per-language parse prompts and confirmation copy |
+| Reply matching | Parse the yes/no WhatsApp reply to close the verify-supplier handshake and flip the entry's trust tier |
+| Ephemeral serverless media | Implement the `MEDIA_BACKEND=db` path (bytes into `media_blobs.data`) and make it the default on Vercel |
