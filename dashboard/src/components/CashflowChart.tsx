@@ -26,7 +26,7 @@ const W = 640;
 const H = 250;
 const TOP = 28;
 const BOTTOM = H - 34;
-const LEFT = 12;
+const LEFT = 46; // room for the Y-axis scale labels (print has no hover chips)
 const RIGHT = W - 12;
 const BAR_W = 26;
 const BAR_GAP = 8;
@@ -36,6 +36,11 @@ const ROUNDS = [10_000, 20_000, 50_000, 100_000, 200_000];
 function niceMax(v: number): number {
   for (const r of ROUNDS) if (v <= r) return r;
   return Math.ceil(v / 100_000) * 100_000;
+}
+
+function scaleLabel(v: number): string {
+  if (v === 0) return '0';
+  return v % 1000 === 0 ? `${v / 1000}k` : `${(v / 1000).toFixed(1)}k`;
 }
 
 function shortMonth(ym: string): string {
@@ -90,18 +95,36 @@ export function CashflowChart({ months }: CashflowChartProps) {
             role="group"
             aria-label="Monthly cash-flow bars"
           >
-        {/* D4-1 gridlines: 1px ink at 20% alpha; the baseline rides 2px ink. */}
-        {[0, 0.25, 0.5, 0.75, 1].map((p) => (
-          <line
-            key={p}
-            x1={LEFT}
-            x2={RIGHT}
-            y1={BOTTOM - p * (BOTTOM - TOP)}
-            y2={BOTTOM - p * (BOTTOM - TOP)}
-            stroke={p === 0 ? 'var(--bizro-ink-line)' : 'var(--bizro-gridline)'}
-            strokeWidth={p === 0 ? 2 : 1}
-          />
-        ))}
+        {/* D4-1 gridlines: 1px ink at 20% alpha; the baseline rides 2px ink.
+            Scale labels ride each gridline — on paper there is no hover chip,
+            so the printed chart must carry its own scale. */}
+        {[0, 0.25, 0.5, 0.75, 1].map((p) => {
+          const y = BOTTOM - p * (BOTTOM - TOP);
+          return (
+            <g key={p}>
+              <line
+                x1={LEFT}
+                x2={RIGHT}
+                y1={y}
+                y2={y}
+                stroke={p === 0 ? 'var(--bizro-ink-line)' : 'var(--bizro-gridline)'}
+                strokeWidth={p === 0 ? 2 : 1}
+              />
+              <text
+                x={LEFT - 8}
+                y={y + 4}
+                textAnchor="end"
+                fontFamily="var(--bizro-font-numerals)"
+                fontSize="11"
+                fontWeight="600"
+                fill="var(--bizro-ink-line)"
+                opacity="0.75"
+              >
+                {scaleLabel(Math.round(p * max))}
+              </text>
+            </g>
+          );
+        })}
 
         {months.map((m, i) => {
           const cx = LEFT + GROUP_GAP / 2 + slot * i + slot / 2;
