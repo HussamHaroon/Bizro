@@ -29,7 +29,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from . import customer_confirm, dispatch, whatsapp_client
+from . import dispatch, whatsapp_client
 from .config import get_settings
 from . import lang as lang_mod
 from .db import MediaBlob, Merchant, ProcessedMessage, db_session
@@ -211,33 +211,6 @@ def _claim_message_id(message_id: str) -> bool:
 def _handle_message(
     msg: dict[str, Any], contacts: dict[str, Any], sim_envelope: dict[str, Any]
 ) -> dict[str, Any]:
-
-    # §13: customer two-factor confirmation runs BEFORE merchant resolution —
-    # the sender here is a CUSTOMER phoning from their own number, not the
-    # shopkeeper. Only bare YES/NO-style texts are captured; anything else
-    # falls through to the normal merchant path.
-    _body = str(((msg.get("text") or {}) or {}).get("body") or "")
-    if _body and len(_body) <= 40 and not _body.lower().startswith(("cancel", "undo")):
-        # §13: a known customer texting short confirms/corrections is handled on
-        # the customer path — never routed to merchant onboarding (a stray
-        # "ok"/"1" from a customer would otherwise create a phantom merchant).
-        with db_session() as _session:
-            _cust = customer_confirm.find_customer_by_phone(
-                _session, str(msg.get("from", ""))
-            )
-            if _cust is not None:
-                if customer_confirm.is_customer_confirmation(_body):
-                    return customer_confirm.apply_customer_reply(
-                        _session, _cust_merchant(_session, _cust), _cust, _body,
-                        deliver_fn=dispatch.deliver, send_reply_fn=dispatch.send_reply,
-                    )
-                if customer_confirm.classify_customer_reply(_body) is None:
-                    _nudge = ("Please reply YES to confirm the recorded entry, "
-                              "or NO if it is wrong.")
-                    _sent = dispatch.deliver(_cust.phone, _nudge)
-                    return {"ok": True, "type": "text", "customer_reply": "nudge",
-                            "reply": _nudge, "sent": _sent}
-
     wa_id: str = msg.get("from", "")
     ts = msg.get("timestamp")
     occurred_at = (
@@ -420,7 +393,6 @@ def _ingest_free_text(
     if is_cancel_command and is_cancel_command(body):
         return _cancel_last_entry(session, merchant, msg)
 
-
     try:
         env = dispatch.process_transcript_multi(body, merchant, occurred_at)
     except Exception:
@@ -444,9 +416,6 @@ def _ingest_free_text(
             session, merchant, env["transactions"], None,
             env.get("reply_text") or "",
         )
-        customer_pings = customer_confirm.ping_customers_for_entries(
-            session, merchant, txs, deliver_fn=dispatch.deliver
-        )
     except ValidationError:
         logger.warning(
             "Typed message failed contract validation (wamid=%s)", msg.get("id")
@@ -468,16 +437,8 @@ def _ingest_free_text(
         "status": txs[0].status,
         "confirmation_ur": confirmation,
         "reply": confirmation,
-        "customer_pings": customer_pings,
         "sent": sent,
     }
-
-
-
-def _cust_merchant(session, customer):
-    from .db import Merchant
-
-    return session.get(Merchant, customer.merchant_id)
 
 
 def _cancel_last_entry(session, merchant: Merchant, msg: dict[str, Any]) -> dict[str, Any]:
@@ -654,12 +615,6 @@ def _ingest_media(
     txs = dispatch.persist_transactions_batch(
         session, merchant, entries, blob.id, env.get("reply_text") or ""
     )
-    # §13: two-factor customer confirmation — ping the customer's own WhatsApp
-    # for each entry that names a customer with a phone on file (best-effort;
-    # the shopkeeper flow is never blocked by this).
-    customer_pings = customer_confirm.ping_customers_for_entries(
-        session, merchant, txs, deliver_fn=dispatch.deliver
-    )
     confirmation = env.get("reply_text") or ""
     sent = dispatch.send_confirmation(merchant, txs[0], confirmation) if confirmation else None
     return {
@@ -672,7 +627,6 @@ def _ingest_media(
         "entries": len(txs),
         "status": txs[0].status,
         "confirmation_ur": confirmation,
-        "customer_pings": customer_pings,
         "sent": sent,
     }
 

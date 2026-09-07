@@ -21,9 +21,7 @@ SCENARIOS: dict[str, dict] = {
         "transaction": {
             "kind": "udhar_given",
             "amount_pkr": 5000,
-            # §13 demo: the counterparty carries the phone the merchant spoke —
-            # persist creates the customer row from it and the ping targets it.
-            "counterparty": {"name": "احمد", "phone": "923001112233"},
+            "counterparty": {"name": "احمد", "phone": None},
             "description": "Udhar given to Ahmad",
             "item_lines": [],
             "unclear": [],
