@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type SVGProps } from "react";
 import LazyScrollMovie from "./LazyScrollMovie";
+import FieldBand from "./FieldBand";
+import heroBackdrop from "./assets/stock/field-hero-kirana.jpg";
 import { GuideMithu, Mithu, SfxToggle } from "./Mascot";
 import { useReveal } from "./useReveal";
 import { COPY, type Copy } from "./content";
@@ -452,6 +454,17 @@ export default function App() {
       <main id="main" ref={revealRef}>
         {/* ---------------- HERO ---------------- */}
         <section className="hero wrap" id="top" aria-labelledby="hero-heading">
+          {/* stock-photo texture behind the hero — decor only: muted to a
+              paper tint, edge-faded into the canvas, never content */}
+          <div className="hero__backdrop" aria-hidden="true">
+            <img
+              src={heroBackdrop}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+            />
+          </div>
           <div className="hero__grid">
             <div className="reveal">
               <p style={{ margin: 0 }}>
@@ -676,6 +689,9 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {/* ---------------- IN THE FIELD ---------------- */}
+        <FieldBand />
       </main>
 
       {/* ---------------- FOOTER ---------------- */}

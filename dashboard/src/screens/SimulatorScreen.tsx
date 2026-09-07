@@ -813,7 +813,16 @@ export function SimulatorScreen() {
         purpose="Try the real pipeline — no WhatsApp needed"
       />
 
-      <div className="bizro-card bizro-card-hero mx-auto flex w-full max-w-md flex-col overflow-hidden">
+      {/* The phone mockup — sized like a phone, not a card. Height-driven:
+          the card gets a definite height that fits the viewport (76dvh, capped
+          720px, floored 480px so short viewports keep a usable chat) and
+          aspect-[9/19.5] derives the width (~332px at the 720px cap). The old
+          w-full max-w-md + a fixed 460px chat produced a squat ~448×620 box
+          (≈1:1.4) that ignored the viewport — the "wrong size" owner report.
+          self-center (not stretch) lets the ratio own the width; min-w floors
+          it at 18rem on narrow screens so the chat stays readable (ratio
+          degrades gracefully there), max-w-full guarantees no overflow. */}
+      <div className="bizro-card bizro-card-hero flex aspect-[9/19.5] h-[max(min(76dvh,720px),30rem)] w-auto min-w-[min(100%,18rem)] max-w-full self-center flex-col overflow-hidden">
         {/* -- WhatsApp-evoking header (Bizro's stamped version) ------------------ */}
         <div className="flex items-center gap-3 border-b-[3px] border-ink-line bg-fill-green px-3 py-2.5 text-paper">
           {/* Avatar: initial-letter square (Mithu SVG lives in site/, out of scope) */}
@@ -868,7 +877,7 @@ export function SimulatorScreen() {
           role="log"
           aria-live="polite"
           aria-label="Chat with Bizro"
-          className="flex h-[min(60dvh,460px)] min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-paper px-3 py-4"
+          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-paper px-3 py-4"
         >
           {/* Date chip — WhatsApp's "Today" divider, stamped */}
           <p className="mx-auto border-2 border-ink-line bg-paper-raised px-3 py-1 text-center text-xs font-semibold">
@@ -1073,7 +1082,7 @@ export function SimulatorScreen() {
               }}
               placeholder="Type a message…"
               aria-label="Message Bizro"
-              className="min-h-touch min-w-0 flex-1 rounded-button border-[3px] border-ink-line bg-paper px-3 text-sm text-ink-line placeholder:text-ink-line placeholder:opacity-50"
+              className="min-h-touch min-w-[9rem] flex-1 rounded-button border-[3px] border-ink-line bg-paper px-3 text-sm text-ink-line placeholder:text-ink-line placeholder:opacity-50"
             />
             <button
               type="button"
