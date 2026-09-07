@@ -12,6 +12,13 @@ becomes credit.
 
 Built for the Bano Qabil x Alibaba Cloud AI Hackathon Pakistan 2026.
 
+## The product in seconds
+
+![Bizro product ad](assets/bizro-ad.mp4)
+
+A 43-second ad for the zero-typing loop: an Urdu voice note or receipt photo
+in on WhatsApp, a structured ledger entry and a credit-ready history out.
+
 ## Live
 
 - Production: <https://bizro-pk.vercel.app> — `/`, `/ledger` and `/health` all
