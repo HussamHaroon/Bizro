@@ -2205,3 +2205,131 @@ a:focus-visible,
     opacity: 0.6;
   }
 }
+
+/* ============================================================
+   Stock-field media layer (2026-10-02) — appended layer, additive
+   only. Two additions, both inside the existing token law (3px ink
+   borders, hard offset shadows, radius <= 2px, motion ONLY with
+   consent):
+     1. hero backdrop — one Unsplash kirana photo as a heavily muted
+        paper texture BEHIND the unchanged hero content (aria-hidden,
+        16% opacity, edge-faded into the canvas; text contrast stays
+        far above AA — ink-on-canvas is ~13:1 and the tint can only
+        shave a fraction of it).
+     2. "In the field" gallery band (section 05, FieldBand.tsx) — a
+        bento grid of six photos + two muted Pexels loops. Videos
+        preload nothing, play only while visible, and never autoplay
+        for reduced-motion visitors (poster only).
+   ============================================================ */
+
+/* ---------- 1 · hero backdrop ---------- */
+
+.hero {
+  position: relative; /* the anchor for the decorative layer */
+}
+
+.hero__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: clip;
+  pointer-events: none;
+  /* dissolve the photo's top and bottom edges into the canvas so the
+     texture reads as paper grain, not a picture behind text */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 14%,
+    #000 86%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 14%,
+    #000 86%,
+    transparent 100%
+  );
+}
+
+.hero__backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.16;
+  filter: saturate(0.6);
+}
+
+/* the hero content sits above its decorative layer */
+.hero__grid {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- 2 · "In the field" band ---------- */
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 150px;
+  gap: 1.1rem;
+}
+
+.field-tile {
+  position: relative;
+  margin: 0;
+  overflow: clip;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: var(--shadow-md);
+}
+
+.field-tile img,
+.field-tile video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* the feature video goes full-width on phones, 2x2 from tablet up */
+.field-tile--feature {
+  grid-column: span 2;
+}
+
+/* caption bar — the ledger-mock caption language, pinned to the tile */
+.field-tile figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.45rem 0.75rem 0.5rem;
+  background: var(--canvas);
+  border-top: 3px solid var(--ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* stock-media honesty note under the grid */
+.field-note {
+  margin-top: 1.4rem;
+}
+
+@media (min-width: 760px) {
+  .field-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 175px;
+    gap: 1.5rem;
+  }
+
+  .field-tile--feature {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+
+  .field-tile--tall {
+    grid-row: span 2;
+  }
+}
