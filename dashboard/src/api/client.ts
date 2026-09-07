@@ -23,6 +23,7 @@
 import {
   MOCK_MERCHANT,
   MOCK_TRANSACTIONS,
+  deriveLedgerVerify,
   deriveReportPreview,
   deriveStreak,
   deriveUdhar,
@@ -31,6 +32,7 @@ import { adaptCanonicalReport, isCanonicalReport } from './reportAdapter';
 import type {
   CreditReportPreview,
   LanguageSetting,
+  LedgerVerifyResult,
   MerchantSettings,
   MerchantSettingsPut,
   MerchantSummary,
@@ -322,6 +324,88 @@ export async function fetchStreak(): Promise<SavingsStreak | null> {
       best_streak_weeks: typeof s.best_streak_weeks === 'number' ? s.best_streak_weeks : s.streak_weeks,
       current_week_positive: Boolean(s.current_week_positive),
     };
+  } catch {
+    return null;
+  }
+}
+
+/** GET /api/merchants/{id}/ledger/verify (schema.md §11, server/app/ledger.py
+    verify_chain) — the LedgerIntegrityChip source. OPTIONAL endpoint like the
+    ones above: any absence (older server, 404, network) → null and the chip
+    renders nothing — a missing feature, never an error. In mock mode the
+    verdict is DERIVED from the fixtures (deriveLedgerVerify), including one
+    deliberately amended row so the honest "audit working" state is demoable. */
+export async function fetchLedgerVerify(
+  merchantId: string = currentMerchantId(),
+): Promise<LedgerVerifyResult | null> {
+  if (fellBack) return deriveLedgerVerify(MOCK_TRANSACTIONS);
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}/ledger/verify`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const d: unknown = await res.json();
+    if (!d || typeof (d as LedgerVerifyResult).checked !== 'number') return null;
+    const v = d as LedgerVerifyResult;
+    return {
+      valid: Boolean(v.valid),
+      checked: v.checked,
+      amended_after_sealing: Array.isArray(v.amended_after_sealing) ? v.amended_after_sealing.map(String) : [],
+      unsealed: typeof v.unsealed === 'number' ? v.unsealed : 0,
+      broken_at: v.broken_at == null ? null : String(v.broken_at),
+      details: Array.isArray(v.details) ? v.details : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ---- Officer-portal fetchers (explicit merchant id, outside attempt()) --------
+   The /officer screen renders a CARD PER APPLICANT, so it cannot ride the
+   module-singleton merchant key. These take an explicit id and return null on
+   any absence — a dead merchant card reads "no data", never an app-wide flip
+   to fixtures. In mock mode the single fixture merchant answers every id. */
+
+/** GET /api/merchants/{id}/report/preview for a SPECIFIC merchant — canonical
+    §6.5 payloads go through the same adapter as the live client; the v0.7
+    trust/officer/limitations fields ride along untouched (optional contract). */
+export async function fetchMerchantReport(merchantId: string): Promise<CreditReportPreview | null> {
+  if (fellBack) return deriveReportPreview(MOCK_TRANSACTIONS);
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}/report/preview`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const payload: unknown = await res.json();
+    const canonical = (payload as { report?: unknown })?.report ?? payload;
+    if (isCanonicalReport(canonical)) {
+      // adaptCanonicalReport derives skeleton stats from rows; the officer card
+      // reads band/score/flags, so an empty row set is fine here (the card's
+      // entries/activity come from fetchMerchantTransactions, not the report).
+      return adaptCanonicalReport(canonical, []);
+    }
+    return { ...(payload as CreditReportPreview), mock: false };
+  } catch {
+    return null;
+  }
+}
+
+/** GET /api/merchants/{id}/transactions for a SPECIFIC merchant — feeds the
+    officer card's entries count, weekly activity bars and udhar derivation. */
+export async function fetchMerchantTransactions(merchantId: string): Promise<Transaction[] | null> {
+  if (fellBack) return MOCK_TRANSACTIONS;
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/merchants/${encodeURIComponent(merchantId)}/transactions`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const data: unknown = await res.json();
+    return Array.isArray(data)
+      ? (data as Transaction[])
+      : (((data as { transactions?: Transaction[] })?.transactions as Transaction[]) ?? []);
   } catch {
     return null;
   }

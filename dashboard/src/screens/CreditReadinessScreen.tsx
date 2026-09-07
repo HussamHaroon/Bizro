@@ -24,6 +24,7 @@ import { EditTransactionForm } from '../components/EditTransactionForm';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SealGauge } from '../components/SealGauge';
 import { SealMark } from '../components/TrustSealBadge';
+import { TrustTierBadge } from '../components/TrustTierBadge';
 import { TrendSparkline } from '../components/TrendSparkline';
 import {
   IconFlag,
@@ -550,6 +551,14 @@ export function CreditReadinessScreen() {
                           demo
                         </span>
                       )}
+                      {/* §11 tier chip — only when it carries signal beyond the
+                          self-reported baseline (same rule as ledger rows). */}
+                      {(() => {
+                        const tier = t?.trust_tier;
+                        return tier === 'customer_confirmed' || tier === 'third_party' ? (
+                          <TrustTierBadge tier={tier} />
+                        ) : null;
+                      })()}
                     </span>
                     <span className="text-xs text-ink-line opacity-75">
                       {formatMonth(li.month)} ·{' '}

@@ -44,6 +44,13 @@ export interface ItemLine {
   line_total: number;
 }
 
+/** schema.md §11 — trust tier on every wire row (server/app/schemas.py
+    transaction_to_wire: null tier renders as "self_reported"). The ladder:
+    self_reported (the merchant told us) → customer_confirmed (the counterparty
+    on the entry confirmed it) → third_party (an external party — e.g. the
+    distributor via POST /transactions/{id}/verify-supplier — confirmed it). */
+export type TrustTier = 'self_reported' | 'customer_confirmed' | 'third_party';
+
 /** schema.md §1 — canonical transaction JSON (pipeline output / API wire format). */
 export interface Transaction {
   id: string;
@@ -60,6 +67,29 @@ export interface Transaction {
   status: TransactionStatus;
   /** Clean Urdu confirmation text (text-out path per design.md §2). */
   confirmation_ur: string | null;
+  /* ---- §11 integrity chain (transaction_to_wire) -----------------------------
+     Optional in TS: rows from a pre-§11 server simply lack them, and the UI
+     renders the neutral default instead of erroring. Edits never rewrite the
+     sealed hash — a mismatch IS the "amended after sealing" signal. */
+  trust_tier?: TrustTier | null;
+  entry_hash?: string | null;
+  prev_entry_hash?: string | null;
+}
+
+/** GET /api/merchants/{id}/ledger/verify (schema.md §11, server/app/ledger.py
+    verify_chain). Tamper-EVIDENT, not tamper-PROOF: an edit after sealing is a
+    visible amendment (still auditable via original_values), a broken link is a
+    vanished/out-of-band row. The verdict goes to the officer; the officer decides. */
+export interface LedgerVerifyResult {
+  valid: boolean;
+  /** Sealed rows that were recomputed. */
+  checked: number;
+  /** Transaction ids whose CURRENT fields no longer match their sealed hash. */
+  amended_after_sealing: string[];
+  /** Rows with no seal yet (inserted by a pre-sealing path). */
+  unsealed: number;
+  broken_at: string | null;
+  details: { tx_id: string; problem: string; [key: string]: unknown }[];
 }
 
 /** schema.md §3 — Udhar Radar derived view: outstanding per customer.
@@ -208,4 +238,59 @@ export interface CreditReportPreview {
   };
   narrative_ur: string | null;
   line_items: CreditReportLineItem[];
+  /* ---- v0.7 (in flight, optional per contract) ------------------------------- */
+  trust?: ReportTrustBlock | null;
+  officer?: OfficerPackBlock | null;
+  /** Honest disclosures — what this report does NOT know (schema.md §9:
+      every input is merchant-volunteered; omission is not detectable). */
+  limitations?: string[] | null;
+}
+
+/* ---- v0.7 addendum (credit-agent, landing in parallel) — officer pack ---------
+   Additions to report_json the credit agent is shipping: a `trust` block
+   (corroboration), an `officer` block (visit metrics), and root `limitations`.
+   EVERY field is optional here by contract: the UI renders a section when its
+   fields exist and hides it gracefully when they don't (optional chaining +
+   empty-state fallbacks), so the build works against today's API AND tomorrow's.
+   Field names below mirror the credit-agent's planned wire keys; unknown extra
+   keys on the payload are ignored. */
+
+/** report_json.trust — corroboration across the ledger, 0..100 ("_pct" suffix
+    is the wire convention; absent → no corroboration claim is rendered). */
+export interface ReportTrustBlock {
+  corroboration_pct?: number | null;
+}
+
+/** One aging bucket. `bucket` is the server's label (e.g. "0-30", "31-60",
+    "60+"); amount_pkr is the outstanding sum in it; count is optional. */
+export interface OfficerAgingBucket {
+  bucket: string;
+  amount_pkr: number;
+  count?: number | null;
+}
+
+/** One weekly-activity point. Accepts both plausible wire shapes: a bare
+    number per week or an object with the week label + entries count. */
+export interface OfficerWeekPoint {
+  week?: string | null;
+  entries: number;
+}
+
+/** report_json.officer — the loan-officer pack, computed by the credit agent
+    over ledger internals only. Absent block → the whole section stays hidden. */
+export interface OfficerPackBlock {
+  /** Outstanding by days-outstanding bucket, oldest last. */
+  aging?: OfficerAgingBucket[] | null;
+  /** Collected ÷ billed over the period. Both wire spellings accepted;
+      `collection_rate` may be a 0..1 fraction OR already a percentage —
+      the renderer normalizes (≤1 → ×100). */
+  collection_rate?: number | null;
+  collection_rate_pct?: number | null;
+  /** Largest single debtor's share of outstanding, 0..100. WARN > 40. */
+  top_debtor_concentration_pct?: number | null;
+  /** Entries per week, oldest→newest (recent weeks last). */
+  weekly_activity?: OfficerWeekPoint[] | number[] | null;
+  /** Percent drop in activity vs the prior baseline, when the server flags
+      one; null/absent → no alert banner. */
+  activity_drop_pct?: number | null;
 }
