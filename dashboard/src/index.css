@@ -400,6 +400,11 @@
   .bizro-card-hero {
     break-inside: avoid;
   }
+  /* Officer-portal print blocks (committee pack): a section never splits
+     across pages — the pack paginates as whole blocks. */
+  .bizro-print-keep {
+    break-inside: avoid;
+  }
   .bizro-card-hover,
   .bizro-card-hover:hover {
     transition: none !important;
