@@ -228,6 +228,42 @@ _KIND_TEMPLATES_UR = {
     "udhar_settlement": "{name} نے {amount} واپس کیے۔",
 }
 
+# Kinds where item detail is expected. "cash_sale" is the schema-doc name; the
+# codebase Kind literal is "sale" (models.py) — both listed so the empty-items
+# notice fires regardless of vocabulary.
+KINDS_WITH_ITEMS = {"sale", "cash_sale", "expense", "udhar_given"}
+_MAX_LINES_SHOWN = 3  # read back at most this many item lines; the rest → "+N more"
+
+
+def _items_sentence(tx: Transaction, numeral_style: str, lang: str) -> str | None:
+    """Item read-back sentence for the confirmation, or None to append nothing.
+    Read-back only: item names verbatim (never translated); qty and price digits
+    follow NUMERAL_STYLE. Empty item_lines on an item-bearing kind → explicit
+    'total only' notice so the merchant knows item detail was dropped.
+    udhar_settlement with no items gets no extra line."""
+    lines = tx.item_lines or []
+    ur = lang == "ur"
+    if lines:
+        shown = lines[:_MAX_LINES_SHOWN]
+        entries = [
+            f"{to_numeral_digits(li.qty, numeral_style)} {li.item}"
+            f" ({to_numeral_digits(li.line_total, numeral_style)})"
+            for li in shown
+        ]
+        text = ("آئٹمز: " if ur else "Items: ") + ("، " if ur else ", ").join(entries)
+        remaining = len(lines) - len(shown)
+        if remaining > 0:
+            n = to_numeral_digits(remaining, numeral_style)
+            text += f" +{n} مزید" if ur else f" +{n} more"
+        return text + ("۔" if ur else ".")
+    if tx.kind in KINDS_WITH_ITEMS:
+        return (
+            "صرف کل رقم درج ہوئی — آئٹم کی تفصیل شامل نہیں۔"
+            if ur
+            else "Only the total is recorded — no item detail."
+        )
+    return None
+
 
 def _name_or_fallback(counterparty, lang: str = "en") -> str:
     name = (getattr(counterparty, "name", None) or "").strip()
@@ -256,7 +292,12 @@ def build_confirmation(tx: Transaction, numeral_style: str = "western", lang: st
         sentence = tpl.format(name=name, amount=amount)
     lead = "سمجھ گیا۔" if ur else "Got it."
     q = QUESTION_UR if ur else QUESTION
-    return f"{lead} {sentence} {q}"
+    parts = [lead, sentence]
+    items = _items_sentence(tx, numeral_style, lang)
+    if items:
+        parts.append(items)
+    parts.append(q)  # question always LAST, byte-identical
+    return " ".join(parts)
 
 
 # Historical name kept: voice_agent/__init__.py (and older callers) import
