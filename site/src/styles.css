@@ -2230,26 +2230,36 @@ a:focus-visible,
 
 .hero__backdrop {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  /* full-bleed: escape the .wrap width cap so the texture spans the
+     whole viewport instead of floating as a 1120px rectangle */
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+  width: auto;
   z-index: 0;
   overflow: clip;
   pointer-events: none;
-  /* dissolve the photo's top and bottom edges into the canvas so the
-     texture reads as paper grain, not a picture behind text */
+  /* dissolve ALL four edges into the canvas so the texture reads as
+     paper grain, not a picture behind text */
   -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 14%,
-    #000 86%,
-    transparent 100%
-  );
+      to bottom,
+      transparent 0,
+      #000 14%,
+      #000 86%,
+      transparent 100%
+    ),
+    linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%);
+  -webkit-mask-composite: source-in;
   mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 14%,
-    #000 86%,
-    transparent 100%
-  );
+      to bottom,
+      transparent 0,
+      #000 14%,
+      #000 86%,
+      transparent 100%
+    ),
+    linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%);
+  mask-composite: intersect;
 }
 
 .hero__backdrop img {
