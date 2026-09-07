@@ -57,6 +57,17 @@ class Settings:
     # chat-completions; any failure falls back to the whisper provider above ---
     stt_provider: str = "groq"  # groq | qwen
     stt_qwen_model: str = "qwen3-asr-flash"
+    # --- Cross-check (dual-engine agreement): OpenAI Whisper as an INDEPENDENT
+    # second opinion. When both engines agree, transcription confidence is
+    # boosted; on disagreement the entries are penalized and the merchant is
+    # asked to confirm — a wrong number never slips through silently. ---
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"
+    stt_crosscheck: str = "auto"  # auto | on | off (auto = on iff OPENAI_API_KEY)
+    stt_secondary_model: str = "whisper-1"  # or gpt-4o-transcribe
+    stt_agree_threshold: float = 0.80  # normalized similarity considered "agree"
+    stt_agree_bonus: float = 0.10
+    stt_disagree_penalty: float = 0.10
     repo_root: Path = field(default_factory=_find_repo_root)
 
     @property
@@ -66,6 +77,14 @@ class Settings:
         if self.mock_mode == "never":
             return False
         return not self.dashscope_api_key  # auto
+
+    @property
+    def crosscheck_enabled(self) -> bool:
+        if self.stt_crosscheck == "off":
+            return False
+        if not self.openai_api_key:
+            return False
+        return True  # "on" or "auto" with a key present
 
 
 def load_settings(env: dict[str, str] | None = None) -> Settings:
@@ -92,4 +111,11 @@ def load_settings(env: dict[str, str] | None = None) -> Settings:
         stt_language=get("STT_LANGUAGE", "ur"),
         stt_provider=get("STT_PROVIDER", "groq").lower(),
         stt_qwen_model=get("STT_QWEN_MODEL", Settings.stt_qwen_model),
+        openai_api_key=get("OPENAI_API_KEY"),
+        openai_base_url=get("OPENAI_BASE_URL", Settings.openai_base_url),
+        stt_crosscheck=get("STT_CROSSCHECK", "auto").lower(),
+        stt_secondary_model=get("STT_SECONDARY_MODEL", Settings.stt_secondary_model),
+        stt_agree_threshold=float(get("STT_AGREE_THRESHOLD", "0.80")),
+        stt_agree_bonus=float(get("STT_AGREE_BONUS", "0.10")),
+        stt_disagree_penalty=float(get("STT_DISAGREE_PENALTY", "0.10")),
     )

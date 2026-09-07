@@ -64,6 +64,10 @@ def _mock(agg: Aggregates, scored: Scored, merchant: str) -> tuple[str, bool]:
 def _call_reasoning_model(payload: dict) -> str | None:
     import httpx  # lazy: only needed on the live path
 
+    # BIZRO_OFFLINE=1 (test harness): never a live call, whatever the env says —
+    # other suites' .env loaders can re-inject DASHSCOPE_API_KEY mid-session.
+    if os.environ.get("BIZRO_OFFLINE") == "1":
+        return None
     key = os.environ.get("DASHSCOPE_API_KEY", "")
     if not key:
         return None

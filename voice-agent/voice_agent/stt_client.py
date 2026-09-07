@@ -24,6 +24,7 @@ from typing import Any
 
 import httpx
 
+from . import stt_crosscheck
 from .config import Settings
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,92 @@ def transcribe(audio_bytes: bytes, *, filename: str = "voice.wav", settings: Set
                 exc, settings.stt_model, settings.stt_base_url,
             )
     return _whisper_transcribe(audio_bytes, filename=filename, settings=settings)
+
+
+def transcribe_dual(
+    audio_bytes: bytes, *, filename: str = "voice.wav", settings: Settings
+) -> dict[str, Any]:
+    """Primary engine + independent OpenAI Whisper second opinion.
+
+    Returns `{"transcript", "primary", "secondary", "cross", "engines", "errors"}`
+    where `cross` is the stt_crosscheck record (see stt_crosscheck.evaluate) or
+    None when the second engine is disabled/failed. The chosen transcript is the
+    primary's when it succeeded, else the secondary's (never lose a voice note
+    to one engine's hiccup)."""
+    transcript = None
+    errors: dict[str, str] = {}
+    try:
+        transcript = transcribe(audio_bytes, filename=filename, settings=settings)
+    except Exception as exc:  # noqa: BLE001 — recorded, secondary still runs
+        errors["primary"] = str(exc)[:200]
+        logger.warning("primary STT failed: %s", exc)
+
+    secondary = None
+    cross: dict[str, Any] | None = None
+    if settings.crosscheck_enabled:
+        try:
+            secondary = _openai_transcribe(
+                audio_bytes, filename=filename, settings=settings
+            )
+        except Exception as exc:  # noqa: BLE001 — crosscheck is best-effort
+            errors["secondary"] = str(exc)[:200]
+            logger.warning("crosscheck STT failed: %s", exc)
+
+    if transcript is None and secondary is not None:
+        transcript = secondary
+    if transcript is None:
+        raise STTError(
+            "all STT engines failed: " + "; ".join(f"{k}: {v}" for k, v in errors.items())
+            or "no STT engine available"
+        )
+    if transcript is not None and secondary is not None and transcript != secondary:
+        cross = stt_crosscheck.evaluate(transcript, secondary, settings)
+    engines = [settings.stt_model]
+    if secondary is not None:
+        engines.append(settings.stt_secondary_model)
+    return {
+        "transcript": transcript,
+        "primary": transcript,
+        "secondary": secondary,
+        "cross": cross,
+        "engines": engines,
+        "errors": errors,
+    }
+
+
+def _openai_transcribe(
+    audio_bytes: bytes, *, filename: str, settings: Settings
+) -> str:
+    """OpenAI's own Whisper (or gpt-4o-transcribe) — the INDEPENDENT second
+    opinion for the cross-check. Same OpenAI-shaped endpoint, different vendor."""
+    if not settings.openai_api_key:
+        raise STTError("OPENAI_API_KEY not set — crosscheck engine unavailable")
+    import llm_guard  # free-tier budget guard (repo root; D6-2)
+
+    llm_guard.allow(f"stt:{settings.stt_secondary_model}")
+    files = {"file": (filename, audio_bytes, "audio/wav")}
+    data: dict[str, Any] = {"model": settings.stt_secondary_model, "response_format": "json"}
+    if settings.stt_language:
+        data["language"] = settings.stt_language
+    resp = httpx.post(
+        settings.openai_base_url.rstrip("/") + "/audio/transcriptions",
+        headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+        files=files,
+        data=data,
+        timeout=120.0,
+    )
+    if resp.status_code != 200:
+        raise STTError(
+            f"OpenAI STT HTTP {resp.status_code}: {resp.text[:300]}"
+        )
+    payload = resp.json()
+    text = str(payload.get("text") or "").strip()
+    llm_guard.record(
+        f"stt:{settings.stt_secondary_model}", usage={"completion_tokens": len(text)}
+    )
+    if not text:
+        raise STTError("OpenAI STT returned an empty transcript")
+    return text
 
 
 def _qwen_asr(audio_bytes: bytes, *, filename: str, settings: Settings) -> str:

@@ -33,6 +33,7 @@ from voice_agent.decode import DecodeError, decode_audio
 from voice_agent.mock_data import SCENARIOS, infer_scenario, mock_response_text
 from voice_agent.models import Transaction
 from voice_agent.numbers import collapse_suspected, normalize_spoken_numbers
+from voice_agent import stt_crosscheck
 
 SYSTEM_PROMPT = """You are Bizro's voice-ledger parser for Pakistani karyana (corner-store) merchants.
 You receive ONE short WhatsApp voice note in casual Urdu, often mixed with English words and brand
@@ -148,6 +149,7 @@ def process_voice_note_multi(
     settings = settings or load_settings()
     when = _coerce_occurred_at(occurred_at)
     audio_bytes = Path(audio_path).read_bytes()
+    cross: dict | None = None  # dual-engine STT agreement record (live path only)
 
     if settings.use_mock:
         scenario = (
@@ -168,12 +170,14 @@ def process_voice_note_multi(
             # (The OpenRouter free tier has no audio-input models.) The omni
             # single-call path stays for when a DashScope voucher lands.
             try:
-                from voice_agent.stt_client import STTError, transcribe
+                from voice_agent.stt_client import STTError, transcribe_dual
 
                 decoded = decode_audio(audio_bytes, strategy=settings.audio_decode)
-                transcript = transcribe(
+                dual = transcribe_dual(
                     decoded.data, filename=f"voice.{decoded.api_format}", settings=settings
                 )
+                transcript = dual["transcript"]
+                cross = dual.get("cross")
                 # plain text call — generic hosts reject the omni field set.
                 # Number aid: bracketed digit hints after spoken number words
                 # cut digit-conversion errors (the #1 association killer).
@@ -226,6 +230,9 @@ def process_voice_note_multi(
         # Per-entry failures already became low_confidence entries inside
         # _assemble_all, so the envelope stays schema-valid even after a
         # failed repair — nothing else to do here.
+    # Dual-engine agreement adjustments LAST: confidence boost on agreement,
+    # penalty on divergence — auditable in source.raw_output.stt_crosscheck.
+    stt_crosscheck.apply_crosscheck(txs, cross)
     return {"transactions": txs, "reply_text": reply}
 
 
