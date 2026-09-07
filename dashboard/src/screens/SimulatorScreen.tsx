@@ -1082,8 +1082,9 @@ export function SimulatorScreen() {
               }}
               placeholder="Type a message…"
               aria-label="Message Bizro"
-              className="min-h-touch min-w-[9rem] flex-1 basis-full rounded-button border-[3px] border-ink-line bg-paper px-3 text-sm text-ink-line placeholder:text-ink-line placeholder:opacity-50"
+              className="min-h-touch basis-full rounded-button border-[3px] border-ink-line bg-paper px-3 text-sm text-ink-line placeholder:text-ink-line placeholder:opacity-50"
             />
+            <div className="flex w-full gap-2 [&>button]:flex-1 [&>button]:justify-center">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -1137,6 +1138,7 @@ export function SimulatorScreen() {
               <IconSend className="h-5 w-5" />
               Send
             </button>
+            </div>
           </div>
           {recording ? (
             <p role="status" className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-ink-line">
