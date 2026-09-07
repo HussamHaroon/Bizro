@@ -25,6 +25,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 from credit_agent.seed import seed_demo  # noqa: E402
 from credit_agent.report import generate_report  # noqa: E402
 from credit_agent.render import save_report_html  # noqa: E402
+from credit_agent.committee_summary import render_committee_summary_html  # noqa: E402
 from credit_agent.rubric import BAND_LABELS_UR, BAND_NEARLY, BAND_READY  # noqa: E402
 from credit_agent.db_view import CreditReport, get_sessionmaker  # noqa: E402
 
@@ -60,6 +61,25 @@ def _hist_row(base: dict, mid: str, score: int, days_ago: int) -> CreditReport:
     )
 
 
+def _ensure_mirror_columns(engine) -> None:
+    """Additive, idempotent demo-DB shim: the mirror writes trust_tier /
+    entry_hash / prev_entry_hash (server §11 contract). On a fresh DB built
+    from THIS worktree's server models those columns may not exist yet (the
+    §11 branch may not be merged) — add them here so the demo DB matches the
+    contract. No-op when the server already owns them; server-owned DDL is
+    never replaced (schema.md stays server-owned)."""
+    from sqlalchemy import text
+
+    with engine.connect() as conn:
+        have = {
+            row[1] for row in conn.execute(text("PRAGMA table_info(transactions)"))
+        }
+        for col in ("trust_tier", "entry_hash", "prev_entry_hash"):
+            if col not in have:
+                conn.execute(text(f"ALTER TABLE transactions ADD COLUMN {col} TEXT"))
+        conn.commit()
+
+
 def main() -> None:
     db = sys.argv[1] if len(sys.argv) > 1 else os.environ.get(
         "DATABASE_URL", "sqlite:///./bizro.db"
@@ -70,7 +90,9 @@ def main() -> None:
 
     from server.app.db import Base as ServerBase
 
-    ServerBase.metadata.create_all(create_engine(db))
+    engine = create_engine(db)
+    ServerBase.metadata.create_all(engine)
+    _ensure_mirror_columns(engine)
 
     ids, reports = [], {}
     for name, kwargs, _hist in MERCHANTS:
@@ -92,6 +114,11 @@ def main() -> None:
 
     out = pathlib.Path("credit_report_demo.html").resolve()
     save_report_html(reports[MERCHANTS[0][0]], str(out))
+    # §12: the one-page committee artifact for the same merchant
+    committee_out = pathlib.Path("credit_report_committee.html").resolve()
+    committee_out.write_text(
+        render_committee_summary_html(reports[MERCHANTS[0][0]]), encoding="utf-8"
+    )
     print(json.dumps({
         "merchants": [
             {
@@ -103,6 +130,7 @@ def main() -> None:
             for name, mid, _hist in ids
         ],
         "html": str(out),
+        "committee_html": str(committee_out),
     }, ensure_ascii=False, indent=2))
 
 

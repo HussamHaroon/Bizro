@@ -24,7 +24,9 @@ from .formatting import (
     provider_from_base_url,
 )
 from .narrative import build_narrative
-from .rubric import score
+from .officer import compute_officer_metrics
+from .rubric import INDICATOR_NOTE, LIMITATIONS, score
+from .trust import compute_trust
 
 PERIODS = {
     "last_30_days": 30,
@@ -86,6 +88,14 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         narrative_ur, is_mock = build_narrative(agg, scored, mname)
         data_quality = compute_data_quality(list(txs), now=end)
         forensics = compute_forensics(list(txs), customers, now=end)
+        # §12: corroboration share — how much of the stated revenue (sale +
+        # udhar_settlement) carries a tier vouched by someone other than the
+        # merchant. Disclosure for the officer, never a trust score.
+        trust = compute_trust(list(txs))
+        # §12: officer completeness metrics — aging, collection rate,
+        # concentration, weekly-entries activity. The desk-check numbers a
+        # manual credit officer would compile, computed from the ledger.
+        officer = compute_officer_metrics(list(txs), customers, now=end)
         # §10: forensics ride the same disclosure card — patterns from ledger
         # internals + receipt provenance, never assertions of intent.
         data_quality["forensics"] = forensics
@@ -141,6 +151,9 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
                 "score": scored.score,
                 "band": scored.band,
                 "label_ur": scored.label_ur,
+                # §12 honest labeling: travels with the score into every
+                # consumer of the payload, not just the renderers.
+                "note": INDICATOR_NOTE,
             },
             "metrics": [
                 _metric("entries", "Total entries", "کل اندراجات",
@@ -182,6 +195,14 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
             # Data-quality & consistency disclosures (schema.md §9 local ruling):
             # ledger-internals evidence for the loan officer — never a trust score.
             "data_quality": data_quality,
+            # §12: trust tiers — corroboration share of stated revenue.
+            "trust": trust,
+            # §12: officer completeness metrics for the review pack.
+            "officer": officer,
+            # §12: the four standing limitations, rendered as a footer card on
+            # every surface — self-reported inputs, no outcome validation,
+            # Urdu-centric parsing, heuristics not forensics.
+            "limitations": list(LIMITATIONS),
         }
         if is_mock:
             report["mock"] = True
