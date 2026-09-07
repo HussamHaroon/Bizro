@@ -193,7 +193,7 @@ def _process_payload(
                     logger.exception("Message handling failed (wamid=%s)", wamid)
                     results.append({"message_id": wamid, "ok": False, "error": "internal"})
 
-    return {"processed": len(results), "results": results}
+    return results
 
 
 def _claim_message_id(message_id: str) -> bool:
@@ -382,6 +382,17 @@ def _ingest_free_text(
             "reply": _h, "sent": sent,
         }
 
+    # §11: typed "cancel last" correction — handled BEFORE the pipeline so a
+    # cancel command can never be parsed as a transaction. Helper lives in
+    # voice_agent.corrections (parallel agent, contract in its SKILL); absent
+    # package → hook is inert and normal parsing continues.
+    try:
+        from voice_agent.corrections import is_cancel_command
+    except ImportError:
+        is_cancel_command = None
+    if is_cancel_command and is_cancel_command(body):
+        return _cancel_last_entry(session, merchant, msg)
+
     try:
         env = dispatch.process_transcript_multi(body, merchant, occurred_at)
     except Exception:
@@ -427,6 +438,47 @@ def _ingest_free_text(
         "confirmation_ur": confirmation,
         "reply": confirmation,
         "sent": sent,
+    }
+
+
+def _cancel_last_entry(session, merchant: Merchant, msg: dict[str, Any]) -> dict[str, Any]:
+    """Reject the merchant's most recent PENDING entry and confirm in the
+    merchant's language. The integrity chain keeps the original seal — the
+    status change surfaces in verify as amended-after-sealing, an honest
+    trail rather than a silent deletion (schema.md §11)."""
+    from sqlalchemy import select as _select
+
+    from .db import Transaction
+
+    try:
+        from voice_agent.corrections import CANCEL_CONFIRMATION_REPLIES
+    except ImportError:
+        CANCEL_CONFIRMATION_REPLIES = {
+            "en": "Done. Your last entry is cancelled.",
+            "ur": "ہو گیا۔ آخری اندراج کینسل ہو گیا۔",
+        }
+
+    tx = session.scalars(
+        _select(Transaction)
+        .where(Transaction.merchant_id == merchant.id, Transaction.status == "pending")
+        .order_by(Transaction.created_at.desc())
+        .limit(1)
+    ).first()
+    if tx is None:
+        lang = lang_mod.get_merchant_lang(session, merchant)
+        reply = ("Nothing pending to cancel." if lang != "ur"
+                 else "کینسل کرنے کے لیے کچھ باقی نہیں۔")
+        cancelled = False
+    else:
+        tx.status = "rejected"
+        session.add(tx)
+        lang = lang_mod.get_merchant_lang(session, merchant)
+        reply = CANCEL_CONFIRMATION_REPLIES.get(lang, CANCEL_CONFIRMATION_REPLIES["en"])
+        cancelled = True
+    sent = dispatch.send_reply(session, merchant, reply)
+    return {
+        "message_id": msg.get("id"), "ok": True, "type": "text",
+        "cancelled": cancelled, "reply": reply, "sent": sent,
     }
 
 

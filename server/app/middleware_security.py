@@ -8,7 +8,7 @@ EVERY response (including 429s and errors that flow through this layer).
 Rate limiting: in-memory sliding window keyed by client IP (the socket peer,
 ``scope["client"]`` — not a spoofable header). Two buckets:
 
-- ``POST /webhook/whatsapp``  → RATE_LIMIT_WEBHOOK_PER_HOUR (default 30)/hour.
+- ``POST /webhook/whatsapp``  → RATE_LIMIT_WEBHOOK_PER_HOUR (default 300)/hour.
   This endpoint is PUBLIC and triggers paid-tier AI calls, so it gets the
   strict budget.
 - everything else             → RATE_LIMIT_GENERAL_PER_MIN (default 120)/min.
@@ -82,7 +82,10 @@ def reset_rate_limits() -> None:
 def _bucket_for(method: str, path: str) -> tuple[str, int, int]:
     """Returns (bucket name, limit, window seconds) for a request."""
     if method == "POST" and path == WEBHOOK_PATH:
-        return "webhook", _env_int("RATE_LIMIT_WEBHOOK_PER_HOUR", 30), WEBHOOK_WINDOW_S
+        # 300/hr default: a demo venue shares ONE public IP, and every hero-mic
+        # press hits this bucket — 30/hr self-throttled the live demo.
+        # Env still overrides for hardening a real deployment.
+        return "webhook", _env_int("RATE_LIMIT_WEBHOOK_PER_HOUR", 300), WEBHOOK_WINDOW_S
     return "general", _env_int("RATE_LIMIT_GENERAL_PER_MIN", 120), GENERAL_WINDOW_S
 
 

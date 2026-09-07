@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from datetime import timezone as _UTC
 from typing import Any
 
 from sqlalchemy import select
@@ -45,10 +46,17 @@ def _canonical_item_lines(item_lines: Any) -> str:
 
 
 def _iso(value: Any) -> str:
+    """Timestamps must hash IDENTICALLY at seal time and at verify time.
+    SQLite reads back naive datetimes while inserts were tz-aware, so every
+    datetime is normalized to UTC before hashing — naive values are treated
+    as UTC (the server-wide storage convention)."""
     if value is None:
         return ""
     if hasattr(value, "isoformat"):
-        return value.isoformat()
+        dt = value if not hasattr(value, "tzinfo") else value
+        if getattr(dt, "tzinfo", None) is None:
+            dt = dt.replace(tzinfo=_UTC.utc)
+        return dt.astimezone(_UTC.utc).isoformat()
     return str(value)
 
 
