@@ -94,6 +94,13 @@ def main() -> None:
     ServerBase.metadata.create_all(engine)
     _ensure_mirror_columns(engine)
 
+    def _seal_chain() -> None:
+        """Seal every seeded row onto the §11 integrity chain (runs after all
+        seeding) so the committee one-pager shows a real sealed chain."""
+        from server.app.db import _backfill_ledger_chain
+
+        _backfill_ledger_chain(url=db)  # the SEED database — never the env's DATABASE_URL
+
     ids, reports = [], {}
     for name, kwargs, _hist in MERCHANTS:
         mid = seed_demo(db, merchant_name=name, create_tables=False, **kwargs)
@@ -104,6 +111,8 @@ def main() -> None:
     # accumulates (Al-Madina 58 → 77 → latest; Bilal 41 → 55 → latest), all rows
     # the SAME 90-day window so the sparkline never mixes periods. Mock-marked
     # demo data (schema.md §6.3).
+    _seal_chain()
+
     Session = get_sessionmaker(db)
     with Session() as s:
         for name, mid, hist in ids:
