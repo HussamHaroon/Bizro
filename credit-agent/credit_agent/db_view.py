@@ -70,6 +70,16 @@ class Transaction(Base):
     status: Mapped[str] = mapped_column(String, default="pending")
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Trust tier (server §11 contract): who vouches for the entry —
+    # 'self_reported' | 'customer_confirmed' | 'third_party'; NULL reads as
+    # self_reported. Nullable + additive: older rows and the mirror's own
+    # minimal tables predate it.
+    trust_tier: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Ledger integrity chain (server §11): entry_hash seals the row at insert;
+    # prev_entry_hash links the merchant's previous row. Read-only here — the
+    # committee summary reports the chain tail, nothing in this package seals.
+    entry_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prev_entry_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class CreditReport(Base):

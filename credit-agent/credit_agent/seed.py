@@ -135,7 +135,7 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
         s.flush()  # customers must exist before transactions reference them
 
         def add_tx(day_offset, kind, amount, source, conf, flag="none", status="confirmed",
-                   desc="", customer=None):
+                   desc="", customer=None, trust_tier=None):
             # day_offset 0 = TODAY: a random 1-12h earlier than `now`, so the
             # newest entry lands today (or late yesterday) — never in the future
             # (owner ruling: demo history runs up to and including today).
@@ -160,6 +160,8 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
                 confidence=conf if source != "manual" else None,
                 raw_model_output=raw_out,
                 flag=flag, status=status,
+                # Trust tier (server §11 contract): NULL = self_reported.
+                trust_tier=trust_tier,
                 created_at=when, updated_at=when,
             ))
 
@@ -178,28 +180,36 @@ def _gen_healthy(rng, add_tx, days: int) -> None:
     circle with partial settlements, wholesale restock receipts every week or
     two (two left pending price flags), amounts trending gently upward. Recent
     months are as full as older ones — a loan officer must see a LIVE shop,
-    not one that stopped logging in August."""
+    not one that stopped logging in August.
+    Trust tiers (server §11 contract): a realistic mix — mostly self_reported
+    (NULL), some customer-confirmed walk-in settlements/sales, and the first
+    three supplier receipts third_party (the §10 verification handshake)."""
     anomalies = 0
+    third_party_left = 3  # supplier-verified receipts, capped for realism
     for day in range(days, -1, -1):  # day 0 = today (inclusive newest cap)
         dow = day % 7
         growth = 1 + 0.18 * (days - day) / max(1, days)  # gentle upward trend
         recent = day <= 10  # the newest stretch is always fully logged —
         # a shop being screened for credit cannot look like it stopped midway
         if recent or rng.random() > 0.10:  # daily cash sale; shuttered ~1 day in ten
+            confirmed_walk_in = rng.random() < 0.15
             add_tx(day, "sale", rng.uniform(600, 3200) * growth, "voice",
-                   rng.uniform(0.88, 0.98), desc="cash sale")
+                   rng.uniform(0.88, 0.98), desc="cash sale",
+                   trust_tier="customer_confirmed" if confirmed_walk_in else None)
         if (recent and rng.random() > 0.35) or rng.random() > 0.72:
-            # a second, often typed, sale most days
+            # a second, often typed, sale most days — typed by the merchant
             add_tx(day, "sale", rng.uniform(400, 2800) * growth, "text",
                    rng.uniform(0.90, 0.97), desc="cash sale")
         if dow in (1, 4):  # udhar out, twice a week, to the circle
             add_tx(day, "udhar_given", rng.uniform(800, 6500) * growth, "voice",
                    rng.uniform(0.84, 0.96), customer=rng.choice(CUSTOMERS),
                    desc="udhar given")
-        if dow in (2, 5):  # partial settlements, twice a week
+        if dow in (2, 5):  # partial settlements, twice a week — in person when
+            # the customer walks in (customer_confirmed), else merchant-stated
             add_tx(day, "udhar_settlement", rng.uniform(500, 5200) * growth, "voice",
                    rng.uniform(0.88, 0.97), customer=rng.choice(CUSTOMERS),
-                   desc="udhar received")
+                   desc="udhar received",
+                   trust_tier="customer_confirmed" if rng.random() < 0.25 else None)
         if day > 4 and day % rng.randint(6, 9) == 0:  # wholesale restock receipt —
             # never inside the newest few days: a restock the day before the
             # report makes the current month look loss-making when it isn't
@@ -209,10 +219,14 @@ def _gen_healthy(rng, add_tx, days: int) -> None:
             if flagged:
                 anomalies += 1
             conf = rng.uniform(0.52, 0.68) if flagged else rng.uniform(0.80, 0.95)
+            tier = None
+            if not flagged and third_party_left:
+                tier = "third_party"  # supplier handshake confirmed the receipt
+                third_party_left -= 1
             add_tx(day, "expense", qty * price * growth, "photo", conf,
                    flag="price_anomaly" if flagged else "none",
                    status="pending" if flagged else "confirmed",
-                   desc=f"supplier: {item} {qty} {unit}")
+                   desc=f"supplier: {item} {qty} {unit}", trust_tier=tier)
 
 
 def _gen_contrast(rng, add_tx, days: int) -> None:

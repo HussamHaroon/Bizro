@@ -25,6 +25,7 @@ from .formatting import (
 )
 from .narrative import build_narrative
 from .rubric import score
+from .trust import compute_trust
 
 PERIODS = {
     "last_30_days": 30,
@@ -86,6 +87,10 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         narrative_ur, is_mock = build_narrative(agg, scored, mname)
         data_quality = compute_data_quality(list(txs), now=end)
         forensics = compute_forensics(list(txs), customers, now=end)
+        # §12: corroboration share — how much of the stated revenue (sale +
+        # udhar_settlement) carries a tier vouched by someone other than the
+        # merchant. Disclosure for the officer, never a trust score.
+        trust = compute_trust(list(txs))
         # §10: forensics ride the same disclosure card — patterns from ledger
         # internals + receipt provenance, never assertions of intent.
         data_quality["forensics"] = forensics
@@ -182,6 +187,8 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
             # Data-quality & consistency disclosures (schema.md §9 local ruling):
             # ledger-internals evidence for the loan officer — never a trust score.
             "data_quality": data_quality,
+            # §12: trust tiers — corroboration share of stated revenue.
+            "trust": trust,
         }
         if is_mock:
             report["mock"] = True
