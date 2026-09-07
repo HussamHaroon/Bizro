@@ -25,6 +25,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { SealGauge } from '../components/SealGauge';
 import { SealMark } from '../components/TrustSealBadge';
 import { TrustTierBadge } from '../components/TrustTierBadge';
+import { OfficerPack } from '../components/OfficerPack';
 import { TrendSparkline } from '../components/TrendSparkline';
 import {
   IconFlag,
@@ -516,6 +517,11 @@ export function CreditReadinessScreen() {
           </ul>
         )}
       </section>
+
+      {/* Officer pack (v0.7, credit-agent in flight) — aging, collection rate,
+          concentration, activity drop, corroboration. Renders ONLY when the
+          payload carries the block; absent fields hide their own sections. */}
+      <OfficerPack report={report} />
 
       {/* Sourced line items with the audit-trail drill-down (design.md §7.2). */}
       <section aria-labelledby="lineitems-title">

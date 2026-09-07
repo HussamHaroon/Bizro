@@ -20,9 +20,10 @@
 import { BrowserRouter, NavLink, Route, Routes, Navigate } from 'react-router-dom';
 import { MerchantPicker } from './components/MerchantPicker';
 import { MockBanner } from './components/MockBanner';
-import { IconLedger, IconReport, IconSettings, IconWhatsApp } from './components/icons';
+import { IconCustomer, IconLedger, IconReport, IconSettings, IconWhatsApp } from './components/icons';
 import { MonthlyLedgerScreen } from './screens/MonthlyLedgerScreen';
 import { CreditReadinessScreen } from './screens/CreditReadinessScreen';
+import { OfficerReviewScreen } from './screens/OfficerReviewScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { NotFoundScreen } from './screens/NotFoundScreen';
 import { SimulatorScreen } from './screens/SimulatorScreen';
@@ -32,6 +33,7 @@ import { useMerchant } from './merchant';
 const SCREEN_TABS = [
   { to: '/ledger', icon: IconLedger, label: 'Ledger' },
   { to: '/credit', icon: IconReport, label: 'Credit' },
+  { to: '/officer', icon: IconCustomer, label: 'Officer' },
   { to: '/simulator', icon: IconWhatsApp, label: 'WhatsApp' },
   { to: '/settings', icon: IconSettings, label: 'Settings' },
 ] as const;
@@ -146,6 +148,7 @@ export function App() {
             <Route path="/" element={<Navigate to="/ledger" replace />} />
             <Route path="/ledger" element={<MonthlyLedgerScreen />} />
             <Route path="/credit" element={<CreditReadinessScreen />} />
+            <Route path="/officer" element={<OfficerReviewScreen />} />
             <Route path="/simulator" element={<SimulatorScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />
             {/* Dev-only gallery — deliberately NOT linked from the prod footer
