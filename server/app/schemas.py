@@ -92,6 +92,9 @@ class TransactionPatch(BaseModel):
     item_lines: list[ItemLine] | None = None
     flag: Flag | None = None
     status: Status | None = None
+    # §11: the merchant may upgrade an entry's tier ("customer confirmed it",
+    # "supplier verified the receipt"); only these three values are accepted.
+    trust_tier: Literal["self_reported", "customer_confirmed", "third_party"] | None = None
 
 
 class MerchantSettingsPut(BaseModel):
@@ -146,6 +149,10 @@ def transaction_to_wire(
         "confirmation_ur": confirmation_ur,
         "created_at": tx.created_at.isoformat(),
         "updated_at": tx.updated_at.isoformat(),
+        # §11: integrity chain + trust tier (null tier renders as self-reported)
+        "entry_hash": getattr(tx, "entry_hash", None),
+        "prev_entry_hash": getattr(tx, "prev_entry_hash", None),
+        "trust_tier": getattr(tx, "trust_tier", None) or "self_reported",
     }
     if tx.original_values:
         out["original_values"] = tx.original_values  # audit: pre-edit snapshot

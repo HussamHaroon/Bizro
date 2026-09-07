@@ -180,6 +180,15 @@ class Transaction(Base):
     # NOTE: additive nullable column beyond the schema.md v0.1 DDL, filed with
     # the Orchestrator for v0.2 (see STATUS.agent.md) — no consumer migration.
     original_values: Mapped[dict | None] = mapped_column(JSONVariant)
+    # --- ledger integrity chain (schema.md §11): entry_hash seals the row's
+    # fields at insert; prev_entry_hash links to the merchant's previous row.
+    # NEVER rewritten on edit/delete — verify_chain() detects amendments by
+    # recomputation and gaps as breaks. Additive nullable columns.
+    entry_hash: Mapped[str | None] = mapped_column(Text)
+    prev_entry_hash: Mapped[str | None] = mapped_column(Text)
+    # --- trust tier (schema.md §11): who vouches for this entry. NULL is
+    # self_reported. Set via PATCH or the supplier-verification handshake.
+    trust_tier: Mapped[str | None] = mapped_column(Text)
 
 
 class OutboundMessage(Base):
@@ -272,6 +281,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_additive_columns()
     _ensure_source_type_constraint()
+    _backfill_ledger_chain()
 
 
 _SOURCE_TYPE_CHECK = "source_type IN ('voice','photo','manual','text')"
@@ -336,16 +346,64 @@ def _ensure_additive_columns() -> None:
     """create_all() never ALTERs an existing table, so additive columns added
     after a DB was first created must be back-filled here (SQLite dev DBs;
     Postgres deployments run a real migration). Currently: §7.1's
-    outbound_messages.payload."""
+    outbound_messages.payload + §11's ledger-chain and trust-tier columns."""
     from sqlalchemy import inspect, text as sa_text
 
     inspector = inspect(engine)
     if not inspector.has_table("outbound_messages"):
         return
-    columns = {c["name"] for c in inspector.get_columns("outbound_messages")}
     with engine.begin() as conn:
-        if "payload" not in columns:
+        om_columns = {c["name"] for c in inspector.get_columns("outbound_messages")}
+        if "payload" not in om_columns:
             conn.execute(sa_text("ALTER TABLE outbound_messages ADD COLUMN payload JSON"))
+        tx_columns = {c["name"] for c in inspector.get_columns("transactions")}
+        for col, ddl in (
+            ("entry_hash", "ALTER TABLE transactions ADD COLUMN entry_hash TEXT"),
+            ("prev_entry_hash", "ALTER TABLE transactions ADD COLUMN prev_entry_hash TEXT"),
+            ("trust_tier", "ALTER TABLE transactions ADD COLUMN trust_tier TEXT"),
+        ):
+            if col not in tx_columns:
+                conn.execute(sa_text(ddl))
+
+
+def _backfill_ledger_chain() -> None:
+    """One-time seal of rows created before the chain existed (§11). Sealed in
+    (created_at, id) order per merchant; idempotent — sealed rows untouched."""
+    from sqlalchemy import select
+
+    from .ledger import seal_transaction
+
+    with db_session() as session:
+        rows = session.scalars(
+            select(Transaction)
+            .where(Transaction.entry_hash.is_(None))
+            .order_by(Transaction.merchant_id, Transaction.created_at, Transaction.id)
+        ).all()
+        if not rows:
+            return
+        tails: dict[uuid.UUID, str | None] = {}
+        for tx in rows:
+            prev = tails.get(tx.merchant_id)
+            if prev is None and tx.merchant_id not in tails:
+                prev = _sealed_tail(session, tx.merchant_id)
+            seal_transaction(tx, prev)
+            tails[tx.merchant_id] = tx.entry_hash
+        session.commit()
+
+
+def _sealed_tail(session: Session, merchant_id: uuid.UUID) -> str | None:
+    from sqlalchemy import select
+
+    row = session.execute(
+        select(Transaction.entry_hash)
+        .where(
+            Transaction.merchant_id == merchant_id,
+            Transaction.entry_hash.is_not(None),
+        )
+        .order_by(Transaction.created_at.desc(), Transaction.id.desc())
+        .limit(1)
+    ).first()
+    return row[0] if row else None
 
 
 def db_session() -> Session:

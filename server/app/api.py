@@ -810,6 +810,9 @@ def verify_supplier(transaction_id: str):
             f"on {tx.occurred_at.date().isoformat()}? Reply YES or NO."
         )
         sent = dispatch.deliver(phone, body)
+        # §11: requesting distributor confirmation upgrades the entry's trust
+        # tier; the confirmation reply matching remains future scope.
+        tx.trust_tier = "third_party"
         session.add(
             OutboundMessage(
                 merchant_id=tx.merchant_id,
@@ -828,6 +831,23 @@ def verify_supplier(transaction_id: str):
         }
 
 
+@router.get("/merchants/{merchant_id}/ledger/verify")
+def verify_ledger(merchant_id: str):
+    """Ledger integrity chain verdict (schema.md §11): recomputes every sealed
+    row and walks the links. valid=true means nothing sealed was later changed
+    and no row vanished; amended rows and gaps are listed, never hidden."""
+    from .ledger import verify_chain
+
+    with db_session() as session:
+        try:
+            mid = uuid.UUID(merchant_id)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="invalid merchant id")
+        if session.get(Merchant, mid) is None:
+            raise HTTPException(status_code=404, detail="merchant not found")
+        return verify_chain(session, mid)
+
+
 @router.patch("/transactions/{transaction_id}")
 def patch_transaction(transaction_id: str, patch: TransactionPatch):
     with db_session() as session:
@@ -843,6 +863,12 @@ def patch_transaction(transaction_id: str, patch: TransactionPatch):
         counterparty = updates.pop("counterparty", None)
 
         # Audit: snapshot editable fields on FIRST edit only (schema.md §4).
+        # §11: trust_tier is settable but deliberately NOT snapshotted — it is
+        # an attestation layer, not a ledger field; the sealed entry_hash only
+        # covers ledger content, so tier changes never read as tampering.
+        tier = updates.pop("trust_tier", None)
+        if tier is not None:
+            tx.trust_tier = tier
         if tx.original_values is None:
             tx.original_values = {f: getattr(tx, f) for f in _EDITABLE_FIELDS}
             if tx.occurred_at is not None:

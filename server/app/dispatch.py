@@ -516,7 +516,14 @@ def persist_transaction(
         raw_model_output=parsed.source.raw_output or {},
         flag=parsed.flag or "none",
         status=status,
+        trust_tier=getattr(parsed, "trust_tier", None) or None,
     )
+    # Seal onto the merchant's integrity chain BEFORE the row is visible
+    # (schema.md §11): entry_hash covers the inserted fields, prev_entry_hash
+    # links the chain. Edits/deletes never rewrite these columns.
+    from .ledger import chain_tail, seal_transaction
+
+    seal_transaction(tx, chain_tail(session, merchant.id))
     session.add(tx)
     session.flush()
 
