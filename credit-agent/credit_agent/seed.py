@@ -22,14 +22,19 @@ from datetime import datetime, timedelta, timezone
 from .db_view import Base, Customer, MediaBlob, Merchant, Transaction, get_sessionmaker
 
 RNG_SEED = 20260821
-CUSTOMERS = ["Ahmad", "Bilal", "Kamran", "Nasir", "Sana"]
+CUSTOMERS = ["Rahmat", "Usman", "Ashraf", "Naveed", "Imran", "Shoaib", "Dilawar", "Nasir", "Sana"]
 CONTRAST_CUSTOMERS = ["Ahmad", "Kamran"]  # narrow udhar circle → low breadth pillar
 ITEMS = [
     ("chai patti", 350, "packet"),
     ("cheeni", 180, "kg"),
     ("dal", 260, "kg"),
-    ("cooking oil", 720, "litre"),
-    ("atta", 190, "bag"),
+    ("cooking oil 5L", 3650, "tin"),
+    ("atta 10kg", 1200, "bag"),
+    ("basmati rice 5kg", 1450, "bag"),
+    ("surf packet", 480, "packet"),
+    ("besan", 280, "kg"),
+    ("cold drink crate", 960, "crate"),
+    ("ghee 1kg", 540, "carton"),
 ]
 CONTRAST_ANOMALY_DAYS = (3, 15, 51)   # price-anomaly receipts (2-3, spread)
 CONTRAST_GAP = (19, 30)               # ~12 days of stopped logging (irregularity)
@@ -169,28 +174,44 @@ def seed_demo(db_url: str, merchant_name: str = "Al-Madina Kiryana Store",
 
 
 def _gen_healthy(rng, add_tx, days: int) -> None:
+    """Steady 6-day-a-week shop: 1-2 entries most days, a nine-customer udhar
+    circle with partial settlements, wholesale restock receipts every week or
+    two (two left pending price flags), amounts trending gently upward. Recent
+    months are as full as older ones — a loan officer must see a LIVE shop,
+    not one that stopped logging in August."""
+    anomalies = 0
     for day in range(days, -1, -1):  # day 0 = today (inclusive newest cap)
-        # 5-6 entries/week: sales every ~1.2 days, udhar ~weekly, receipts ~weekly
-        if day % 2 == 0:
-            add_tx(day, "sale", rng.uniform(800, 4500), "voice",
-                   rng.uniform(0.86, 0.98), desc="cash sale")
-        if day % 7 == 3:
-            add_tx(day, "udhar_given", rng.uniform(500, 5000), "voice",
-                   rng.uniform(0.82, 0.96), customer=rng.choice(CUSTOMERS),
+        dow = day % 7
+        growth = 1 + 0.18 * (days - day) / max(1, days)  # gentle upward trend
+        recent = day <= 10  # the newest stretch is always fully logged —
+        # a shop being screened for credit cannot look like it stopped midway
+        if recent or rng.random() > 0.10:  # daily cash sale; shuttered ~1 day in ten
+            add_tx(day, "sale", rng.uniform(600, 3200) * growth, "voice",
+                   rng.uniform(0.88, 0.98), desc="cash sale")
+        if (recent and rng.random() > 0.35) or rng.random() > 0.72:
+            # a second, often typed, sale most days
+            add_tx(day, "sale", rng.uniform(400, 2800) * growth, "text",
+                   rng.uniform(0.90, 0.97), desc="cash sale")
+        if dow in (1, 4):  # udhar out, twice a week, to the circle
+            add_tx(day, "udhar_given", rng.uniform(800, 6500) * growth, "voice",
+                   rng.uniform(0.84, 0.96), customer=rng.choice(CUSTOMERS),
                    desc="udhar given")
-        if day % 7 == 5:
-            add_tx(day, "udhar_settlement", rng.uniform(300, 3000), "voice",
+        if dow in (2, 5):  # partial settlements, twice a week
+            add_tx(day, "udhar_settlement", rng.uniform(500, 5200) * growth, "voice",
                    rng.uniform(0.88, 0.97), customer=rng.choice(CUSTOMERS),
                    desc="udhar received")
-        if day % 6 == 0:
+        if day > 4 and day % rng.randint(6, 9) == 0:  # wholesale restock receipt —
+            # never inside the newest few days: a restock the day before the
+            # report makes the current month look loss-making when it isn't
             item, price, unit = rng.choice(ITEMS)
-            qty = rng.randint(1, 4)
-            flag = "price_anomaly" if day % 30 == 0 else "none"
-            conf = rng.uniform(0.78, 0.95)
-            if flag != "none":
-                conf = rng.uniform(0.5, 0.7)
-            add_tx(day, "expense", qty * price, "photo", conf, flag=flag,
-                   status="pending" if flag != "none" else "confirmed",
+            qty = rng.randint(2, 6)
+            flagged = anomalies < 2 and rng.random() < 0.22
+            if flagged:
+                anomalies += 1
+            conf = rng.uniform(0.52, 0.68) if flagged else rng.uniform(0.80, 0.95)
+            add_tx(day, "expense", qty * price * growth, "photo", conf,
+                   flag="price_anomaly" if flagged else "none",
+                   status="pending" if flagged else "confirmed",
                    desc=f"supplier: {item} {qty} {unit}")
 
 
