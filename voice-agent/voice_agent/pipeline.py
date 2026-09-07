@@ -135,7 +135,7 @@ def process_voice_note(
                 # DashScopeError propagate; the webhook maps it to
                 # MODEL_OUTAGE_REPLY_UR. Everything else (corrupt audio, STT
                 # failure) → ask again; never crash the webhook.
-                if isinstance(exc, DashScopeError):
+                if isinstance(exc, DashScopeError) or type(exc).__name__ == "FreeTierBudgetExceeded":
                     raise
                 # Corrupt audio or STT failure → ask again; never crash the webhook.
                 return _low_confidence_fallback(
@@ -152,7 +152,7 @@ def process_voice_note(
                     settings=settings, mock=False, note=f"audio decode failed: {exc}",
                 )
             model_text = client.omni_chat(
-                system=SYSTEM_PROMPT, user_text=_user_prompt(when)
+                system=SYSTEM_PROMPT, user_text=_user_prompt(when), audio=decoded
             ).text
 
     tx_dict, errors = _assemble(
