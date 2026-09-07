@@ -14,8 +14,8 @@ Built for the Bano Qabil x Alibaba Cloud AI Hackathon Pakistan 2026.
 
 ## Live
 
-- Production: <https://bizro-pk.vercel.app> — health at `/health` (both
-  returned HTTP 200 on 2026-09-04)
+- Production: <https://bizro-pk.vercel.app> — `/`, `/ledger` and `/health` all
+  returned HTTP 200 on 2026-09-07
 - Aliases: `getbizro.vercel.app`, `bizro-app.vercel.app`, `bizro-ai.vercel.app`
 - `/` is the marketing site. The dashboard SPA lives at `/ledger`, `/credit`,
   `/simulator`, and `/settings`; any other path gets an honest not-found screen.
@@ -84,7 +84,8 @@ the model stack and its fallbacks, and the security posture.
 - `scripts/` — `deploy.sh` (prod deploy) and `run_demo.sh` (one-command local
   demo).
 - `.agents/` — the multi-agent build system used during the hackathon
-  (orchestrator dispatches worker skills; see `.agents/skills/`).
+  (orchestrator dispatches worker skills). Local-only and gitignored: the
+  shipped repo is the product, not the scaffolding.
 
 ## Quickstart
 
@@ -147,8 +148,8 @@ bash scripts/deploy.sh
 The script builds `dashboard/` and `site/`, runs `vercel deploy --prod`,
 re-points the four aliases, and verifies `/health` and `/` return 200. Vercel
 env vars (see the table below) are managed in the Vercel dashboard. Production
-runs on Neon Postgres with `MEDIA_DIR=/tmp/media` — see `docs/GUIDE.md` for
-what is durable where.
+runs on Neon Postgres with `MEDIA_DIR=/tmp/media` — see `docs/Bizro_Guide.pdf`
+for what is durable where.
 
 ## Environment variables
 
@@ -180,15 +181,15 @@ Canonical contract: `.env.example` (copy to `.env`). Never commit `.env`.
 | `OPENROUTER_DAILY_BUDGET` | Hard stop for `llm_guard.py` when the endpoint points at OpenRouter | `40` |
 
 Defaults above are the code defaults (`server/app/config.py`,
-`voice-agent/voice_agent/config.py`, `vision-agent/vision_agent/config.py`).
-Two sample model values printed in `.env.example` are stale placeholders; the
-code defaults (`qwen-flash` for parsing and reasoning) are what production
-runs. `STT_PROVIDER` and `STT_QWEN_MODEL` are read by the voice pipeline but
-not yet listed in `.env.example`.
+`voice-agent/voice_agent/config.py`, `vision-agent/vision_agent/config.py`);
+`.env.example` mirrors them, including the `qwen3-asr-flash` STT block and a
+commented OpenRouter free-tier fallback (OpenAI-compatible swap for the
+`DASHSCOPE_*` names, budget-capped by `llm_guard.py`).
 
 ## Documentation
 
-- `docs/Bizro_Guide.pdf` — the deep guide as a print-ready PDF (built from the
-  local `docs/GUIDE.md` source via `python docs/build_guide_pdf.py`): local setup, the webhook flow, the Qwen model
-  stack and fallbacks, the demo walkthrough, security posture, ops, and
-  troubleshooting.
+- `docs/Bizro_Guide.pdf` — the deep guide as a print-ready PDF: local setup,
+  the webhook flow, the Qwen model stack and fallbacks, the demo walkthrough,
+  security posture, ops, and troubleshooting. The full content lives in the
+  tracked build script `docs/build_guide_pdf.py` — run
+  `python docs/build_guide_pdf.py` to rebuild the PDF.
