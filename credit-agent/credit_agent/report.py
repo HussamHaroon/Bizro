@@ -25,7 +25,14 @@ from .formatting import (
 )
 from .narrative import build_narrative
 from .officer import compute_officer_metrics
-from .rubric import INDICATOR_NOTE, LIMITATIONS, score
+from .rubric import (
+    INDICATOR_NOTE,
+    INDICATOR_NOTE_UR,
+    LIMITATIONS,
+    TWO_WAY_NOTE_CLAUSE,
+    TWO_WAY_NOTE_CLAUSE_UR,
+    score,
+)
 from .trust import compute_trust
 
 PERIODS = {
@@ -63,6 +70,31 @@ def _prov(agg: Aggregates) -> dict:
     }
 
 
+def _two_way_required(session, mid) -> bool:
+    """The officer's two-way toggle (server §8 merchant_settings, owner ruling
+    2026-09-07). Raw SELECT on the report session — db_view.py mirrors no
+    settings table by design. Defensive read: ANY failure (table missing in
+    standalone mirror DBs, column missing pre-migration) means OFF, i.e.
+    exactly the pre-toggle rubric. Binding is dialect-aware: SQLAlchemy Uuid
+    stores CHAR(32) dash-less hex on SQLite, native UUID on Postgres."""
+    from sqlalchemy import text as sa_text
+    from sqlalchemy.exc import SQLAlchemyError
+
+    try:
+        dialect = session.bind.dialect.name if session.bind is not None else "sqlite"
+        param = mid if dialect == "postgresql" else mid.hex
+        val = session.execute(
+            sa_text(
+                "SELECT two_way_confirmation_required FROM merchant_settings "
+                "WHERE merchant_id = :mid"
+            ),
+            {"mid": param},
+        ).scalar()
+    except SQLAlchemyError:
+        return False
+    return bool(val)
+
+
 def generate_report(merchant_id, period: str = "last_30_days", db_url: str | None = None) -> dict:
     mid = merchant_id if isinstance(merchant_id, uuid.UUID) else uuid.UUID(str(merchant_id))
     start, end = _resolve_period(period)
@@ -84,14 +116,21 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
         }
 
         agg = compute_aggregates(list(txs), customers, now=end)
-        scored = score(agg)
+        # §12: corroboration share — how much of the stated revenue (sale +
+        # udhar_settlement) carries a tier vouched by someone other than the
+        # merchant. Disclosure for the officer, never a trust score — and,
+        # when the officer's two-way toggle is ON, the raw value of the
+        # CORROBORATION rubric pillar (rubric.py).
+        trust = compute_trust(list(txs))
+        two_way = _two_way_required(session, mid)
+        scored = score(
+            agg,
+            corroboration_pct=trust["corroboration_pct"],
+            two_way_required=two_way,
+        )
         narrative_ur, is_mock = build_narrative(agg, scored, mname)
         data_quality = compute_data_quality(list(txs), now=end)
         forensics = compute_forensics(list(txs), customers, now=end)
-        # §12: corroboration share — how much of the stated revenue (sale +
-        # udhar_settlement) carries a tier vouched by someone other than the
-        # merchant. Disclosure for the officer, never a trust score.
-        trust = compute_trust(list(txs))
         # §12: officer completeness metrics — aging, collection rate,
         # concentration, weekly-entries activity. The desk-check numbers a
         # manual credit officer would compile, computed from the ledger.
@@ -152,8 +191,19 @@ def generate_report(merchant_id, period: str = "last_30_days", db_url: str | Non
                 "band": scored.band,
                 "label_ur": scored.label_ur,
                 # §12 honest labeling: travels with the score into every
-                # consumer of the payload, not just the renderers.
-                "note": INDICATOR_NOTE,
+                # consumer of the payload, not just the renderers. OFF reports
+                # are byte-identical to the pre-toggle payload except the one
+                # additive boolean below; ON appends ONE short clause.
+                "note": INDICATOR_NOTE
+                + (TWO_WAY_NOTE_CLAUSE if two_way else ""),
+                **(
+                    {"note_ur": INDICATOR_NOTE_UR + TWO_WAY_NOTE_CLAUSE_UR}
+                    if two_way
+                    else {}
+                ),
+                # Two-way toggle (owner ruling 2026-09-07): the ONLY flag
+                # exposure anywhere in the payload — no banners, no badges.
+                "two_way_required": two_way,
             },
             "metrics": [
                 _metric("entries", "Total entries", "کل اندراجات",

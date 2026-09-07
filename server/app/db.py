@@ -15,6 +15,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -78,6 +79,12 @@ class MerchantSettings(Base):
     )
     language: Mapped[str] = mapped_column(Text, nullable=False, default="mixed")
     numeral_style: Mapped[str] = mapped_column(Text, nullable=False, default="western")
+    # Two-way toggle (owner ruling 2026-09-07): when the OFFICER flips this on,
+    # the readiness rubric scores customer corroboration as a pillar. Default
+    # OFF = exactly the pre-toggle rubric — the demo numbers never move.
+    two_way_confirmation_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
@@ -346,7 +353,8 @@ def _ensure_additive_columns() -> None:
     """create_all() never ALTERs an existing table, so additive columns added
     after a DB was first created must be back-filled here (SQLite dev DBs;
     Postgres deployments run a real migration). Currently: §7.1's
-    outbound_messages.payload + §11's ledger-chain and trust-tier columns."""
+    outbound_messages.payload, §11's ledger-chain and trust-tier columns, and
+    the two-way toggle flag on merchant_settings."""
     from sqlalchemy import inspect, text as sa_text
 
     inspector = inspect(engine)
@@ -364,6 +372,18 @@ def _ensure_additive_columns() -> None:
         ):
             if col not in tx_columns:
                 conn.execute(sa_text(ddl))
+        # Two-way toggle (owner ruling 2026-09-07): NOT NULL DEFAULT FALSE —
+        # SQLite backfills 0, Postgres uses a fast default; existing rows and
+        # fresh merchants are OFF (today's rubric) until the officer flips it.
+        if inspector.has_table("merchant_settings"):
+            ms_columns = {c["name"] for c in inspector.get_columns("merchant_settings")}
+            if "two_way_confirmation_required" not in ms_columns:
+                conn.execute(
+                    sa_text(
+                        "ALTER TABLE merchant_settings ADD COLUMN "
+                        "two_way_confirmation_required BOOLEAN NOT NULL DEFAULT FALSE"
+                    )
+                )
 
 
 def _backfill_ledger_chain(url: str | None = None) -> None:
