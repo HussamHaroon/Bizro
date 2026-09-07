@@ -57,12 +57,14 @@ class DashScopeClient:
         user_text: str,
         model: str | None = None,
         temperature: float = 0.1,
-        max_tokens: int = 600,
+        max_tokens: int = 1500,
     ) -> OmniResponse:
         """Plain non-streaming text completion — for the STT path, where the
         transcript is already plain text and provider-specific omni fields
         (modalities / stream_options) would be rejected by generic hosts
-        (OpenRouter free models reject them)."""
+        (OpenRouter free models reject them). 1500 (not 600): the structuring
+        reply echoes the verbatim transcript, so a 45-60s note's JSON can
+        exceed 600 completion tokens and truncate mid-JSON."""
         payload: dict = {
             "model": model or self.settings.model_voice,
             "messages": [

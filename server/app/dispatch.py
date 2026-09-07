@@ -552,6 +552,27 @@ def rejection_reply_from_exception(exc: Exception) -> str | None:
     return None
 
 
+# Model-outage exceptions (voice/vision DashScope errors, the llm_guard budget)
+# must surface as the busy reply — the wamid is already claimed, so Meta's
+# redelivery would be deduped and the merchant would otherwise get silence.
+_OUTAGE_EXC_NAMES = {
+    "DashScopeError",          # voice-agent
+    "DashScopeApiError",       # vision-agent
+    "DashScopeAuthError",
+    "DashScopeRateLimitError",
+    "FreeTierBudgetExceeded",  # llm_guard
+}
+
+
+def is_model_outage_exception(exc: Exception) -> bool:
+    """True when `exc` is a transducer/model failure (quota, auth, 5xx, budget)
+    rather than a content rejection. Name-based: avoids importing the pipeline
+    packages (and their SDKs) into dispatch at module load."""
+    return type(exc).__name__ in _OUTAGE_EXC_NAMES or (
+        type(exc).__name__.startswith("DashScope") and type(exc).__name__.endswith("Error")
+    )
+
+
 def send_reply(
     session: Session,
     merchant: Merchant,

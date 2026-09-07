@@ -460,9 +460,13 @@ def _ingest_media(
             )
     except Exception as exc:
         # §6.4/F-6: ReceiptRejected carries a polite reply — send it,
-        # persist nothing, and report the message handled. Anything else
+        # persist nothing, and report the message handled. A model outage
+        # (quota/auth/5xx/budget) gets the busy reply — silence is never
+        # acceptable because the wamid is already claimed. Anything else
         # propagates to the webhook's per-message error handler.
         rejection_reply = dispatch.rejection_reply_from_exception(exc)
+        if rejection_reply is None and dispatch.is_model_outage_exception(exc):
+            rejection_reply = MODEL_OUTAGE_REPLY_UR
         if rejection_reply is None:
             raise
         tx_data = None
