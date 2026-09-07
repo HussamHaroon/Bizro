@@ -23,6 +23,7 @@
 import {
   MOCK_MERCHANT,
   MOCK_TRANSACTIONS,
+  deriveInventory,
   deriveLedgerVerify,
   deriveReportPreview,
   deriveStreak,
@@ -31,6 +32,7 @@ import {
 import { adaptCanonicalReport, isCanonicalReport } from './reportAdapter';
 import type {
   CreditReportPreview,
+  InventoryView,
   LanguageSetting,
   LedgerVerifyResult,
   MerchantSettings,
@@ -355,6 +357,48 @@ export async function fetchLedgerVerify(
       unsealed: typeof v.unsealed === 'number' ? v.unsealed : 0,
       broken_at: v.broken_at == null ? null : String(v.broken_at),
       details: Array.isArray(v.details) ? v.details : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** GET /api/merchants/{id}/inventory (v0.9 addendum — derived stock, no new
+    tables; server/app/inventory.py) — the InventoryCard source. OPTIONAL
+    endpoint like fetchStreak/fetchLedgerVerify: any absence (older server,
+    404, network) → null and the card simply doesn't render — a missing
+    feature, never an error. In mock mode the view is DERIVED from the same
+    fixtures the ledger renders (deriveInventory — an honest computation, with
+    one deliberately negative item so the disclosure state is demoable). */
+export async function fetchInventory(): Promise<InventoryView | null> {
+  if (fellBack) return deriveInventory(MOCK_TRANSACTIONS);
+  try {
+    const res = await fetch(
+      `${BASE_URL}/api/merchants/${encodeURIComponent(currentMerchantId())}/inventory`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const d: unknown = await res.json();
+    if (!d || typeof (d as InventoryView).merchant_id !== 'string' || !Array.isArray((d as InventoryView).items)) {
+      return null;
+    }
+    const v = d as InventoryView;
+    return {
+      merchant_id: v.merchant_id,
+      note: typeof v.note === 'string' ? v.note : '',
+      items: v.items
+        .filter(
+          (i): i is InventoryView['items'][number] =>
+            !!i && typeof (i as InventoryView['items'][number]).item === 'string',
+        )
+        .map((i) => ({
+          item: i.item,
+          unit: i.unit ?? null,
+          bought: Number(i.bought ?? 0),
+          sold: Number(i.sold ?? 0),
+          in_stock: Number(i.in_stock ?? 0),
+          flag: i.flag === 'low' || i.flag === 'negative' ? i.flag : 'ok',
+        })),
     };
   } catch {
     return null;

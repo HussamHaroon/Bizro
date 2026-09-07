@@ -294,3 +294,30 @@ export interface OfficerPackBlock {
       one; null/absent → no alert banner. */
   activity_drop_pct?: number | null;
 }
+
+/* ---- v0.9 addendum (inventory agent) — derived stock, no new tables ----------
+   GET /api/merchants/{id}/inventory → per-item stock DERIVED from existing
+   transactions' item_lines: bought = Σ qty over `expense` lines (goods IN),
+   sold = Σ qty over `sale` + `udhar_given` lines (goods OUT — udhar_settlement
+   is money-only per schema.md §1). Names merge case/whitespace-insensitively
+   (credit_agent.data_quality._norm_item). flag: "negative" when sold exceeds
+   bought (a data-quality disclosure in the §9 stock_coherence spirit — shown,
+   never hidden), "low" when in_stock ≤ max(2, 10% of bought), else "ok".
+   OPTIONAL endpoint: the client returns null on any absence and the card
+   doesn't render — a missing feature, never an error. */
+
+export interface InventoryItem {
+  item: string;
+  unit: string | null;
+  bought: number;
+  sold: number;
+  in_stock: number;
+  flag: 'ok' | 'low' | 'negative';
+}
+
+export interface InventoryView {
+  merchant_id: string;
+  items: InventoryItem[];
+  /** Server's honest derivation note — surfaces on the card as fine print. */
+  note: string;
+}

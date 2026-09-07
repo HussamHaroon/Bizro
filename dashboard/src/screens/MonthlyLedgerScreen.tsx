@@ -6,12 +6,19 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { api, fetchStreak } from '../api/client';
-import type { SavingsStreak, Transaction, TransactionKind, UdharOutstanding } from '../types/schema';
+import { api, fetchInventory, fetchStreak } from '../api/client';
+import type {
+  InventoryView,
+  SavingsStreak,
+  Transaction,
+  TransactionKind,
+  UdharOutstanding,
+} from '../types/schema';
 import { AmountText } from '../components/AmountText';
 import { EditTransactionForm } from '../components/EditTransactionForm';
 import { EmptyState } from '../components/EmptyState';
 import { HeroStat } from '../components/HeroStat';
+import { InventoryCard } from '../components/InventoryCard';
 import { LedgerIntegrityChip } from '../components/LedgerIntegrityChip';
 import { LedgerDayHeader, LedgerRow, isDemoRow } from '../components/LedgerRow';
 import { reportDemoRows } from '../components/MockBanner';
@@ -64,6 +71,8 @@ export function MonthlyLedgerScreen() {
   const [udhar, setUdhar] = useState<UdharOutstanding[] | null>(null);
   /** Savings streak (D3-3, schema.md §7.3). Optional endpoint: null = no chip. */
   const [streak, setStreak] = useState<SavingsStreak | null>(null);
+  /** Derived stock (v0.9). Optional endpoint: null = card hidden, never an error. */
+  const [inventory, setInventory] = useState<InventoryView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -88,6 +97,11 @@ export function MonthlyLedgerScreen() {
     // missing endpoint must hide the chip, never break the ledger.
     fetchStreak().then((s) => {
       if (alive) setStreak(s);
+    });
+    // Inventory is whole-ledger (not month-scoped) and optional the same way:
+    // an older server without the route just hides the card (graceful absence).
+    fetchInventory().then((v) => {
+      if (alive) setInventory(v);
     });
     return () => {
       alive = false;
@@ -330,6 +344,10 @@ export function MonthlyLedgerScreen() {
       )}
 
       {udhar && <UdharRadar items={udhar} />}
+
+      {/* Derived stock (v0.9) — sits under Udhar Radar: money owed, then goods
+          on shelves. Renders nothing on servers without the route. */}
+      {inventory && <InventoryCard view={inventory} />}
 
       {/* Kind filter — every chip is word-paired (EN + UR), never icon-only.
           D4-1: square sticker chips; active = green-fill with paper text. */}

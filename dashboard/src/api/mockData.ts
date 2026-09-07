@@ -11,6 +11,8 @@
 
 import type {
   CreditReportPreview,
+  InventoryItem,
+  InventoryView,
   LedgerVerifyResult,
   MerchantSummary,
   ReadinessLevel,
@@ -200,7 +202,13 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
       { item: 'sugar 1kg', qty: 8, unit: 'kg', unit_price: 100, line_total: 800 },
     ],
   }),
-  tx('sale', 1250, '2026-08-07T11:15:00+05:00', v(0.97, 'm-0804'), { counterparty: SANA }),
+  tx('sale', 1250, '2026-08-07T11:15:00+05:00', v(0.97, 'm-0804'), {
+    counterparty: SANA,
+    // INVENTORY FIXTURE (labeled): a voice sale WITH item lines — the pipeline
+    // can return them; most voice sales in this fixture carry none (the real
+    // undercount the inventory card discloses).
+    item_lines: [{ item: 'sugar 1kg', qty: 12, unit: 'kg', unit_price: 100, line_total: 1200 }],
+  }),
   tx('udhar_settlement', 1000, '2026-08-09T17:05:00+05:00', v(0.9, 'm-0805'), { counterparty: AHMAD }),
   // Below the 0.75 CONFIDENCE_CONFIRM_THRESHOLD → stored pending until confirmed.
   tx('expense', 620, '2026-08-11T19:20:00+05:00', o(OCR_NEW, 0.68, 'm-0806'), {
@@ -221,8 +229,16 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
   }),
   tx('sale', 2100, '2026-08-19T12:25:00+05:00', v(0.95, 'm-0809'), { counterparty: AHMAD }),
   tx('udhar_settlement', 2000, '2026-08-20T16:45:00+05:00', v(0.89, 'm-0810'), { counterparty: SANA }),
-  tx('sale', 640, '2026-08-20T11:10:00+05:00', v(0.92, 'm-0811'), { counterparty: HINA }),
-  tx('udhar_given', 1500, '2026-08-21T15:05:00+05:00', v(0.79, 'm-0812'), { counterparty: BILAL }),
+  tx('sale', 640, '2026-08-20T11:10:00+05:00', v(0.92, 'm-0811'), {
+    counterparty: HINA,
+    item_lines: [{ item: 'tapal chai 200g', qty: 2, unit: 'packet', unit_price: 320, line_total: 640 }],
+  }),
+  tx('udhar_given', 1500, '2026-08-21T15:05:00+05:00', v(0.79, 'm-0812'), {
+    counterparty: BILAL,
+    // INVENTORY FIXTURE (labeled): udhar_given is goods OUT for stock (the
+    // goods left the shop on credit) — drives sugar negative in deriveInventory.
+    item_lines: [{ item: 'sugar 1kg', qty: 8, unit: 'kg', unit_price: 100, line_total: 800 }],
+  }),
   tx('expense', 5400, '2026-08-21T18:30:00+05:00', o(OCR_VL, 0.9, 'm-0813'), {
     counterparty: ALMADINA,
     description: 'Weekly restock — flour, oil',
@@ -351,6 +367,62 @@ export function deriveLedgerVerify(items: Transaction[]): LedgerVerifyResult {
       problem: 'amended_after_sealing',
       note: 'fixture — the merchant edited this entry after sealing; original_values keeps the pre-edit snapshot',
     })),
+  };
+}
+
+/* ---- Derived inventory (v0.9 addendum — inventory agent) ----------------------
+   Mock stand-in for GET /api/merchants/{id}/inventory, DERIVED from the SAME
+   fixtures the ledger renders (server/app/inventory.py semantics, mirrored
+   1:1): bought = Σ qty over expense lines, sold = Σ qty over sale + udhar_given
+   lines (udhar_settlement is money-only), rejected rows excluded, names merged
+   case/whitespace-insensitively (credit_agent._norm_item idea). flag =
+   "negative" when sold > bought (a shown data-quality disclosure, §9 spirit),
+   "low" when in_stock ≤ max(2, 10% of bought). With these fixtures: sugar 1kg
+   lands at in_stock −2 (18 bought vs 20 sold) and tapal chai 200g at 0 (low) —
+   so the offline demo shows both disclosure states honestly. */
+
+const INVENTORY_LOW_FLOOR = 2;
+const INVENTORY_LOW_SHARE = 0.1;
+
+/** Twin of credit_agent.data_quality._norm_item (NFC → casefold → Urdu-digit
+    folding → whitespace collapse → punctuation strip). */
+function normItem(name: string): string {
+  const folded = (name ?? '').normalize('NFC').toLowerCase().replace(/[۰-۹]/g, (d) =>
+    String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)),
+  );
+  return folded.replace(/\s+/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+}
+
+export function deriveInventory(items: Transaction[]): InventoryView {
+  const bought = new Map<string, number>();
+  const sold = new Map<string, number>();
+  const units = new Map<string, string | null>();
+  for (const t of items) {
+    if (t.status === 'rejected') continue;
+    if (t.kind !== 'expense' && t.kind !== 'sale' && t.kind !== 'udhar_given') continue;
+    const bucket = t.kind === 'expense' ? bought : sold;
+    for (const line of Array.isArray(t.item_lines) ? t.item_lines : []) {
+      const name = normItem(String(line?.item ?? ''));
+      const qty = Number(line?.qty ?? 0);
+      if (!name || !Number.isFinite(qty) || qty <= 0) continue;
+      bucket.set(name, (bucket.get(name) ?? 0) + qty);
+      if (!units.has(name)) units.set(name, line?.unit ?? null);
+    }
+  }
+  const severity = { negative: 0, low: 1, ok: 2 } as const;
+  const rows: InventoryItem[] = [...new Set([...bought.keys(), ...sold.keys()])].map((name) => {
+    const b = bought.get(name) ?? 0;
+    const s = sold.get(name) ?? 0;
+    const in_stock = Math.round((b - s) * 100) / 100;
+    const flag: InventoryItem['flag'] =
+      in_stock < 0 ? 'negative' : in_stock <= Math.max(INVENTORY_LOW_FLOOR, INVENTORY_LOW_SHARE * b) ? 'low' : 'ok';
+    return { item: name, unit: units.get(name) ?? null, bought: b, sold: s, in_stock, flag };
+  });
+  rows.sort((a, b) => severity[a.flag] - severity[b.flag] || a.item.localeCompare(b.item));
+  return {
+    merchant_id: MOCK_MERCHANT.id,
+    items: rows,
+    note: 'Derived from logged item lines: receipts add stock, sales and udhar remove it. "negative" means more logged sold than bought — usually sales recorded without item lines, shown as a data-quality disclosure, not an accusation.',
   };
 }
 
