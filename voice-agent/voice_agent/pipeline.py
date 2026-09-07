@@ -97,6 +97,8 @@ HARD RULES:
 - English number words are often written in Urdu script PHONETICALLY by the transcriber:
   "سون تھاؤزن" = 7000, "ٹو ان ہزار" = 2000, "پوائنٹ فائیو" = 0.5, "فورٹی فائیو" = 45.
   Always convert these phonetic English numbers to digits like any other spoken number.
+- If the merchant SPEAKS a customer phone number, put the digits in counterparty.phone
+  (11 digits starting 03 → store as 92 + the last 10 digits); else null.
 - item_lines only when the note clearly lists items; else [].
 - If item_lines exist and their line_totals do not sum to amount_pkr, still report what was said —
   do NOT silently fix; the pipeline flags the mismatch.

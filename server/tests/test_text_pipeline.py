@@ -114,13 +114,16 @@ def test_text_transaction_persists_with_source_type_text(client, monkeypatch):
     # the typed message itself is kept in the audit raw_output
     assert tx.raw_model_output.get("typed_text") == body
 
-    # the confirmation must exist as an outbound row (simulator renders it)
+    # the confirmation must exist as an outbound row (simulator renders it).
+    # §13 pin: the clean_udhar mock now carries a spoken counterparty phone, so
+    # the two-factor flow adds its own customer_confirmation_request audit row
+    # beside the confirmation — count only the confirmation rows here.
     rows = _outbound_rows(wa)
-    assert len(rows) == 1
-    assert rows[0].kind == "confirmation_text"
-    assert rows[0].transaction_id == tx.id
-    assert rows[0].body == out["confirmation_ur"]
-    assert "5000" in rows[0].body and ("Is this correct?" in rows[0].body or "درست ہے؟" in rows[0].body)
+    confirmations = [row for row in rows if row.kind == "confirmation_text"]
+    assert len(confirmations) == 1
+    assert confirmations[0].transaction_id == tx.id
+    assert confirmations[0].body == out["confirmation_ur"]
+    assert "5000" in confirmations[0].body and ("Is this correct?" in confirmations[0].body or "درست ہے؟" in confirmations[0].body)
 
 
 def test_text_confirmation_visible_via_simulator_outbound_endpoint(client, monkeypatch):
