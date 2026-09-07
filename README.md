@@ -1,5 +1,9 @@
 # Bizro
 
+### Project walkthrough
+
+https://youtu.be/epfOT6UnsNU
+
 Bizro is a zero-typing WhatsApp bookkeeping copilot for Pakistani karyana
 (corner) shopkeepers. A shopkeeper sends an Urdu voice note ("sold ghee to
 Rahmat for 3000 cash") or a receipt photo on WhatsApp; the pipeline parses it
