@@ -1,0 +1,13 @@
+{
+  "name": "bizro-wa-bridge",
+  "private": true,
+  "type": "module",
+  "description": "QR-linked WhatsApp number <-> Bizro backend, speaking the Cloud API wire shapes",
+  "scripts": { "start": "node index.mjs" },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "pino": "^9.0.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "0.12.0"
+  }
+}

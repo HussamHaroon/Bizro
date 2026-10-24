@@ -1,0 +1,30 @@
+# VPS demo stack: Bizro backend + dashboard, and the QR-linked WhatsApp bridge
+# standing in for the (locked) Cloud API. Secrets come from .env (see deploy/vps.sh).
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      WHATSAPP_GRAPH_BASE: http://bridge:8090
+      WHATSAPP_TOKEN: bridge
+      WHATSAPP_PHONE_NUMBER_ID: bridge
+    ports:
+      - "80:8000"
+    volumes:
+      - bizro-data:/app/data
+  bridge:
+    build: ./bridge
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://app:8000
+      BRIDGE_SELF_URL: http://bridge:8090
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET}
+      WHATSAPP_PHONE_NUMBER_ID: bridge
+    ports:
+      - "8090:8090"
+    volumes:
+      - wa-auth:/bridge/auth
+volumes:
+  bizro-data:
+  wa-auth:

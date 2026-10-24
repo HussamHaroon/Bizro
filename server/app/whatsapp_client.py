@@ -13,6 +13,7 @@ Outbound audit trail: the webhook/dispatch layer persists every message to
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 import httpx
@@ -22,7 +23,11 @@ from .config import get_settings
 logger = logging.getLogger("bizro.whatsapp")
 
 GRAPH_API_VERSION = "v22.0"
-GRAPH_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
+# WHATSAPP_GRAPH_BASE points sends/media at a Graph-compatible bridge instead
+# of Meta (bridge/: a QR-linked WhatsApp number, used while the WABA is locked).
+GRAPH_BASE = os.environ.get(
+    "WHATSAPP_GRAPH_BASE", f"https://graph.facebook.com/{GRAPH_API_VERSION}"
+).rstrip("/")
 
 
 class WhatsAppError(RuntimeError):
