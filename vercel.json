@@ -80,7 +80,7 @@
       "check": true
     },
     {
-      "src": "/(ledger|credit|settings)",
+      "src": "/(ledger|credit|settings|simulator)",
       "dest": "api/index.py"
     },
     {

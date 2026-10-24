@@ -73,7 +73,7 @@ export const COPY = {
     parseMiss: "Bizro couldn't read an entry from that note. Its reply:",
     freeTierNote:
       "Each recording uses 1–2 AI requests and adds a public demo entry to the shared demo ledger.",
-    chatLink: "Open the live ledger",
+    chatLink: "Open the full WhatsApp chat",
   },
   movie: {
     label: "Bizro in four scenes — an animated title sequence",

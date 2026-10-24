@@ -298,7 +298,7 @@ function DemoFrame({ hero }: { hero: Copy["hero"] }) {
   );
 
   const noMicRow = (
-    <a className="hero-demo__mic hero-demo__mic--link" href="/ledger">
+    <a className="hero-demo__mic hero-demo__mic--link" href="/simulator">
       <MicIcon />
       <span>{hero.micUnavailable}</span>
     </a>
@@ -406,6 +406,9 @@ function DemoFrame({ hero }: { hero: Copy["hero"] }) {
       <div className="hero-demo__links">
         <a className="demo-frame__link" href="/ledger">
           {hero.link} <ArrowIcon />
+        </a>
+        <a className="demo-frame__link" href="/simulator">
+          {hero.chatLink} <ArrowIcon />
         </a>
       </div>
     </div>
