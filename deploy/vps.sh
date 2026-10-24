@@ -44,5 +44,5 @@ $DOCKER compose -f docker-compose.vps.yml up -d --build
 IP=$(curl -fsS https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
 echo
 echo ">> Dashboard:  http://$IP/      health: http://$IP/health   simulator: http://$IP/simulator"
-echo ">> WhatsApp QR: http://$IP:8090/qr   (WhatsApp -> Linked devices -> Link a device)"
-echo ">> Logs:  $DOCKER compose -f docker-compose.vps.yml logs -f bridge"
+echo ">> WhatsApp QR (scan in WhatsApp -> Linked devices -> Link a device):"
+$DOCKER compose -f docker-compose.vps.yml logs -f bridge

@@ -22,7 +22,7 @@ services:
       WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET}
       WHATSAPP_PHONE_NUMBER_ID: bridge
     ports:
-      - "8090:8090"
+      - "127.0.0.1:8090:8090"  # never public: the Graph endpoints are unauthenticated
     volumes:
       - wa-auth:/bridge/auth
 volumes:
