@@ -80,14 +80,7 @@
       "check": true
     },
     {
-      "src": "/simulator",
-      "status": 308,
-      "headers": {
-        "Location": "/ledger"
-      }
-    },
-    {
-      "src": "/(ledger|credit|settings)",
+      "src": "/(ledger|credit|settings|simulator)",
       "dest": "api/index.py"
     },
     {
